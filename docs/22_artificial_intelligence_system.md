@@ -1828,7 +1828,9 @@ Normal walking recordings will test `WALKING` classification under the formal ph
 
 # 195. Physical Motion Test — Running (Fiziksel Hareket Testi — Koşma)
 
-Controlled running recordings will test `RUNNING` classification if the class remains in the final project scope. *(Kontrollü koşu kayıtları sınıf nihai proje kapsamında kalırsa `RUNNING` sınıflandırmasını test edecektir.)*
+Controlled running recordings are required to evaluate `RUNNING` within the frozen Motion Classification output schema: `STATIONARY`, `WALKING`, `RUNNING`, and `TURNING`. *(Kontrollü koşu kayıtları `RUNNING` sınıfını frozen Motion Classification output schema içerisinde değerlendirmek için zorunludur: `STATIONARY`, `WALKING`, `RUNNING` ve `TURNING`.)*
+
+If valid `RUNNING` evidence is insufficient, model acceptance remains unmet or incomplete; the class must not be silently removed from the output schema. *(Valid `RUNNING` evidence yetersizse model acceptance karşılanmamış veya incomplete kalır; sınıf output schema'dan sessizce kaldırılmamalıdır.)*
 
 ---
 

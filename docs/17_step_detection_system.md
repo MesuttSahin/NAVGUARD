@@ -1024,9 +1024,11 @@ Sessions should include multiple continuous walking intervals rather than only o
 
 # 96. Running Evaluation Dataset (Koşma Değerlendirme Veri Seti)
 
-If running remains within the final motion scope, the detector will also be evaluated on running sessions. *(Koşma nihai hareket kapsamı içerisinde kalırsa algılayıcı koşu oturumlarında da değerlendirilecektir.)*
+Because `RUNNING` is part of the frozen trained class set, running sessions are required evaluation coverage for the detector and its interaction with Motion Classification. *(`RUNNING` frozen trained class set'in parçası olduğu için running session'ları detector ve Motion Classification ile interaction'ı için required evaluation coverage'dır.)*
 
 Walking and running performance will be reported separately when their signal characteristics differ materially. *(Sinyal özellikleri anlamlı şekilde farklı olduğunda yürüyüş ve koşu performansı ayrı raporlanacaktır.)*
+
+If safe and defensible running data cannot be collected, the relevant acceptance condition remains incomplete and the limitation must be documented; the `RUNNING` trained class must not be silently removed. *(Safe ve defensible running data toplanamazsa ilgili acceptance condition incomplete kalır ve limitation dokümante edilmelidir; `RUNNING` trained class sessizce kaldırılmamalıdır.)*
 
 ---
 
@@ -1506,7 +1508,9 @@ The detector must be evaluated against stationary recordings. *(Algılayıcı sa
 
 The detector must be evaluated against turn-containing movement. *(Algılayıcı dönüş içeren harekete karşı değerlendirilmelidir.)*
 
-Running must also be evaluated if it remains a supported final motion class. *(Koşma desteklenen nihai hareket sınıfı olarak kalırsa ayrıca değerlendirilmelidir.)*
+Running must be evaluated as required coverage for the frozen four-class Motion Classification schema. *(Koşma frozen four-class Motion Classification schema için zorunlu coverage olarak değerlendirilmelidir.)*
+
+If running-specific step-detector performance is insufficient, the limitation and unmet or incomplete acceptance status must be reported; `RUNNING` must not be removed from the Motion Classification class set. *(Running-specific step-detector performansı yetersizse limitation ve karşılanmamış veya incomplete acceptance status raporlanmalıdır; `RUNNING` Motion Classification class set'inden kaldırılmamalıdır.)*
 
 ---
 

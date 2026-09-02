@@ -6,7 +6,7 @@ NAVGUARD is an Android-based research and development project focused on pedestr
 
 ## Status
 
-Development is in progress.
+The pre-implementation technical documentation baseline is complete. Application implementation, physical device verification, and experimental evaluation have not started.
 
 ## Platform
 

@@ -1401,7 +1401,9 @@ This route will evaluate stationary detection, false-step suppression, and resta
 
 # 217. Running Segment Test (Koşu Segmenti Testi)
 
-If running is retained in the formal motion model, controlled running segments will evaluate running-specific behavior. *(Koşma resmî motion model içerisinde korunursa kontrollü running segment'leri running-specific davranışı değerlendirecektir.)*
+The test strategy will cover all four frozen trained classes: `STATIONARY`, `WALKING`, `RUNNING`, and `TURNING`. Controlled running segments will evaluate running-specific behavior. *(Test strategy dört frozen trained class'ın tamamını kapsayacaktır: `STATIONARY`, `WALKING`, `RUNNING` ve `TURNING`. Controlled running segment'leri running-specific davranışı değerlendirecektir.)*
+
+If running data or testing cannot be completed safely and defensibly, the relevant acceptance criterion will remain `NOT MET` or `INCOMPLETE`, the limitation will be recorded, and the `RUNNING` class will not be silently removed. *(Running data veya testing safe ve defensible biçimde tamamlanamazsa ilgili acceptance criterion `NOT MET` veya `INCOMPLETE` kalacak, limitation kaydedilecek ve `RUNNING` class sessizce kaldırılmayacaktır.)*
 
 ---
 
@@ -1498,13 +1500,13 @@ CPU / Memory
 
 # 230. Primary Research Metric (Temel Araştırma Metriği)
 
-Median position error across matched final sessions remains one of the primary NAVGUARD comparison metrics. *(Eşleşmiş nihai oturumlar arasındaki median position error temel NAVGUARD karşılaştırma metriklerinden biri olarak kalır.)*
+The single project-level primary research metric is aggregated matched-session median horizontal position error for the Configuration D versus Configuration A comparison. *(Tek project-level primary research metric Configuration D ile Configuration A karşılaştırması için aggregated matched-session median horizontal position error'dır.)*
 
 ---
 
-# 231. Primary Success Target (Temel Başarı Hedefi)
+# 231. Predeclared Primary Research Target (Önceden Belirlenmiş Primary Research Hedefi)
 
-The provisional primary navigation target remains at least a 20% reduction in median position error for the full NAVGUARD configuration compared with PDR-only baseline across matched final sessions. *(Geçici temel navigasyon hedefi eşleşmiş nihai oturumlar üzerinde tam NAVGUARD yapılandırmasının PDR-only baseline'a göre median position error değerinde en az %20 azalma sağlamasıdır.)*
+The primary target is frozen as a predeclared target: Configuration D targets at least a `20%` reduction in aggregated matched-session median horizontal position error relative to Configuration A. This target is not a measured result. *(Primary target predeclared target olarak frozen'dır: Configuration D, Configuration A'ya göre aggregated matched-session median horizontal position error'da en az `%20` reduction hedefler. Bu hedef measured result değildir.)*
 
 ---
 
@@ -1559,7 +1561,7 @@ Configuration B isolates the value of improved heading handling. *(Configuration
 
 # 239. Configuration C Purpose (Configuration C Amacı)
 
-Configuration C isolates the value of ARCore relative tracking when combined with PDR. *(Configuration C PDR ile birleştirildiğinde ARCore relative tracking'in değerini izole eder.)*
+Configuration C isolates validated ARCore relative tracking by preserving Configuration A's deterministic step detector, baseline step-length policy, and baseline heading policy while enabling only the documented ARCore enhancement and any unavoidable evidence-gated integration dependency. *(Configuration C, Configuration A'nın deterministic step detector, baseline step-length policy ve baseline heading policy'sini korurken yalnızca documented ARCore enhancement'ı ve kaçınılmaz evidence-gated integration dependency'yi etkinleştirerek validated ARCore relative tracking'i izole eder.)*
 
 ---
 
@@ -1589,7 +1591,7 @@ Replay comparisons should use identical raw sensor and reference evidence. *(Rep
 
 # 244. Same Metric Pipeline Principle (Aynı Metrik Hattı İlkesi)
 
-Compared configurations will use the same evaluation-code version for the primary metrics. *(Karşılaştırılan yapılandırmalar temel metrikler için aynı evaluation-code sürümünü kullanacaktır.)*
+Compared configurations will use the same evaluation-code version for the project-level primary research metric and the required secondary or diagnostic metrics. *(Karşılaştırılan configuration'lar project-level primary research metric ve gerekli secondary veya diagnostic metric'ler için aynı evaluation-code version'ını kullanacaktır.)*
 
 ---
 
@@ -2190,7 +2192,7 @@ The exact final inclusion and exclusion policy for positional benchmark sessions
 
 **Primary Full System:** Full NAVGUARD AI-Assisted Fusion *(Temel Tam Sistem: Full NAVGUARD AI-Assisted Fusion)*
 
-**Provisional Primary Navigation Target:** ≥20% Median Position Error Reduction vs PDR Baseline *(Geçici Temel Navigasyon Hedefi: PDR Baseline'a Göre ≥%20 Median Position Error Azalması)*
+**Predeclared Frozen Primary Research Target:** ≥20% Aggregated Matched-Session Median Horizontal Position Error Reduction, Configuration D vs Configuration A *(Önceden Belirlenmiş Frozen Primary Research Hedefi: Configuration D vs Configuration A için ≥%20 Aggregated Matched-Session Median Horizontal Position Error Azalması)*
 
 **Provisional Motion AI Target:** Macro F1 ≥0.90 *(Geçici Motion AI Hedefi: Macro F1 ≥0.90)*
 

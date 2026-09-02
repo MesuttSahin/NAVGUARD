@@ -375,20 +375,34 @@ PDR must continue independently during such an interruption. *(PDR böyle bir ke
 
 ---
 
-# 38. ARCore Navigation Quality State (ARCore Navigasyon Kalite Durumu)
+# 38. ARCore Tracking Lifecycle and Canonical Quality (ARCore Takip Yaşam Döngüsü ve Canonical Kalite)
 
-NAVGUARD will derive a navigation-oriented ARCore quality state. *(NAVGUARD navigasyon odaklı bir ARCore kalite durumu türetecektir.)*
+ARCore tracking lifecycle or availability will be represented by a separate explicit type. *(ARCore tracking lifecycle veya availability ayrı ve açık bir type ile temsil edilecektir.)*
 
 ```
-UNAVAILABLE
+ARCoreTrackingLifecycle
+
 INITIALIZING
-GOOD
-DEGRADED
+TRACKING
 LOST
 RECOVERING
+UNAVAILABLE
 ```
 
-These states are project-level interpretations and must remain distinguishable from the raw ARCore `TrackingState`. *(Bu durumlar proje seviyesinde yorumlardır ve ham ARCore `TrackingState` değerinden ayırt edilebilir kalmalıdır.)*
+These lifecycle values are not canonical Sensor Quality states and must remain distinguishable from both the raw ARCore `TrackingState` and the common quality field. Formal navigation measurement use still requires raw `TrackingState.TRACKING` plus all other validity checks. *(Bu lifecycle value'ları canonical Sensor Quality state değildir ve hem raw ARCore `TrackingState` hem de common quality field'dan ayrı kalmalıdır. Formal navigation measurement kullanımı yine raw `TrackingState.TRACKING` ve diğer tüm validity check'leri gerektirir.)*
+
+The separate ARCore source-quality field will use the canonical Sensor Quality enum. *(Ayrı ARCore source-quality field canonical Sensor Quality enum'u kullanacaktır.)*
+
+```text
+UNKNOWN
+GOOD
+USABLE
+DEGRADED
+UNRELIABLE
+UNAVAILABLE
+```
+
+Lifecycle and canonical quality must not replace one another. Any mapping from lifecycle and measured pose evidence into canonical quality must be explicit, versioned, and calibrated. *(Lifecycle ve canonical quality birbirinin yerini almamalıdır. Lifecycle ile measured pose evidence'tan canonical quality'ye yapılan herhangi bir mapping explicit, versioned ve calibrated olmalıdır.)*
 
 ---
 
@@ -397,6 +411,8 @@ These states are project-level interpretations and must remain distinguishable f
 `GOOD` requires valid camera `TRACKING` and acceptable recent pose behavior. *(`GOOD`, geçerli kamera `TRACKING` durumu ve kabul edilebilir son poz davranışı gerektirir.)*
 
 Additional quality checks may include pose continuity and recent tracking stability. *(Ek kalite kontrolleri poz sürekliliğini ve son takip kararlılığını içerebilir.)*
+
+`GOOD` quality cannot authorize a pose when raw tracking is `PAUSED` or otherwise invalid. *(`GOOD` quality, raw tracking `PAUSED` veya başka şekilde invalid olduğunda bir pose'u authorize edemez.)*
 
 ---
 
@@ -1471,23 +1487,25 @@ If PDR and heading remain functional, NAVGUARD must continue in degraded fallbac
 
 # 138. Configuration C Definition (Yapılandırma C Tanımı)
 
-Configuration C will represent PDR with improved heading and validated ARCore relative-motion integration. *(Yapılandırma C geliştirilmiş yön ve doğrulanmış ARCore göreli hareket entegrasyonuna sahip PDR’yi temsil edecektir.)*
+Configuration C represents Configuration A plus validated ARCore relative tracking while preserving Configuration A's deterministic step detector, baseline step-length policy, and baseline true-north heading policy. Configuration B's improved/fused heading is not enabled. *(Configuration C, Configuration A'nın deterministic step detector, baseline step-length policy ve baseline true-north heading policy'sini korurken Configuration A'ya doğrulanmış ARCore relative tracking ekler. Configuration B'nin improved/fused heading'i etkinleştirilmez.)*
 
-The step detector and step-length method should remain consistent with the relevant comparison configuration unless the experiment explicitly studies another component. *(Deney açıkça başka bir bileşeni araştırmadığı sürece adım algılayıcı ve adım uzunluğu yöntemi ilgili karşılaştırma yapılandırmasıyla tutarlı kalmalıdır.)*
+The ARCore alignment design requires a validated true-north reference, but it does not require Configuration B's improved/fused heading method. Configuration A's validated baseline heading may provide the alignment reference. *(ARCore alignment tasarımı doğrulanmış bir true-north reference gerektirir ancak Configuration B'nin improved/fused heading yöntemini zorunlu kılmaz. Alignment reference Configuration A'nın doğrulanmış baseline heading'i tarafından sağlanabilir.)*
+
+If formal ARCore integration requires the minimum EKF or another integration scaffold, that dependency must be explicitly identified in the frozen Configuration C profile and must not silently enable improved heading, Motion AI, learned step length, or full Configuration D behavior. *(Formal ARCore entegrasyonu minimum EKF veya başka bir integration scaffold gerektirirse bu dependency frozen Configuration C profilinde açıkça tanımlanmalı ve improved heading, Motion AI, learned step length veya tam Configuration D davranışını sessizce etkinleştirmemelidir.)*
 
 ---
 
 # 139. ARCore Ablation Comparison (ARCore Ablation Karşılaştırması)
 
-The preferred ARCore contribution test will compare otherwise matched configurations with ARCore disabled and enabled. *(Tercih edilen ARCore katkı testi diğer açılardan eşleştirilmiş yapılandırmaları ARCore kapalı ve açık olarak karşılaştıracaktır.)*
+The preferred ARCore contribution test will compare Configuration A behavior with ARCore disabled against the same step, step-length, and baseline-heading policies with validated ARCore relative tracking enabled. *(Tercih edilen ARCore katkı testi ARCore devre dışıyken Configuration A davranışını, aynı step, step-length ve baseline-heading politikaları korunarak validated ARCore relative tracking etkinleştirilmiş davranışla karşılaştıracaktır.)*
 
 ```
-PDR + Improved Heading
+Configuration A behavior with ARCore disabled
           versus
-PDR + Improved Heading + ARCore
+the same step, step-length, and baseline-heading policies with validated ARCore relative tracking enabled
 ```
 
-This isolates the effect of visual-inertial displacement as much as practical. *(Bu görsel-ataletsel yer değiştirmenin etkisini pratik olarak mümkün olduğunca izole eder.)*
+This isolates the effect of validated visual-inertial displacement as much as practical without inheriting Configuration B heading behavior. *(Bu, Configuration B heading davranışını miras almadan validated visual-inertial displacement etkisini pratik olarak mümkün olduğunca izole eder.)*
 
 ---
 

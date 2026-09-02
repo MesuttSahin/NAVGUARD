@@ -68,15 +68,21 @@ This reduces the number of weakly observable variables during the first implemen
 
 ---
 
-# 8. Target Velocity-Augmented State (Hedef Hız Genişletilmiş Durum)
+# 8. Optional Evidence-Gated Velocity-Augmented State (İsteğe Bağlı Kanıta Dayalı Hız Genişletilmiş Durum)
 
-A later target experiment may evaluate an augmented state. *(Daha sonraki hedef deney genişletilmiş bir durumu değerlendirebilir.)*
+**Status: OPTIONAL / NON-AUTHORITATIVE / EVIDENCE-GATED EXTENSION.** *(Durum: OPTIONAL / NON-AUTHORITATIVE / EVIDENCE-GATED EXTENSION.)*
 
-`text id="e31v4z" x_aug = [E, N, vE, vN, ψ]ᵀ`
+A later experiment may evaluate the following augmented state. *(Daha sonraki bir deney aşağıdaki genişletilmiş durumu değerlendirebilir.)*
 
-`vE` and `vN` represent local horizontal velocity. *(`vE` ve `vN`, yerel yatay hızı temsil eder.)*
+```text
+x_aug = [E, N, vE, vN, ψ]ᵀ
+```
 
-The augmented state will be retained only if GNSS, ARCore, or other measured velocity information makes it sufficiently observable and improves navigation results. *(Genişletilmiş durum yalnızca GNSS, ARCore veya diğer ölçülmüş hız bilgileri onu yeterince gözlemlenebilir hale getirir ve navigasyon sonuçlarını iyileştirirse korunacaktır.)*
+`vE` and `vN` represent local horizontal velocity. *(`vE` ve `vN` yerel yatay hızı temsil eder.)*
+
+This state is not the authoritative minimum EKF state and must not replace `[E, N, ψ]` in the core implementation, recovery matrices, logs, or benchmark profiles without an explicit Technical Decision and evidence of measurable benefit. *(Bu durum authoritative minimum EKF state değildir ve açık bir Technical Decision ile ölçülebilir fayda kanıtı olmadan core implementation, recovery matrix'leri, log'lar veya benchmark profile'larında `[E, N, ψ]` durumunun yerini alamaz.)*
+
+The augmented state may be retained only if measured velocity information makes it sufficiently observable and improves held-out navigation results. *(Genişletilmiş durum yalnızca ölçülmüş velocity bilgisi onu yeterince observable hale getirir ve held-out navigation sonuçlarını iyileştirirse tutulabilir.)*
 
 ---
 
@@ -1348,7 +1354,7 @@ Configuration A will preserve the independent PDR-only baseline. *(Yapılandırm
 
 Configuration B will preserve PDR with improved heading. *(Yapılandırma B geliştirilmiş yönle PDR’yi koruyacaktır.)*
 
-Configuration C will evaluate the added value of ARCore relative-motion integration. *(Yapılandırma C ARCore göreli hareket entegrasyonunun ek değerini değerlendirecektir.)*
+Configuration C preserves Configuration A's baseline heading, deterministic step detector, and baseline step-length policy while evaluating the added value of validated ARCore relative-motion integration. *(Configuration C, validated ARCore relative-motion integration'ın ek değerini değerlendirirken Configuration A'nın baseline heading, deterministic step detector ve baseline step-length policy'sini korur.)*
 
 Configuration D will represent the full validated NAVGUARD fusion stack with AI-assisted motion context and step-length estimation where retained. *(Yapılandırma D korunduğu durumda yapay zekâ destekli hareket bağlamı ve adım uzunluğu tahminiyle tam doğrulanmış NAVGUARD füzyon yığınını temsil edecektir.)*
 
@@ -1368,16 +1374,17 @@ Controlled comparisons will add or remove one major information source at a time
 
 ```text id=“wmf5fo”
 A:
-PDR
+Deterministic PDR baseline
 
 B:
-PDR + Improved Heading
+Configuration A + Improved / Fused Heading
 
 C:
-PDR + Improved Heading + ARCore
+Configuration A + Validated ARCore Relative Tracking
+(Configuration A baseline heading remains unchanged)
 
 D:
-Full NAVGUARD
+Full Frozen NAVGUARD Configuration
 ```
 
 ---

@@ -1332,7 +1332,7 @@ The recovery condition must be predefined according to the frozen route protocol
 
 # 208. Field Session Integrity Acceptance (Field Session Integrity Kabulü)
 
-Every final session must pass manifest, logging, timing, firewall, and route-integrity review before contributing to primary metrics. *(Her final session primary metric'lere katkıda bulunmadan önce manifest, logging, timing, firewall ve route-integrity review'u geçmelidir.)*
+Every final session must pass manifest, logging, timing, firewall, and route-integrity review before contributing to the required metric set or the project-level primary research comparison. *(Her final session gerekli metric set'ine veya project-level primary research comparison'a katkıda bulunmadan önce manifest, logging, timing, firewall ve route-integrity review'u geçmelidir.)*
 
 ---
 
@@ -1362,7 +1362,7 @@ High position error alone is not a valid exclusion reason. *(High position error
 
 # 213. Ground Truth Quality Acceptance (Ground Truth Kalite Kabulü)
 
-Primary position metrics require reference quality that satisfies the frozen inclusion policy. *(Primary position metric'leri frozen inclusion policy'yi sağlayan reference quality gerektirir.)*
+The required position-metric set requires reference quality that satisfies the frozen inclusion policy. *(Required position-metric set frozen inclusion policy'yi sağlayan reference quality gerektirir.)*
 
 ---
 
@@ -1378,9 +1378,9 @@ Ordinary smartphone GNSS must not be described as centimeter-accurate ground tru
 
 ---
 
-# 216. Primary Position Metric Acceptance (Primary Position Metric Kabulü)
+# 216. Required Position Metric Set Acceptance (Required Position Metric Set Kabulü)
 
-Mean, median, RMSE, P95, and final pre-correction horizontal error must be available for valid final sessions with usable reference. *(Usable reference'e sahip valid final session'lar için mean, median, RMSE, P95 ve final pre-correction horizontal error available olmalıdır.)*
+For valid final sessions with usable reference, the evaluation pipeline must provide mean, median, RMSE, P95, and final pre-correction horizontal error. These values form the required position-metric set, but only aggregated matched-session median horizontal position error for Configuration D versus Configuration A is the project-level primary research metric. *(Usable reference'e sahip valid final session'lar için evaluation pipeline mean, median, RMSE, P95 ve final pre-correction horizontal error sağlamalıdır. Bu değerler required position-metric set'i oluşturur ancak yalnızca Configuration D ile Configuration A için aggregated matched-session median horizontal position error project-level primary research metric'tir.)*
 
 ---
 
@@ -1668,13 +1668,13 @@ Affected sessions must be recollected or clearly separated when a material estim
 
 # 263. Primary Research Metric Acceptance (Primary Research Metric Kabulü)
 
-The final report must compare Configuration D against Configuration A using aggregated matched-session median position error. *(Final report aggregated matched-session median position error kullanarak Configuration D'yi Configuration A'ya karşı compare etmelidir.)*
+The final report must compare Configuration D against Configuration A using aggregated matched-session median horizontal position error as the single project-level primary research metric. *(Final report Configuration D'yi Configuration A'ya karşı tek project-level primary research metric olarak aggregated matched-session median horizontal position error kullanarak karşılaştırmalıdır.)*
 
 ---
 
 # 264. Primary Research Target (Primary Research Hedefi)
 
-The provisional target remains at least `20%` reduction in the selected aggregated median position-error comparison. *(Geçici target selected aggregated median position-error comparison'da en az `20%` reduction olarak kalır.)*
+The predeclared primary research target is frozen as at least a `20%` reduction in aggregated matched-session median horizontal position error for Configuration D relative to Configuration A. It remains an unmeasured target until the final benchmark is completed. *(Predeclared primary research target Configuration D için Configuration A'ya göre aggregated matched-session median horizontal position error'da en az `%20` reduction olarak frozen'dır. Final benchmark tamamlanana kadar unmeasured target olarak kalır.)*
 
 ---
 
@@ -1974,7 +1974,7 @@ The following targets improve the final result but do not all individually deter
 ```text
 TARGET-01  Motion Macro F1 ≥ 0.90
 TARGET-02  Step count absolute error ≤ 5%
-TARGET-03  Full NAVGUARD median error improvement ≥ 20%
+TARGET-03  Configuration D vs A aggregated matched-session median horizontal position error reduction ≥ 20%
 TARGET-04  AI inference approximately < 50 ms
 TARGET-05  ARCore contributes usable tracking
 TARGET-06  Long-duration full-stack stability
@@ -2205,8 +2205,8 @@ The research Definition of Done requires the following conditions. *(Research De
 [ ] Ground truth integrity checked
 [ ] Valid sessions identified
 [ ] A-D matched replay completed
-[ ] Primary metrics calculated
-[ ] Primary improvement calculated
+[ ] Required position metrics calculated
+[ ] Project-level primary research comparison calculated
 [ ] AI metrics calculated
 [ ] Step metrics calculated
 [ ] Recovery metrics calculated
@@ -2511,7 +2511,7 @@ Final benchmark collection may only begin after build, model, route, inclusion, 
 
 # 355. Research Target Acceptance Frozen by This Document (Bu Dokümanla Sabitlenen Research Target Kabulü)
 
-The provisional primary research target remains at least `20%` reduction in aggregated matched-session median position error for Configuration D relative to Configuration A. *(Geçici primary research target Configuration D için Configuration A'ya göre aggregated matched-session median position error'da en az `20%` reduction olarak kalır.)*
+The predeclared primary research target is frozen as at least a `20%` reduction in aggregated matched-session median horizontal position error for Configuration D relative to Configuration A. It remains unmeasured until the final benchmark is completed. *(Predeclared primary research target Configuration D için Configuration A'ya göre aggregated matched-session median horizontal position error'da en az `%20` reduction olarak frozen'dır. Final benchmark tamamlanana kadar unmeasured kalır.)*
 
 ---
 
@@ -2539,7 +2539,7 @@ No unresolved critical integrity defect may remain for the project to be accepte
 
 **Final benchmark acceptance requires a frozen build, frozen models, frozen routes, frozen inclusion rules, frozen metric logic, valid session evidence, matched A-D replay, and honest reporting of the predefined research outcome without post-hoc tuning or result-based session exclusion.** *(Final benchmark acceptance frozen build, frozen model'ler, frozen route'lar, frozen inclusion rule'ları, frozen metric logic, valid session evidence, matched A-D replay ve post-hoc tuning veya result-based session exclusion olmadan predefined research outcome'ın dürüstçe raporlanmasını gerektirir.)*
 
-**The final software Definition of Done is intentionally separate from the primary research target: NAVGUARD can be technically complete even if it does not achieve the provisional `20%` error-reduction target, provided the system, evidence, evaluation, limitations, and resulting negative or partial research conclusion are all valid and reproducible.** *(Final software Definition of Done intentional olarak primary research target'tan ayrıdır; NAVGUARD geçici `20%` error-reduction target'ı achieve etmese bile system, evidence, evaluation, limitation ve resulting negative veya partial research conclusion valid ve reproducible ise technically complete olabilir.)*
+**The final software Definition of Done is intentionally separate from the predeclared `20%` primary research target: NAVGUARD can be technically complete even if it does not achieve that target, provided the system, evidence, evaluation, limitations, and resulting negative or partial research conclusion are all valid and reproducible.** *(Final software Definition of Done predeclared `%20` primary research target'tan bilinçli olarak ayrıdır; NAVGUARD bu target'ı karşılamasa bile system, evidence, evaluation, limitation ve resulting negative veya partial research conclusion valid ve reproducible ise technically complete olabilir.)*
 
 **The final project will therefore be accepted only when another reviewer can trace the implemented behavior from source and model identity through session evidence, replay configuration, metric pipeline, acceptance matrix, and final research conclusion without relying on undocumented assumptions or demonstration-only claims.** *(Bu nedenle final proje yalnızca başka bir reviewer implemented behavior'ı source ve model identity'den session evidence, replay configuration, metric pipeline, acceptance matrix ve final research conclusion'a kadar undocumented assumption veya demonstration-only claim'e dayanmadan trace edebildiğinde accepted edilecektir.)*
 
@@ -2655,7 +2655,7 @@ No unresolved critical integrity defect may remain for the project to be accepte
 
 **Primary Research Comparison:** Configuration A vs Configuration D *(Primary Research Comparison: Configuration A vs Configuration D)*
 
-**Primary Provisional Research Target:** `≥20%` Aggregated Matched-Session Median Error Reduction *(Primary Geçici Research Hedefi: `≥20%` Aggregated Matched-Session Median Error Reduction)*
+**Predeclared Frozen Primary Research Target:** `≥20%` Aggregated Matched-Session Median Horizontal Position Error Reduction, Configuration D vs Configuration A *(Önceden Belirlenmiş Frozen Primary Research Hedefi: Configuration D vs Configuration A için `≥20%` Aggregated Matched-Session Median Horizontal Position Error Azalması)*
 
 **Failure to Achieve 20% Means Software Incomplete:** No *(20%'ye Ulaşamamak Software Incomplete Demektir: Hayır)*
 

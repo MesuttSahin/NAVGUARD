@@ -39,7 +39,7 @@ RUNNING
 TURNING
 ```
 
-The final class set may be simplified only if collected data demonstrates that one class cannot be defined or separated reliably enough for the project. *(Nihai sınıf seti yalnızca toplanan veri bir sınıfın proje için yeterince güvenilir tanımlanamadığını veya ayrılamadığını gösterirse sadeleştirilebilir.)*
+The trained class set is frozen as `STATIONARY`, `WALKING`, `RUNNING`, and `TURNING`. Data quality or class-separability findings may limit a class's validated navigation influence, but they do not authorize silent removal or schema simplification. Any class-set change requires an explicit Technical Decision and versioned Change Record that supersedes TD-058 before dataset freeze. *(Trained class set `STATIONARY`, `WALKING`, `RUNNING` ve `TURNING` olarak frozen'dır. Data quality veya class-separability bulguları bir sınıfın doğrulanmış navigation etkisini sınırlayabilir ancak sessiz removal veya schema simplification yetkisi vermez. Herhangi bir class-set değişikliği dataset freeze öncesinde TD-058'i supersede eden explicit Technical Decision ve versioned Change Record gerektirir.)*
 
 ---
 
@@ -914,7 +914,7 @@ Accuracy will remain a secondary global metric. *(Accuracy ikincil global metrik
 
 # 92. Per-Class Metrics (Sınıf Başına Metrikler)
 
-For each retained class, precision will be reported. *(Korunan her sınıf için precision raporlanacaktır.)*
+For each of the four frozen trained classes, precision will be reported. *(Dört frozen trained class'ın her biri için precision raporlanacaktır.)*
 
 Recall will be reported. *(Recall raporlanacaktır.)*
 
@@ -926,7 +926,9 @@ Support will be reported. *(Support raporlanacaktır.)*
 
 # 93. Confusion Matrix (Confusion Matrix)
 
-The final test report will include a four-class confusion matrix if all four classes remain active. *(Dört sınıfın tamamı aktif kalırsa nihai test raporu dört sınıflı confusion matrix içerecektir.)*
+The formal final test report must include a four-class confusion matrix covering the frozen trained classes `STATIONARY`, `WALKING`, `RUNNING`, and `TURNING`. *(Formal nihai test raporu frozen trained class'lar `STATIONARY`, `WALKING`, `RUNNING` ve `TURNING`'i kapsayan four-class confusion matrix içermelidir.)*
+
+If valid evaluation evidence for `RUNNING` is insufficient, this acceptance criterion remains unmet or incomplete rather than permitting a three-class report. *(Valid `RUNNING` evaluation evidence yetersizse bu acceptance criterion three-class report'a izin vermek yerine karşılanmamış veya incomplete kalır.)*
 
 Raw counts and normalized views may both be retained. *(Ham sayılar ve normalize edilmiş görünümler birlikte korunabilir.)*
 
@@ -1800,7 +1802,7 @@ MC-NAV-005    AI-disabled vs AI-enabled replay
 
 # 188. Dataset Acceptance Criteria (Veri Seti Kabul Kriterleri)
 
-Every retained class must contain valid labeled data from multiple independent sessions. *(Korunan her sınıf birden fazla bağımsız oturumdan geçerli etiketli veri içermelidir.)*
+Each of the four frozen trained classes must contain valid labeled data from multiple independent sessions. *(Dört frozen trained class'ın her biri birden fazla independent session'dan valid labeled data içermelidir.)*
 
 No session may exist in multiple train-validation-test splits. *(Hiçbir oturum birden fazla train-validation-test ayrımında bulunamaz.)*
 
@@ -1954,7 +1956,7 @@ The model will not replace the deterministic navigation system. *(Model determin
 
 # 204. Decisions Frozen by This Document (Bu Dokümanla Sabitlenen Kararlar)
 
-The mandatory NAVGUARD motion classifier will initially target four classes: `STATIONARY`, `WALKING`, `RUNNING`, and `TURNING`. *(Zorunlu NAVGUARD hareket sınıflandırıcı başlangıçta dört sınıfı hedefleyecektir: `STATIONARY`, `WALKING`, `RUNNING` ve `TURNING`.)*
+The mandatory NAVGUARD motion classifier's trained class set is frozen as exactly `STATIONARY`, `WALKING`, `RUNNING`, and `TURNING`. *(Zorunlu NAVGUARD hareket sınıflandırıcısının trained class set'i exactly `STATIONARY`, `WALKING`, `RUNNING` ve `TURNING` olarak frozen'dır.)*
 
 The minimum neural input will use synchronized accelerometer and gyroscope channels. *(Minimum sinir ağı girdisi senkronize ivmeölçer ve jiroskop kanallarını kullanacaktır.)*
 

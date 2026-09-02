@@ -187,7 +187,7 @@ Rotation-vector outputs may be used for comparison, fallback, initialization, or
 | --- | --- |
 | A — Baseline PDR *(Temel PDR)* | Tilt-compensated accelerometer + magnetometer heading with declination correction. *(Tilt telafili ivmeölçer + manyetometre yönü ve sapma düzeltmesi.)* |
 | B — Improved Heading *(Geliştirilmiş Yön)* | Gyroscope propagation with quality-controlled magnetic correction. *(Kalite kontrollü manyetik düzeltmeyle jiroskop ilerletmesi.)* |
-| C — PDR + ARCore | Improved heading plus ARCore-enabled navigation context. *(Geliştirilmiş yön ve ARCore destekli navigasyon bağlamı.)* |
+| C — PDR + ARCore | Configuration A baseline heading, unchanged, plus validated ARCore relative tracking. Configuration B improved/fused heading remains off. *(Configuration A baseline heading'i değiştirilmeden korunur ve doğrulanmış ARCore relative tracking eklenir. Configuration B improved/fused heading'i kapalı kalır.)* |
 | D — Full NAVGUARD *(Tam NAVGUARD)* | Final validated heading integrated with confidence-aware fusion. *(Güven farkındalıklı füzyona entegre edilmiş nihai doğrulanmış yön.)* |
 
 ---
@@ -1234,23 +1234,23 @@ The method used to establish the reference direction must be documented. *(Refer
 
 ---
 
-# 105. GNSS Bearing as Reference (Referans Olarak GNSS Bearing)
+# 105. Authorized GNSS Bearing Diagnostic Use (Yetkilendirilmiş GNSS Bearing Diagnostic Kullanımı)
 
-GNSS course bearing may be used as a reference during sufficiently steady movement. *(GNSS hareket bearing değeri yeterince kararlı hareket sırasında referans olarak kullanılabilir.)*
+GNSS course bearing represents horizontal travel direction and not physical device or body heading. *(GNSS course bearing yatay travel direction'ı temsil eder; fiziksel cihaz veya body heading'i temsil etmez.)*
 
-Android defines location bearing as horizontal travel direction rather than physical device orientation. *(Android konum bearing değerini fiziksel cihaz yönelimi yerine yatay hareket yönü olarak tanımlar.)*
+It may be inspected only as travel-direction diagnostic information in explicitly authorized GNSS Mode or during offline post-session evaluation when movement and reference quality are sufficient. *(Yalnızca açıkça authorized GNSS Mode içerisinde veya movement ve reference quality yeterliyken offline post-session evaluation sırasında travel-direction diagnostic bilgisi olarak incelenebilir.)*
 
-This makes it potentially useful for pedestrian course validation when movement and GNSS bearing quality are sufficient. *(Bu hareket ve GNSS bearing kalitesi yeterli olduğunda yaya hareket yönü doğrulaması için potansiyel olarak kullanışlı hale getirir.)*
+It must not be described or consumed as a phone-heading measurement. *(Phone-heading measurement olarak tanımlanmamalı veya tüketilmemelidir.)*
 
 ---
 
-# 106. GNSS Bearing Quality Gate (GNSS Bearing Kalite Kapısı)
+# 106. Denied Evaluation GNSS-Bearing Boundary (Denied Evaluation GNSS-Bearing Sınırı)
 
-GNSS bearing will not be used as heading reference while the pedestrian is effectively stationary. *(GNSS bearing değeri yaya etkili olarak sabitken yön referansı olarak kullanılmayacaktır.)*
+During a denied Evaluation interval, protected GNSS bearing is not authorized to correct or reset heading, enter the estimator, influence heading confidence, influence the navigation Quality Engine, or alter controller behavior. *(Denied Evaluation interval sırasında protected GNSS bearing heading'i düzeltemez veya resetleyemez, estimator'a giremez, heading confidence'i etkileyemez, navigation Quality Engine'i etkileyemez veya controller behavior'ı değiştiremez.)*
 
-It will also require acceptable GNSS bearing accuracy and movement conditions. *(Ayrıca kabul edilebilir GNSS bearing doğruluğu ve hareket koşulları gerektirecektir.)*
+Motion, speed, bearing accuracy, or any other quality condition cannot authorize protected GNSS bearing during the denied interval. *(Motion, speed, bearing accuracy veya başka bir quality condition denied interval sırasında protected GNSS bearing'i authorize edemez.)*
 
-The exact quality thresholds will be determined from field measurements. *(Kesin kalite eşikleri saha ölçümlerinden belirlenecektir.)*
+Diagnostic thresholds for authorized GNSS Mode or offline evaluation remain pending field evidence and are not estimator-authorization thresholds. *(Authorized GNSS Mode veya offline evaluation için diagnostic eşikler field evidence beklemektedir ve estimator-authorization threshold'ları değildir.)*
 
 ---
 

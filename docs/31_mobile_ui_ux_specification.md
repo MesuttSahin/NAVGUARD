@@ -675,33 +675,38 @@ A compact confidence indicator will accompany the map. *(Kompakt güven gösterg
 
 ---
 
-# 73. Candidate Confidence States (Aday Güven Durumları)
+# 73. Candidate UI Confidence Labels (Aday UI Güven Etiketleri)
+
+The UI may expose the following separate presentation type. *(UI aşağıdaki ayrı presentation type'ını sunabilir.)*
 
 ```text
+UiConfidenceLabel
+
 HIGH
 (YÜKSEK)
 
-GOOD
-(İYİ)
+MODERATE
+(ORTA)
 
-USABLE
-(KULLANILABİLİR)
+LOW
+(DÜŞÜK)
 
-DEGRADED
-(BOZULMUŞ)
+VERY_LOW
+(ÇOK DÜŞÜK)
 
-POOR
-(ZAYIF)
-
-INVALID
-(GEÇERSİZ)
+UNAVAILABLE
+(KULLANILAMIYOR)
 ```
+
+These are user-facing labels and are not members of the canonical Sensor Quality enum. The canonical internal enum remains `UNKNOWN`, `GOOD`, `USABLE`, `DEGRADED`, `UNRELIABLE`, and `UNAVAILABLE`. *(Bunlar user-facing label'lardır ve canonical Sensor Quality enum'unun üyeleri değildir. Canonical internal enum `UNKNOWN`, `GOOD`, `USABLE`, `DEGRADED`, `UNRELIABLE` ve `UNAVAILABLE` olarak kalır.)*
+
+The mapping from internal quality and uncertainty to `UiConfidenceLabel` must be explicit, versioned, and calibrated before being interpreted as validated confidence. *(Internal quality ve uncertainty'den `UiConfidenceLabel`'a mapping explicit, versioned ve validated confidence olarak yorumlanmadan önce calibrated olmalıdır.)*
 
 ---
 
 # 74. User-Friendly Confidence Labels (Kullanıcı Dostu Güven Etiketleri)
 
-Normal UI may use simplified labels such as `High`, `Moderate`, `Low`, and `Unreliable`. *(Normal UI `High`, `Moderate`, `Low` ve `Unreliable` gibi sadeleştirilmiş etiketler kullanabilir.)*
+Normal UI may render `UiConfidenceLabel` using localized labels such as `High`, `Moderate`, `Low`, `Very Low`, and `Unavailable`. *(Normal UI `UiConfidenceLabel` değerlerini `High`, `Moderate`, `Low`, `Very Low` ve `Unavailable` gibi localized label'larla gösterebilir.)*
 
 Diagnostics will retain the exact internal quality state. *(Diagnostics kesin dahili kalite durumunu koruyacaktır.)*
 

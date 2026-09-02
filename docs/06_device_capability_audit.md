@@ -1,3 +1,5 @@
+# 06 — Device Capability Audit (Cihaz Yetenek Denetimi)
+
 ## 1. Document Purpose (Dokümanın Amacı)
 
 This document defines the mandatory pre-development hardware and runtime capability audit for the Xiaomi Redmi Note 9 Pro used by the NAVGUARD project. *(Bu doküman, NAVGUARD projesinde kullanılan Xiaomi Redmi Note 9 Pro için zorunlu geliştirme öncesi donanım ve çalışma zamanı yetenek denetimini tanımlar.)*

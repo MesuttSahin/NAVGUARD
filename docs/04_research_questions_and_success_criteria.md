@@ -192,11 +192,11 @@ Quantitative metrics must support all major performance conclusions. *(Tüm öne
 
 # 19. Primary Navigation Success Criterion — SC-NAV-01 (Birincil Navigasyon Başarı Kriteri — SC-NAV-01)
 
-**The complete NAVGUARD configuration should reduce median position error by at least 20% compared with the PDR-only baseline across the final matched evaluation sessions.** *(Tam NAVGUARD yapılandırması, nihai eşleştirilmiş değerlendirme oturumlarında yalnızca PDR kullanan temel yaklaşıma göre medyan konum hatasını en az %20 azaltmalıdır.)*
+**The predeclared frozen primary target is that Configuration D achieve at least a `20%` reduction in aggregated matched-session median horizontal position error relative to Configuration A.** *(Önceden belirlenmiş frozen primary target, Configuration D'nin Configuration A'ya göre aggregated matched-session median horizontal position error değerinde en az `%20` azalma sağlamasıdır.)*
 
-This threshold is a provisional engineering target and may be reviewed after the initial device audit and pilot experiments if the measured hardware characteristics justify a revision. *(Bu eşik geçici bir mühendislik hedefidir ve ölçülen donanım özellikleri bir revizyonu gerekçelendirirse ilk cihaz denetimi ve pilot deneylerden sonra gözden geçirilebilir.)*
+This target is currently unmeasured and must not be presented as an achieved result. Device-audit or pilot evidence does not routinely authorize changing it. *(Bu target şu anda unmeasured durumdadır ve achieved result olarak sunulmamalıdır. Device-audit veya pilot evidence bu target'ın rutin olarak değiştirilmesine yetki vermez.)*
 
-Any revision must be documented before final evaluation begins. *(Herhangi bir revizyon nihai değerlendirme başlamadan önce dokümante edilmelidir.)*
+If a future change becomes unavoidable, it requires an explicit, versioned, superseding Technical Decision under benchmark governance before final benchmark collection begins. *(Gelecekte bir değişiklik kaçınılmaz hale gelirse final benchmark collection başlamadan önce benchmark governance kapsamında explicit, versioned ve superseding bir Technical Decision gerektirir.)*
 
 ---
 
@@ -500,13 +500,13 @@ The project will not be considered an AI-integrated system if the AI model is on
 
 ---
 
-# 48. Provisional Threshold Policy (Geçici Eşik Politikası)
+# 48. Evidence-Gated Subsystem Threshold Policy (Kanıta Bağlı Alt Sistem Eşik Politikası)
 
-Some numerical success thresholds in this document are provisional because the physical sensor characteristics of the Xiaomi Redmi Note 9 Pro have not yet been measured by NAVGUARD. *(Bu dokümandaki bazı sayısal başarı eşikleri geçicidir çünkü Xiaomi Redmi Note 9 Pro'nun fiziksel sensör özellikleri henüz NAVGUARD tarafından ölçülmemiştir.)*
+Some device-dependent subsystem thresholds in this document remain provisional because the physical sensor characteristics of the Xiaomi Redmi Note 9 Pro have not yet been measured by NAVGUARD. This policy does not apply to the frozen `20%` project-level primary research target. *(Bu dokümandaki bazı device-dependent subsystem threshold'ları Xiaomi Redmi Note 9 Pro'nun fiziksel sensör özellikleri henüz NAVGUARD tarafından ölçülmediği için provisional kalır. Bu politika frozen `%20` project-level primary research target'a uygulanmaz.)*
 
 The Device Capability Audit and initial pilot experiments may reveal constraints that justify adjusting specific thresholds. *(Cihaz Yetenek Denetimi ve ilk pilot deneyler belirli eşiklerin ayarlanmasını gerekçelendiren kısıtları ortaya çıkarabilir.)*
 
-Thresholds may only be revised before the final benchmark dataset and evaluation protocol are frozen. *(Eşikler yalnızca nihai benchmark veri seti ve değerlendirme protokolü sabitlenmeden önce revize edilebilir.)*
+Eligible device-dependent subsystem thresholds may only be revised before the final benchmark dataset and evaluation protocol are frozen. *(Uygun device-dependent subsystem threshold'ları yalnızca nihai benchmark veri seti ve değerlendirme protokolü sabitlenmeden önce revize edilebilir.)*
 
 Thresholds must not be changed after final results are observed simply to make the project appear successful. *(Eşikler nihai sonuçlar görüldükten sonra yalnızca projeyi başarılı göstermek amacıyla değiştirilmemelidir.)*
 
@@ -582,11 +582,11 @@ This rule applies particularly to ARCore integration, learned step length estima
 
 **Document Status:** Completed *(Doküman Durumu: Tamamlandı)*
 
-**Threshold Status:** Provisional Until Device Audit and Pilot Testing *(Eşik Durumu: Cihaz Denetimi ve Pilot Testlere Kadar Geçici)*
+**Threshold Status:** Device-Dependent Subsystem Thresholds Pending; Primary Research Target Frozen and Unmeasured *(Eşik Durumu: Cihaza Bağlı Alt Sistem Eşikleri Beklemede; Primary Research Target Frozen ve Unmeasured)*
 
 **Primary Research Question:** RQ-01 *(Birincil Araştırma Sorusu: RQ-01)*
 
-**Primary Navigation Target:** At Least 20% Median Position Error Reduction Relative to PDR Baseline *(Birincil Navigasyon Hedefi: PDR Temel Yaklaşımına Göre En Az %20 Medyan Konum Hatası Azaltımı)*
+**Primary Navigation Target:** At Least `20%` Aggregated Matched-Session Median Horizontal Position Error Reduction, Configuration D Relative to Configuration A *(Birincil Navigasyon Hedefi: Configuration D'nin Configuration A'ya Göre Aggregated Matched-Session Median Horizontal Position Error Değerinde En Az `%20` Azalma)*
 
 **Primary AI Target:** Macro F1 ≥ 0.90 *(Birincil Yapay Zekâ Hedefi: Macro F1 ≥ 0,90)*
 

@@ -302,9 +302,9 @@ Bearing accuracy will be retained when Android reports it. *(Android raporladı�
 
 Android provides bearing accuracy separately from horizontal position accuracy. *(Android bearing doğruluğunu yatay konum doğruluğundan ayrı olarak sağlar.)*
 
-A GNSS bearing should not be used as a heading reference merely because a bearing value exists. *(Bir GNSS bearing değeri yalnızca mevcut olduğu için yön referansı olarak kullanılmamalıdır.)*
+A GNSS bearing is travel-direction diagnostic information, not physical phone or body heading. It may be inspected only in explicitly authorized GNSS Mode or during offline post-session evaluation. *(GNSS bearing fiziksel telefon veya body heading değil, travel-direction diagnostic bilgisidir. Yalnızca explicitly authorized GNSS Mode içerisinde veya offline post-session evaluation sırasında incelenebilir.)*
 
-Movement and quality conditions must also be satisfied. *(Hareket ve kalite koşulları da karşılanmalıdır.)*
+Speed, motion, bearing-accuracy, or GNSS-quality thresholds do not convert it into an authorized phone-heading reference and cannot override the denied-interval authorization boundary. *(Speed, motion, bearing-accuracy veya GNSS-quality threshold'ları bu bilgiyi authorized phone-heading reference haline getirmez ve denied-interval authorization boundary'yi geçersiz kılamaz.)*
 
 ---
 
@@ -516,21 +516,20 @@ Quality decisions will use the combination of evidence appropriate to the operat
 
 ---
 
-# 44. GNSS Quality State (GNSS Kalite Durumu)
+# 44. Canonical GNSS Sensor Quality State (Canonical GNSS Sensor Kalite Durumu)
 
-A derived GNSS quality state may use the following categories. *(Türetilmiş bir GNSS kalite durumu aşağıdaki kategorileri kullanabilir.)*
+The internal GNSS `qualityState` will use the canonical Sensor Quality enum defined by **20 — Sensor Confidence & Quality Engine**. *(Internal GNSS `qualityState`, **20 — Sensor Confidence & Quality Engine** tarafından tanımlanan canonical Sensor Quality enum'u kullanacaktır.)*
 
 ```
 UNKNOWN
-POOR
-USABLE
 GOOD
-EXCELLENT
-STALE
+USABLE
+DEGRADED
+UNRELIABLE
 UNAVAILABLE
 ```
 
-These labels must be calibrated using physical-device observations before being presented as measured quality categories. *(Bu etiketler ölçülmüş kalite kategorileri olarak sunulmadan önce fiziksel cihaz gözlemleriyle kalibre edilmelidir.)*
+Freshness, timing, availability, and hard validity remain separate fields or reason flags. In particular, `STALE` is a freshness/validity condition rather than a canonical quality state. Descriptive labels such as poor or excellent may appear only as explicitly named diagnostics or presentation text and must not directly drive estimator or fusion behavior. *(Freshness, timing, availability ve hard validity ayrı field veya reason flag olarak kalır. Özellikle `STALE`, canonical quality state değil freshness/validity condition'dır. Poor veya excellent gibi descriptive label'lar yalnızca açıkça isimlendirilmiş diagnostic veya presentation text olarak bulunabilir ve estimator veya fusion behavior'ını doğrudan yönlendirmemelidir.)*
 
 ---
 
@@ -925,7 +924,7 @@ GNSS timing analysis should include stale-fix events. *(GNSS zamanlama analizi e
 
 NAVGUARD will monitor elapsed time since the latest GNSS fix. *(NAVGUARD son GNSS fix’inden itibaren geçen süreyi izleyecektir.)*
 
-A long interval without new fixes may cause GNSS quality to transition to `DEGRADED`, `STALE`, or `UNAVAILABLE`. *(Yeni fix olmadan uzun bir aralık GNSS kalitesinin `DEGRADED`, `STALE` veya `UNAVAILABLE` durumuna geçmesine neden olabilir.)*
+A long interval without new fixes may cause canonical GNSS quality to transition to `DEGRADED`, `UNRELIABLE`, or `UNAVAILABLE`, while a separate `STALE` freshness reason or validity condition records that no sufficiently fresh fix exists. *(Yeni fix olmadan uzun bir aralık canonical GNSS quality'nin `DEGRADED`, `UNRELIABLE` veya `UNAVAILABLE` durumuna geçmesine neden olabilir; ayrı bir `STALE` freshness reason veya validity condition ise yeterince fresh fix bulunmadığını kaydeder.)*
 
 The exact timing threshold will be derived from the frozen GNSS update configuration and measured behavior. *(Kesin zaman eşiği sabitlenmiş GNSS güncelleme yapılandırmasından ve ölçülen davranıştan türetilecektir.)*
 
@@ -1575,7 +1574,7 @@ The automatic detection mechanism must remain distinguishable from the estimator
 
 GNSS quality information may later contribute to the Sensor Confidence and Quality Engine. *(GNSS kalite bilgisi daha sonra Sensör Güven ve Kalite Motoruna katkıda bulunabilir.)*
 
-During GNSS-enabled operation, poor GNSS quality may reduce the weight of GNSS measurements in a fusion estimator. *(GNSS etkin çalışma sırasında düşük GNSS kalitesi bir füzyon tahmin motorunda GNSS ölçümlerinin ağırlığını azaltabilir.)*
+During GNSS-enabled operation, the canonical GNSS `qualityState` and quantitative quality evidence may influence measurement acceptance or source-specific uncertainty only through an explicit, versioned, calibrated policy. Descriptive poor or excellent labels are not estimator or fusion inputs. *(GNSS etkin çalışma sırasında canonical GNSS `qualityState` ve quantitative quality evidence, measurement acceptance veya source-specific uncertainty'yi yalnızca explicit, versioned ve calibrated bir politika üzerinden etkileyebilir. Descriptive poor veya excellent label'ları estimator veya fusion input'u değildir.)*
 
 During GNSS-denied operation, quality information must not reopen estimator GNSS access. *(GNSS kesintili çalışma sırasında kalite bilgisi tahmin motoru GNSS erişimini yeniden açmamalıdır.)*
 
@@ -1636,9 +1635,9 @@ Ground-truth GNSS remains an external comparison stream during the denied period
 
 # 135. GNSS and Heading Boundary (GNSS ve Yön Sınırı)
 
-GNSS motion bearing may be used as an experimental heading reference when the user is moving sufficiently and the bearing quality is suitable. *(Kullanıcı yeterince hareket ediyorsa ve bearing kalitesi uygunsa GNSS hareket yönü deneysel yön referansı olarak kullanılabilir.)*
+GNSS motion bearing is not physical phone or body heading and will be used only as travel-direction diagnostic information in explicitly authorized GNSS Mode or during offline post-session evaluation. *(GNSS motion bearing fiziksel telefon veya body heading değildir ve yalnızca explicitly authorized GNSS Mode içerisinde veya offline post-session evaluation sırasında travel-direction diagnostic bilgisi olarak kullanılacaktır.)*
 
-It will not be treated as a continuously valid device-heading sensor. *(Sürekli geçerli cihaz yön sensörü olarak ele alınmayacaktır.)*
+During a denied Evaluation interval, protected GNSS bearing is not authorized for heading correction, heading reset, estimator measurement, heading-confidence input, navigation Quality Engine input, or controller input. No speed, motion, bearing-accuracy, or GNSS-quality gate can override this prohibition. *(Denied Evaluation interval sırasında protected GNSS bearing heading correction, heading reset, estimator measurement, heading-confidence input, navigation Quality Engine input veya controller input için authorized değildir. Hiçbir speed, motion, bearing-accuracy veya GNSS-quality gate bu yasağı geçersiz kılamaz.)*
 
 Detailed heading-reference rules belong to **18 — Heading Estimation System**. *(Ayrıntılı yön referansı kuralları **18 — Heading Estimation System** bölümüne aittir.)*
 

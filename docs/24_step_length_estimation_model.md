@@ -698,7 +698,7 @@ This provides step-length variation for regression. *(Bu regresyon için adım u
 
 # 71. Running Data (Koşma Verisi)
 
-Running data will be collected only if the `RUNNING` class remains part of the final navigation model. *(Koşma verisi yalnızca `RUNNING` sınıfı nihai navigasyon modelinin parçası olarak kalırsa toplanacaktır.)*
+`RUNNING` remains part of the frozen Motion Classification schema regardless of whether a running-specific learned step-length experiment is retained. Running-specific step-length data collection and regression form a separate optional experiment and do not control Motion Classification class membership. *(`RUNNING`, running-specific learned step-length experiment korunup korunmadığından bağımsız olarak frozen Motion Classification schema'nın parçası olarak kalır. Running-specific step-length data collection ve regression ayrı bir optional experiment oluşturur ve Motion Classification class membership'i kontrol etmez.)*
 
 Running may be modeled separately if its gait relationship differs materially from walking. *(Gait ilişkisi yürüyüşten anlamlı şekilde farklıysa koşma ayrı modellenebilir.)*
 
@@ -1653,7 +1653,7 @@ A safely faster walking route will test whether cadence and acceleration feature
 
 # 178. Physical Test — Running (Fiziksel Test — Koşma)
 
-Controlled running will be evaluated only if retained in final project scope. *(Kontrollü koşma yalnızca nihai proje kapsamında korunursa değerlendirilecektir.)*
+Controlled running remains required for Motion Classification coverage. A separate controlled-running step-length evaluation is required only when the optional running-specific learned step-length experiment is executed; omitting that experiment does not change the frozen Motion Classification schema. *(Kontrollü koşma Motion Classification coverage için zorunlu kalır. Ayrı controlled-running step-length evaluation yalnızca optional running-specific learned step-length experiment yürütüldüğünde gereklidir; bu experiment'ın yapılmaması frozen Motion Classification schema'yı değiştirmez.)*
 
 ---
 

@@ -678,16 +678,31 @@ N_rec
 
 ---
 
-# 64. Candidate Measurement Matrix (Aday Measurement Matrix)
+# 64. Authoritative Core Recovery Measurement Matrix (Authoritative Core Recovery Ölçüm Matrisi)
 
-For the candidate state `[E, N, vE, vN, ψ]`, the recovery measurement matrix may be as follows. *(Aday `[E, N, vE, vN, ψ]` durumu için recovery measurement matrisi aşağıdaki gibi olabilir.)*
+For the authoritative minimum state `[E, N, ψ]`, an authorized horizontal recovery-position measurement uses the following matrix. *(Authoritative minimum `[E, N, ψ]` durumu için authorized horizontal recovery-position measurement aşağıdaki matrisi kullanır.)*
 
 ```text
 H_rec =
 
+[1 0 0]
+[0 1 0]
+```
+
+This three-column matrix is authoritative for the core recovery implementation. *(Bu üç sütunlu matris core recovery implementation için authoritative'dir.)*
+
+A five-column matrix such as the following belongs only to the optional `[E, N, vE, vN, ψ]` extension. *(Aşağıdaki gibi beş sütunlu bir matris yalnızca optional `[E, N, vE, vN, ψ]` extension'a aittir.)*
+
+```text
+H_rec_optional =
+
 [1 0 0 0 0]
 [0 1 0 0 0]
 ```
+
+**Status: OPTIONAL / NON-AUTHORITATIVE / EVIDENCE-GATED EXTENSION.** *(Durum: OPTIONAL / NON-AUTHORITATIVE / EVIDENCE-GATED EXTENSION.)*
+
+The optional recovery matrix must not be used unless the corresponding velocity-augmented state has been explicitly approved through a later Technical Decision and versioned experiment profile. *(İlgili velocity-augmented state daha sonraki bir Technical Decision ve versioned experiment profile aracılığıyla açıkça approved edilmediği sürece optional recovery matrix kullanılmamalıdır.)*
 
 ---
 
@@ -841,9 +856,11 @@ However, velocity will not be reset blindly from GNSS unless its measurement qua
 
 # 81. Heading Correction (Yön Düzeltmesi)
 
-GNSS bearing will not automatically reset phone heading. *(GNSS bearing telefon yönünü otomatik olarak resetlemeyecektir.)*
+GNSS movement or travel bearing is not a physical device or body-heading measurement and must not be used to correct, reset, replace, or initialize the NAVGUARD phone-heading state during recovery. *(GNSS movement veya travel bearing fiziksel cihaz veya body-heading measurement değildir ve recovery sırasında NAVGUARD phone-heading state'ini düzeltmek, resetlemek, değiştirmek veya initialize etmek için kullanılmamalıdır.)*
 
-GNSS bearing represents travel direction rather than device orientation. *(GNSS bearing cihaz yönelimi yerine hareket yönünü temsil eder.)*
+No manual action, recovery mode, motion gate, speed gate, quality gate, or bearing-accuracy condition authorizes GNSS travel bearing as a phone-heading input. *(Hiçbir manual action, recovery mode, motion gate, speed gate, quality gate veya bearing-accuracy condition GNSS travel bearing'i phone-heading input olarak authorize etmez.)*
+
+GNSS bearing may be inspected only as travel-direction diagnostic information in explicitly authorized GNSS Mode or during offline post-session evaluation. *(GNSS bearing yalnızca explicitly authorized GNSS Mode içerisinde veya offline post-session evaluation sırasında travel-direction diagnostic bilgisi olarak incelenebilir.)*
 
 ---
 
@@ -1961,7 +1978,7 @@ NAVGUARD will not rewrite historical trajectory to hide drift. *(NAVGUARD drift'
 
 NAVGUARD will not select recovery fixes after the fact based on which one minimizes reported error. *(NAVGUARD sonradan raporlanan hatayı en aza indiren recovery fix'ine göre seçim yapmayacaktır.)*
 
-NAVGUARD will not reset heading from GNSS bearing without independent justification. *(NAVGUARD bağımsız gerekçe olmadan yönü GNSS bearing'den resetlemeyecektir.)*
+GNSS movement or travel bearing must never be used to correct, reset, replace, or initialize the NAVGUARD phone/body heading state during recovery. No independent justification, manual action, recovery condition, motion gate, speed gate, quality gate, or non-default path can authorize GNSS bearing as a phone-heading input. *(GNSS movement veya travel bearing recovery sırasında NAVGUARD phone/body heading state'ini düzeltmek, resetlemek, değiştirmek veya initialize etmek için hiçbir zaman kullanılmamalıdır. Hiçbir independent justification, manual action, recovery condition, motion gate, speed gate, quality gate veya non-default path GNSS bearing'i phone-heading input olarak authorize edemez.)*
 
 ---
 
@@ -2015,7 +2032,7 @@ The covariance update method will be explicit and versioned. *(Kovaryans update 
 
 # 230. Heading Decisions Frozen by This Document (Bu Dokümanla Sabitlenen Yön Kararları)
 
-GNSS bearing will not automatically replace the phone heading state during relocalization. *(GNSS bearing relocalization sırasında telefon yön durumunun yerini otomatik olarak almayacaktır.)*
+GNSS movement or travel bearing must never correct, reset, replace, or initialize the phone-heading state during relocalization; it remains diagnostic-only under the explicitly authorized contexts defined by this document. *(GNSS movement veya travel bearing relocalization sırasında phone-heading state'ini hiçbir zaman düzeltemez, resetleyemez, değiştiremez veya initialize edemez; yalnızca bu dokümanda açıkça authorize edilen context'lerde diagnostic-only olarak kalır.)*
 
 ---
 
@@ -2095,7 +2112,7 @@ The exact ARCore-to-ENU alignment update policy after relocalization remains pen
 
 **The minimum relocalization implementation may use a controlled hard position correction after evidence capture, while the target design will compare that approach with an estimator-consistent EKF absolute-position measurement update before selecting the simplest stable final policy.** *(Minimum relocalization uygulaması kanıt yakalamadan sonra kontrollü hard position correction kullanabilirken hedef tasarım en basit kararlı nihai politikayı seçmeden önce bu yaklaşımı tahmin motoruyla tutarlı EKF mutlak konum measurement update'iyle karşılaştıracaktır.)*
 
-**Position covariance will never be reset to zero after recovery, GNSS bearing will never automatically replace device heading, and any optional new geographic anchor will preserve the original anchor and all historical anchor associations.** *(Konum kovaryansı recovery sonrasında hiçbir zaman sıfıra resetlenmeyecek, GNSS bearing cihaz yönünün yerini hiçbir zaman otomatik olarak almayacak ve isteğe bağlı yeni coğrafi anchor orijinal anchor'ı ve tüm geçmiş anchor ilişkilerini koruyacaktır.)*
+**Position covariance will never be reset to zero after recovery, GNSS bearing will never correct, reset, replace, or initialize device heading, and any optional new geographic anchor will preserve the original anchor and all historical anchor associations.** *(Konum kovaryansı recovery sonrasında hiçbir zaman sıfıra resetlenmeyecek, GNSS bearing cihaz yönünü hiçbir zaman düzeltmeyecek, resetlemeyecek, değiştirmeyecek veya initialize etmeyecek ve isteğe bağlı yeni coğrafi anchor orijinal anchor'ı ve tüm geçmiş anchor ilişkilerini koruyacaktır.)*
 
 **Historical denied-navigation trajectory points and the separately logged baseline PDR trajectory will remain immutable after relocalization, allowing the exact drift accumulated before GNSS recovery to remain auditable even though current navigation is subsequently corrected.** *(Geçmiş kesintili navigasyon trajectory noktaları ve ayrı kaydedilmiş temel PDR trajectory'si relocalization sonrasında değişmez kalacak, böylece mevcut navigasyon daha sonra düzeltilse bile GNSS recovery öncesinde biriken kesin drift denetlenebilir kalacaktır.)*
 
@@ -2143,7 +2160,7 @@ The exact ARCore-to-ENU alignment update policy after relocalization remains pen
 
 **Zero Covariance After Recovery:** Forbidden *(Recovery Sonrası Sıfır Kovaryans: Yasak)*
 
-**GNSS Bearing → Device Heading Reset:** Forbidden by Default *(GNSS Bearing → Cihaz Yön Reset'i: Varsayılan Olarak Yasak)*
+**GNSS Bearing → Device Heading Correction / Reset / Replacement / Initialization:** Forbidden *(GNSS Bearing → Cihaz Yön Düzeltme / Reset / Değiştirme / Initialization: Yasak)*
 
 **Historical Denied Trajectory Rewrite:** Forbidden *(Geçmiş Kesintili Trajectory Yeniden Yazma: Yasak)*
 

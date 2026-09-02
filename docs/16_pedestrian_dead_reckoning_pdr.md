@@ -1124,17 +1124,13 @@ Both trajectories will be transformed into the same anchor-based ENU coordinate 
 
 ---
 
-# 94. Primary PDR Position Metrics (Temel PDR Konum Metrikleri)
+# 94. PDR Diagnostic Position Metrics (PDR Diagnostic Konum Metrikleri)
 
-Primary metrics will include mean position error. *(Temel metrikler ortalama konum hatasını içerecektir.)*
+For PDR subsystem analysis, NAVGUARD will report mean horizontal position error, RMSE, final pre-correction horizontal error, drift per minute, and drift relative to travelled distance. *(PDR subsystem analizi için NAVGUARD mean horizontal position error, RMSE, final pre-correction horizontal error, drift per minute ve travelled distance'a göre drift değerlerini raporlayacaktır.)*
 
-Primary metrics will include RMSE. *(Temel metrikler RMSE’yi içerecektir.)*
+These values are required secondary or diagnostic metrics; none replaces the project-level primary research metric. *(Bu değerler gerekli secondary veya diagnostic metric'lerdir; hiçbiri project-level primary research metric'in yerini almaz.)*
 
-Primary metrics will include final position error. *(Temel metrikler nihai konum hatasını içerecektir.)*
-
-Primary metrics will include drift per minute. *(Temel metrikler dakika başına sürüklenmeyi içerecektir.)*
-
-Primary metrics will include drift relative to travelled distance. *(Temel metrikler kat edilen mesafeye göre sürüklenmeyi içerecektir.)*
+The project-level primary research metric remains aggregated matched-session median horizontal position error for the Configuration D versus Configuration A comparison. *(Project-level primary research metric Configuration D ile Configuration A karşılaştırması için aggregated matched-session median horizontal position error olarak kalır.)*
 
 ---
 

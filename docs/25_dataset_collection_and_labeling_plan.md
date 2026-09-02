@@ -369,7 +369,7 @@ Straight or gently varying direction may be used as long as deliberate strong tu
 
 # 39. RUNNING Block (RUNNING Bloğu)
 
-A running block will contain controlled safe running if the `RUNNING` class remains part of the final model. *(Koşu bloğu `RUNNING` sınıfı nihai modelin parçası olarak kalırsa kontrollü güvenli koşuyu içerecektir.)*
+A running block will contain controlled safe running because `RUNNING` is part of the frozen trained class set. If safe collection is not possible, the limitation must be recorded and the dataset acceptance status must remain incomplete rather than silently removing the class. *(Koşu bloğu `RUNNING` frozen trained class set'in parçası olduğu için kontrollü güvenli koşuyu içerecektir. Güvenli collection mümkün değilse limitation kaydedilmeli ve sınıf sessizce kaldırılmak yerine dataset acceptance status incomplete kalmalıdır.)*
 
 The protocol will prioritize repeatability and safety rather than maximum speed. *(Protokol maksimum hız yerine tekrarlanabilirliğe ve güvenliğe öncelik verecektir.)*
 
@@ -401,7 +401,7 @@ This provides transition evidence for the `TURNING` class. *(Bu `TURNING` sını
 
 # 43. Walk-Run-Walk Protocol (Yürü-Koş-Yürü Protokolü)
 
-A walk-run-walk sequence may be collected if running remains in the final class set. *(Koşma nihai sınıf setinde kalırsa yürü-koş-yürü dizisi toplanabilir.)*
+A walk-run-walk sequence may be collected to evaluate `WALKING`–`RUNNING` transitions within the frozen class set. *(Frozen class set içerisindeki `WALKING`–`RUNNING` geçişlerini değerlendirmek için walk-run-walk sequence toplanabilir.)*
 
 This will test transition behavior rather than only long isolated running blocks. *(Bu yalnızca uzun izole koşu blokları yerine geçiş davranışını test edecektir.)*
 
@@ -455,7 +455,7 @@ A single physical session is not sufficient final evidence for one class. *(Tek 
 
 # 50. Provisional Minimum Coverage Gate (Geçici Minimum Kapsama Kapısı)
 
-As an initial planning gate, each retained class should appear in at least three independent usable sessions before model development is considered minimally viable. *(İlk planlama kapısı olarak her korunan sınıf model geliştirme minimum uygulanabilir kabul edilmeden önce en az üç bağımsız kullanılabilir oturumda görünmelidir.)*
+As an initial planning gate, each of the four frozen trained classes should appear in at least three independent usable sessions before model development is considered minimally viable. *(İlk planning gate olarak dört frozen trained class'ın her biri model development minimally viable kabul edilmeden önce en az üç independent usable session'da görünmelidir.)*
 
 This is a practical project-planning minimum and not a claim of statistical sufficiency. *(Bu pratik proje planlama minimumudur ve istatistiksel yeterlilik iddiası değildir.)*
 
@@ -588,7 +588,7 @@ These labels describe collection protocol rather than exact physical speed unles
 
 # 65. Running Step-Length Data (Koşu Adım Uzunluğu Verisi)
 
-Running step-length data will be collected only if running remains relevant after Motion Classification pilot evaluation. *(Koşu adım uzunluğu verisi yalnızca Hareket Sınıflandırma pilot değerlendirmesinden sonra koşma ilgili kalırsa toplanacaktır.)*
+`RUNNING` remains part of the frozen Motion Classification class set. Collection of running-specific step-length labels is a separate optional step-length experiment and will occur only if it can be performed safely and produces defensible labels; omitting this optional regression dataset does not remove the `RUNNING` classification class. *(`RUNNING` frozen Motion Classification class set'in parçası olarak kalır. Running-specific step-length label collection ayrı bir optional step-length experiment'tır ve yalnızca güvenli biçimde yapılabilir ve defensible label üretebilirse gerçekleştirilir; bu optional regression dataset'in toplanmaması `RUNNING` classification class'ını kaldırmaz.)*
 
 ---
 
@@ -790,7 +790,7 @@ A percentage will not be frozen before the available session count is known. *(M
 
 # 90. Split Balance Objective (Ayrım Dengeleme Hedefi)
 
-Each dataset split should contain representative coverage of the retained motion classes where session count permits. *(Oturum sayısı izin verdiğinde her veri seti ayrımı korunan hareket sınıflarının temsili kapsamını içermelidir.)*
+Each formal train, validation, and test split must contain representative coverage of all four frozen trained classes: `STATIONARY`, `WALKING`, `RUNNING`, and `TURNING`. If session count or valid `RUNNING` evidence is insufficient, dataset acceptance remains unmet or incomplete rather than silently reducing class membership. *(Her formal train, validation ve test split'i dört frozen trained class'ın tamamı için representative coverage içermelidir: `STATIONARY`, `WALKING`, `RUNNING` ve `TURNING`. Session count veya valid `RUNNING` evidence yetersizse class membership sessizce azaltılmak yerine dataset acceptance karşılanmamış veya incomplete kalır.)*
 
 ---
 
@@ -1181,11 +1181,11 @@ After pilot collection, class separability and label quality will be reviewed be
 
 ---
 
-# 138. RUNNING Retention Decision (RUNNING Koruma Kararı)
+# 138. RUNNING Data Limitation Handling (RUNNING Veri Sınırlaması Yönetimi)
 
-If running data cannot be collected safely, consistently, or in sufficient quality, the `RUNNING` class may be reduced in operational importance or formally removed before final dataset freeze. *(Koşma verisi güvenli, tutarlı veya yeterli kalitede toplanamazsa `RUNNING` sınıfının operasyonel önemi azaltılabilir veya nihai veri seti sabitlemesinden önce resmî olarak kaldırılabilir.)*
+`RUNNING` remains part of the exact frozen trained class set. If running data cannot be collected safely, consistently, or with sufficient quality, the limitation must be documented, the affected dataset/model acceptance criteria must remain unmet, and running-specific navigation behavior may remain disabled. *(`RUNNING` exact frozen trained class set'in parçası olarak kalır. Running verisi güvenli, tutarlı veya yeterli kalitede toplanamazsa limitation dokümante edilmeli, etkilenen dataset/model acceptance criteria karşılanmamış kalmalı ve running-specific navigation behavior devre dışı kalabilmelidir.)*
 
-Any such scope change will be documented in the Technical Decisions & Change Log. *(Böyle bir kapsam değişikliği Teknik Kararlar ve Değişiklik Kaydında dokümante edilecektir.)*
+Pilot evidence alone does not authorize class removal. Removing or redefining `RUNNING` requires an explicit Technical Decision and versioned Change Record that supersedes TD-058 before dataset freeze. *(Pilot evidence tek başına class removal yetkisi vermez. `RUNNING` sınıfının kaldırılması veya yeniden tanımlanması dataset freeze öncesinde TD-058'i supersede eden explicit Technical Decision ve versioned Change Record gerektirir.)*
 
 ---
 
@@ -1458,7 +1458,7 @@ The Motion Classification dataset will report both class-window balance and clas
 
 # 166. Data Collection Completion Gate (Veri Toplama Tamamlama Kapısı)
 
-Formal model training will not be considered ready until every retained class has adequate independent-session coverage and the leakage audit passes. *(Her korunan sınıf yeterli bağımsız oturum kapsamına sahip olana ve veri sızıntısı denetimi geçene kadar resmî model eğitimi hazır kabul edilmeyecektir.)*
+Formal model training will not be considered ready until each of the four frozen trained classes has adequate independent-session coverage and the leakage audit passes. *(Dört frozen trained class'ın her biri yeterli independent-session coverage'a sahip olana ve leakage audit geçene kadar formal model training hazır kabul edilmeyecektir.)*
 
 ---
 
@@ -1553,9 +1553,9 @@ DATA-REP-002   Dataset regeneration reproducibility
 
 # 175. Motion Collection Acceptance Criteria (Hareket Veri Toplama Kabul Kriterleri)
 
-Every retained motion class must have valid labeled examples from multiple independent sessions. *(Korunan her hareket sınıfı birden fazla bağımsız oturumdan geçerli etiketli örneklere sahip olmalıdır.)*
+Each of the four frozen trained classes must have valid labeled examples from multiple independent sessions. *(Dört frozen trained class'ın her biri birden fazla independent session'dan valid labeled example'lara sahip olmalıdır.)*
 
-The provisional planning minimum is three usable independent sessions per retained class before formal model development is considered minimally viable. *(Geçici planlama minimumu resmî model geliştirme minimum uygulanabilir kabul edilmeden önce korunan sınıf başına üç kullanılabilir bağımsız oturumdur.)*
+The provisional planning minimum is three usable independent sessions for each of the four frozen trained classes before formal model development is considered minimally viable. *(Geçici planning minimum'u formal model development minimally viable kabul edilmeden önce dört frozen trained class'ın her biri için üç usable independent session'dır.)*
 
 ---
 
@@ -1617,7 +1617,7 @@ Final test data will not be repeatedly recycled into model development while sti
 
 # 184. Minimum Dataset Success Definition (Minimum Veri Seti Başarı Tanımı)
 
-The minimum successful Motion Classification dataset will contain session-wise isolated labeled data for all retained classes and sufficient metadata to reproduce window generation. *(Minimum başarılı Hareket Sınıflandırma veri seti korunan tüm sınıflar için oturum bazlı izole etiketli veri ve pencere üretimini yeniden oluşturmak için yeterli metadata içerecektir.)*
+The minimum successful Motion Classification dataset will contain session-wise isolated labeled data for all four frozen trained classes and sufficient metadata to reproduce window generation. *(Minimum başarılı Motion Classification dataset'i dört frozen trained class'ın tümü için session-wise isolated labeled data ve window generation'ı reproduce etmek için yeterli metadata içerecektir.)*
 
 The minimum successful Step Length dataset will contain known-distance calibration sessions with defensible step-count reference and clear label granularity. *(Minimum başarılı Adım Uzunluğu veri seti savunulabilir adım sayısı referansına ve açık etiket granülerliğine sahip bilinen mesafeli kalibrasyon oturumlarını içerecektir.)*
 
@@ -1643,7 +1643,7 @@ Raw recordings will remain immutable. *(Ham kayıtlar değişmez kalacaktır.)*
 
 # 187. Motion Dataset Decisions Frozen by This Document (Bu Dokümanla Sabitlenen Hareket Veri Seti Kararları)
 
-Motion Classification collection will target `STATIONARY`, `WALKING`, `RUNNING`, and `TURNING` unless a later formally documented scope change occurs. *(Hareket Sınıflandırma veri toplama daha sonra resmî olarak dokümante edilmiş kapsam değişikliği gerçekleşmedikçe `STATIONARY`, `WALKING`, `RUNNING` ve `TURNING` sınıflarını hedefleyecektir.)*
+Motion Classification collection will target the exact frozen trained class set: `STATIONARY`, `WALKING`, `RUNNING`, and `TURNING`. Any class-set change requires an explicit Technical Decision and versioned Change Record that supersedes TD-058 before dataset freeze. *(Motion Classification collection exact frozen trained class set'i hedefleyecektir: `STATIONARY`, `WALKING`, `RUNNING` ve `TURNING`. Herhangi bir class-set değişikliği dataset freeze öncesinde TD-058'i supersede eden explicit Technical Decision ve versioned Change Record gerektirir.)*
 
 Motion labels will use explicit activity timelines. *(Hareket etiketleri açık aktivite zaman çizgileri kullanacaktır.)*
 
@@ -1709,7 +1709,7 @@ The final `TURNING` temporal and angular annotation rule remains pending pilot a
 
 The exact number of development sessions per class remains pending pilot data quality and project-time analysis. *(Sınıf başına kesin geliştirme oturumu sayısı pilot veri kalitesini ve proje zaman analizini beklemektedir.)*
 
-The provisional minimum planning gate remains three independent usable sessions per retained class. *(Geçici minimum planlama kapısı korunan sınıf başına üç bağımsız kullanılabilir oturum olarak kalmaktadır.)*
+The provisional minimum planning gate remains three independent usable sessions for each of the four frozen trained classes. *(Geçici minimum planning gate dört frozen trained class'ın her biri için üç independent usable session olarak kalmaktadır.)*
 
 ---
 
@@ -1775,7 +1775,7 @@ The final achievable label granularity remains pending reference quality. *(Niha
 
 **Transition Handling:** Explicit, Final Margin Pending Pilot *(Geçiş Yönetimi: Açık, Nihai Marj Pilot Bekliyor)*
 
-**Provisional Minimum Coverage:** Three Independent Usable Sessions Per Retained Class *(Geçici Minimum Kapsam: Korunan Sınıf Başına Üç Bağımsız Kullanılabilir Oturum)*
+**Provisional Minimum Coverage:** Three Independent Usable Sessions for Each Frozen Trained Class *(Geçici Minimum Kapsam: Her Frozen Trained Class İçin Üç Independent Usable Session)*
 
 **Exact Final Session Count:** Pending Pilot Quality and Schedule Review *(Kesin Nihai Oturum Sayısı: Pilot Kalitesi ve Takvim İncelemesi Bekleniyor)*
 

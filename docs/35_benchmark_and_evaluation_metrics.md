@@ -56,7 +56,7 @@ Configuration D is the primary full-system candidate. *(Configuration D temel fu
 
 Configuration B estimates the value of improved heading handling. *(Configuration B geliştirilmiş heading yönetiminin değerini tahmin eder.)*
 
-Configuration C estimates the value of ARCore relative tracking when combined with PDR. *(Configuration C PDR ile birleştirildiğinde ARCore relative tracking'in değerini tahmin eder.)*
+Configuration C estimates the value of validated ARCore relative tracking by adding it to Configuration A while preserving Configuration A's baseline heading, deterministic step detector, and baseline step-length policy. *(Configuration C, Configuration A'nın baseline heading, deterministic step detector ve baseline step-length policy'sini korurken validated ARCore relative tracking'i Configuration A'ya ekleyerek katkısını ölçer.)*
 
 ---
 
@@ -253,9 +253,11 @@ Median error is less affected by a small number of extreme error spikes than mea
 
 ---
 
-# 32. Primary NAVGUARD Improvement Metric (Temel NAVGUARD İyileştirme Metriği)
+# 32. Primary NAVGUARD Research Metric (Temel NAVGUARD Araştırma Metriği)
 
-Matched-session median position error will be one of the primary metrics used for the main NAVGUARD-versus-baseline conclusion. *(Matched-session median position error temel NAVGUARD-versus-baseline sonucu için kullanılan temel metriklerden biri olacaktır.)*
+The single project-level primary research metric is aggregated matched-session median horizontal position error for Configuration D versus Configuration A. *(Tek project-level primary research metric Configuration D ile Configuration A için aggregated matched-session median horizontal position error'dır.)*
+
+Mean error, RMSE, P95 error, final pre-correction error, drift per time, and drift per distance remain required secondary or diagnostic position metrics. *(Mean error, RMSE, P95 error, final pre-correction error, drift per time ve drift per distance gerekli secondary veya diagnostic position metric'leri olarak kalır.)*
 
 ---
 
@@ -1508,10 +1510,10 @@ Let:
 
 ```text
 M_A =
-aggregate matched-session median error for Configuration A
+aggregated matched-session median horizontal position error for Configuration A
 
 M_D =
-aggregate matched-session median error for Configuration D
+aggregated matched-session median horizontal position error for Configuration D
 ```
 
 Then:
@@ -1525,9 +1527,9 @@ M_A
 
 ---
 
-# 186. Primary Navigation Target (Temel Navigasyon Hedefi)
+# 186. Predeclared Primary Research Target (Önceden Belirlenmiş Primary Research Hedefi)
 
-The provisional project target is at least 20% reduction in matched-session median position error for Configuration D compared with Configuration A. *(Geçici proje hedefi Configuration D'nin Configuration A'ya göre matched-session median position error değerinde en az %20 azalma sağlamasıdır.)*
+The predeclared target is frozen as at least a `20%` reduction in aggregated matched-session median horizontal position error for Configuration D relative to Configuration A. It is not a measured result or a success guarantee. *(Predeclared target Configuration D için Configuration A'ya göre aggregated matched-session median horizontal position error'da en az `%20` reduction olarak frozen'dır. Bu değer measured result veya başarı garantisi değildir.)*
 
 ```text
 ImprovementPercent ≥ 20%
@@ -1537,7 +1539,7 @@ ImprovementPercent ≥ 20%
 
 # 187. Target Is Frozen Before Final Results (Hedef Final Sonuçlardan Önce Sabitlenir)
 
-The target may only be revised before final benchmark inspection and only with a documented reason. *(Hedef yalnızca final benchmark incelemesi öncesinde ve dokümante edilmiş nedenle revize edilebilir.)*
+The predeclared primary research target is frozen before final benchmark collection and must not be revised in response to measured benchmark results. *(Predeclared primary research target final benchmark collection öncesinde frozen'dır ve measured benchmark result'larına yanıt olarak revised edilmemelidir.)*
 
 ---
 
@@ -2139,7 +2141,7 @@ MET-CMP-005   Overall aggregation
 
 # 264. Benchmark Acceptance Metric Set (Benchmark Kabul Metrik Seti)
 
-A final valid benchmark must provide at least the primary position metrics, final error, drift normalization, Configuration A-D comparison, Ground Truth Firewall integrity state, and enough supporting subsystem metrics to interpret the result. *(Final geçerli benchmark en az temel position metrics'i, final error'ı, drift normalization'ı, Configuration A-D comparison'ı, Ground Truth Firewall integrity state'i ve sonucu yorumlamak için yeterli supporting subsystem metric'i sağlamalıdır.)*
+A final valid benchmark must provide the project-level primary research metric, the required secondary or diagnostic position metrics, the Configuration A–D comparison, the Ground Truth Firewall integrity state, and enough supporting subsystem metrics to interpret the result. *(Final valid benchmark project-level primary research metric'i, gerekli secondary veya diagnostic position metric'lerini, Configuration A–D comparison'ını, Ground Truth Firewall integrity state'ini ve sonucu yorumlamak için yeterli supporting subsystem metric'i sağlamalıdır.)*
 
 ---
 
@@ -2184,7 +2186,7 @@ NAVGUARD will prefer an unavailable metric over a fabricated metric. *(NAVGUARD 
 
 # 269. Primary Success Decision (Temel Başarı Kararı)
 
-NAVGUARD meets the provisional primary navigation goal if the frozen final matched-session benchmark shows at least a 20% reduction in aggregated median position error for Configuration D relative to Configuration A. *(Frozen final matched-session benchmark Configuration D için Configuration A'ya göre aggregated median position error değerinde en az %20 azalma gösterirse NAVGUARD geçici temel navigasyon hedefini karşılar.)*
+NAVGUARD meets the predeclared primary research target if the frozen final matched-session benchmark shows at least a `20%` reduction in aggregated matched-session median horizontal position error for Configuration D relative to Configuration A. This statement defines the decision rule and does not report a measured result. *(Frozen final matched-session benchmark Configuration D için Configuration A'ya göre aggregated matched-session median horizontal position error'da en az `%20` reduction gösterirse NAVGUARD predeclared primary research target'ı karşılar. Bu ifade decision rule'u tanımlar ve measured result raporlamaz.)*
 
 ---
 
@@ -2541,7 +2543,7 @@ Configurations A-D will be evaluated with the same metric pipeline. *(Configurat
 
 # 317. Primary Success Decisions Frozen by This Document (Bu Dokümanla Sabitlenen Temel Başarı Kararları)
 
-The provisional primary success criterion remains at least a 20% reduction in aggregated matched-session median position error for Configuration D relative to Configuration A. *(Geçici temel success criterion Configuration D için Configuration A'ya göre aggregated matched-session median position error değerinde en az %20 azalma olarak kalmaktadır.)*
+The predeclared primary research target is frozen as at least a `20%` reduction in aggregated matched-session median horizontal position error for Configuration D relative to Configuration A and remains unmeasured until the final benchmark is completed. *(Predeclared primary research target Configuration D için Configuration A'ya göre aggregated matched-session median horizontal position error'da en az `%20` reduction olarak frozen'dır ve final benchmark tamamlanana kadar unmeasured kalır.)*
 
 ---
 
@@ -2603,13 +2605,13 @@ Bootstrap confidence intervals or paired significance tests will only be retaine
 
 # 327. Final Benchmark & Evaluation Metrics Statement (Nihai Benchmark ve Değerlendirme Metrikleri Bildirimi)
 
-**NAVGUARD will evaluate pedestrian GNSS-denied navigation primarily through time-aligned horizontal ENU position error, with mean, median, RMSE, P95, final pre-correction error, drift per minute, and drift per travelled distance forming the central quantitative navigation metric set.** *(NAVGUARD yaya GNSS kesintili navigasyonu temel olarak zaman hizalanmış yatay ENU position error üzerinden değerlendirecek ve mean, median, RMSE, P95, final pre-correction error, drift per minute ve drift per travelled distance merkezi quantitative navigation metric setini oluşturacaktır.)*
+**NAVGUARD will evaluate pedestrian GNSS-denied navigation through time-aligned horizontal ENU position error, with mean, median, RMSE, P95, final pre-correction error, drift per minute, and drift per travelled distance forming the required secondary or diagnostic position-metric set.** *(NAVGUARD yaya GNSS kesintili navigasyonu time-aligned horizontal ENU position error üzerinden değerlendirecek ve mean, median, RMSE, P95, final pre-correction error, drift per minute ve drift per travelled distance gerekli secondary veya diagnostic position-metric set'ini oluşturacaktır.)*
 
 **The final denied-navigation error will always be captured before GNSS relocalization, preventing the recovery correction itself from hiding the position drift accumulated during the outage.** *(Final kesintili navigasyon hatası her zaman GNSS relocalization öncesinde yakalanacak ve recovery correction'ın kendisinin kesinti sırasında biriken position drift'i gizlemesi önlenecektir.)*
 
 **Configurations A, B, C, and D will be scored with the same frozen evaluation pipeline, and matched replay sessions will be preferred so each configuration receives identical raw sensor, ARCore, timing, denial-boundary, and protected-reference evidence.** *(Configuration A, B, C ve D aynı frozen evaluation pipeline ile skorlanacak ve her configuration'ın aynı raw sensor, ARCore, timing, denial-boundary ve protected-reference evidence alması için matched replay session'lar tercih edilecektir.)*
 
-**The primary NAVGUARD success metric will compare aggregated matched-session median position error between Configuration A and Configuration D, with the provisional target remaining at least a 20% reduction for the full NAVGUARD system relative to the PDR-only baseline.** *(Temel NAVGUARD success metriği Configuration A ile Configuration D arasındaki aggregated matched-session median position error değerini karşılaştıracak ve geçici hedef tam NAVGUARD sisteminin PDR-only baseline'a göre en az %20 azalma sağlaması olarak kalacaktır.)*
+**The single project-level primary research metric is aggregated matched-session median horizontal position error for Configuration D versus Configuration A, and the predeclared frozen target is at least a `20%` reduction for Configuration D relative to Configuration A. The target remains unmeasured until the final benchmark is completed.** *(Tek project-level primary research metric Configuration D ile Configuration A için aggregated matched-session median horizontal position error'dır ve predeclared frozen target Configuration D için Configuration A'ya göre en az `%20` reduction'dır. Target final benchmark tamamlanana kadar unmeasured kalır.)*
 
 **Motion Classification will be evaluated primarily with held-out session-wise Macro F1, step detection with controlled step-count percentage error, ARCore with tracking availability and relative-motion diagnostics, recovery with pre-correction error and latency, and AI deployment with on-device median and P95 inference latency.** *(Motion Classification temel olarak held-out session-wise Macro F1 ile, step detection kontrollü step-count percentage error ile, ARCore tracking availability ve relative-motion diagnostics ile, recovery pre-correction error ve latency ile, AI deployment ise on-device median ve P95 inference latency ile değerlendirilecektir.)*
 
@@ -2695,7 +2697,7 @@ Bootstrap confidence intervals or paired significance tests will only be retaine
 
 **Primary Improvement Formula:** Relative Reduction in Matched-Session Median Error *(Temel İyileştirme Formülü: Matched-Session Median Error'da Göreli Azalma)*
 
-**Provisional Primary NAVGUARD Target:** ≥20% Median Error Reduction vs Configuration A *(Geçici Temel NAVGUARD Hedefi: Configuration A'ya Göre ≥%20 Median Error Azalması)*
+**Predeclared Frozen Primary Research Target:** ≥20% Aggregated Matched-Session Median Horizontal Position Error Reduction, Configuration D vs Configuration A *(Önceden Belirlenmiş Frozen Primary Research Hedefi: Configuration D vs Configuration A için ≥%20 Aggregated Matched-Session Median Horizontal Position Error Azalması)*
 
 **Target Relaxation After Final Results:** Forbidden *(Final Sonuçlar Sonrası Hedef Gevşetme: Yasak)*
 

@@ -152,13 +152,24 @@ The Position Estimation & Uncertainty Engine interprets and exposes that state r
 
 ---
 
-# 16. Candidate EKF State (Aday EKF Durumu)
+# 16. Authoritative Minimum EKF State and Optional Extension (Authoritative Minimum EKF State ve İsteğe Bağlı Genişletme)
 
-The current candidate EKF state remains as follows. *(Mevcut aday EKF durumu aşağıdaki gibi kalmaktadır.)*
+The authoritative minimum EKF state is defined by **21 — Sensor Fusion & Extended Kalman Filter** and frozen by **43 — Technical Decisions & Change Log** as follows. *(Authoritative minimum EKF state **21 — Sensor Fusion & Extended Kalman Filter** tarafından tanımlanmış ve **43 — Technical Decisions & Change Log** tarafından aşağıdaki şekilde frozen edilmiştir.)*
 
-```text id="p28_003"
+```text
 x =
 
+[ E ]
+[ N ]
+[ ψ ]
+```
+
+This `[E, N, ψ]` state is the authoritative core for implementation, covariance interpretation, recovery measurement matrices, logging, and benchmark profiles. *(Bu `[E, N, ψ]` durumu implementation, covariance interpretation, recovery measurement matrix'leri, logging ve benchmark profile'ları için authoritative core'dur.)*
+
+The following state may be evaluated only as an optional extension. *(Aşağıdaki durum yalnızca optional extension olarak değerlendirilebilir.)*
+
+```text
+x_optional =
 [ E  ]
 [ N  ]
 [ vE ]
@@ -166,7 +177,11 @@ x =
 [ ψ  ]
 ```
 
-Additional bias or scale states may be added only if experiments justify them. *(Ek bias veya scale durumları yalnızca deneyler gerekçelendirirse eklenebilir.)*
+**Status: OPTIONAL / NON-AUTHORITATIVE / EVIDENCE-GATED EXTENSION.** *(Durum: OPTIONAL / NON-AUTHORITATIVE / EVIDENCE-GATED EXTENSION.)*
+
+The optional velocity-extended state must not replace the frozen core unless a later explicit Technical Decision records sufficient observability, measurable held-out benefit, updated matrices, schema changes, and a separate versioned experiment profile. *(Optional velocity-extended state; yeterli observability, ölçülebilir held-out benefit, güncellenmiş matrix'ler, schema değişiklikleri ve ayrı versioned experiment profile daha sonraki açık bir Technical Decision ile kaydedilmeden frozen core'un yerini alamaz.)*
+
+Additional bias or scale states likewise require explicit evidence and change control. *(Ek bias veya scale durumları da açık evidence ve change control gerektirir.)*
 
 ---
 
@@ -184,7 +199,7 @@ P ∈ R^(n×n)
 
 # 18. Horizontal Position Covariance (Yatay Konum Kovaryansı)
 
-For the candidate state ordering, the horizontal position covariance block will be extracted from the East and North state dimensions. *(Aday durum sırası için yatay konum kovaryans bloğu East ve North durum boyutlarından çıkarılacaktır.)*
+For the authoritative minimum state ordering, the horizontal position covariance block will be extracted from the East and North state dimensions. *(Authoritative minimum durum sırası için yatay konum kovaryans bloğu East ve North durum boyutlarından çıkarılacaktır.)*
 
 ```text id="p28_005"
 P_EN =
@@ -358,21 +373,20 @@ A quality score of `0.8` will not automatically mean an 80% probability that the
 
 ---
 
-# 35. Position Quality State (Konum Kalite Durumu)
+# 35. Canonical Position Quality State (Canonical Konum Kalite Durumu)
 
-The engine will publish a discrete position-quality state in addition to numerical uncertainty. *(Motor sayısal belirsizliğe ek olarak ayrık konum kalite durumu yayınlayacaktır.)*
+The engine will publish the canonical Sensor Quality state defined by **20 — Sensor Confidence & Quality Engine** in addition to numerical uncertainty. *(Motor sayısal uncertainty'ye ek olarak **20 — Sensor Confidence & Quality Engine** tarafından tanımlanan canonical Sensor Quality state'i yayınlayacaktır.)*
 
-```text id="p28_013"
+```text
 UNKNOWN
-HIGH
 GOOD
 USABLE
 DEGRADED
-POOR
-INVALID
+UNRELIABLE
+UNAVAILABLE
 ```
 
-The exact naming may be aligned later with the common Quality Engine. *(Kesin isimlendirme daha sonra ortak Kalite Motoruyla hizalanabilir.)*
+`HIGH`, `POOR`, and `INVALID` are not members of this canonical Quality Engine enum. UI confidence labels and hard position validity are represented through separate explicitly named types. *(`HIGH`, `POOR` ve `INVALID` bu canonical Quality Engine enum'unun üyeleri değildir. UI confidence label'ları ve hard position validity ayrı ve açıkça adlandırılmış type'lar üzerinden temsil edilir.)*
 
 ---
 
@@ -1006,7 +1020,7 @@ DEGRADED
 INVALID
 ```
 
-Quality detail may be stored separately from this coarse validity state. *(Kalite ayrıntısı bu kaba geçerlilik durumundan ayrı saklanabilir.)*
+`PositionValidity` is a separate hard-validity type and does not replace the canonical Sensor Quality enum. Quality detail is stored separately using `UNKNOWN`, `GOOD`, `USABLE`, `DEGRADED`, `UNRELIABLE`, or `UNAVAILABLE`. *(`PositionValidity` ayrı bir hard-validity type'tır ve canonical Sensor Quality enum'unun yerini almaz. Quality detail `UNKNOWN`, `GOOD`, `USABLE`, `DEGRADED`, `UNRELIABLE` veya `UNAVAILABLE` kullanılarak ayrı saklanır.)*
 
 ---
 

@@ -701,7 +701,9 @@ Magnetic heading must be corrected to true north when the selected method requir
 
 **Status: REJECTED as phone heading.** *(Durum: Phone heading olarak REJECTED.)*
 
-GNSS movement bearing is not treated as equivalent to device or body heading. *(GNSS movement bearing device veya body heading ile equivalent olarak treated edilmez.)*
+GNSS movement or travel bearing is not equivalent to physical device or body heading. It may be inspected only as travel-direction diagnostic information in explicitly authorized GNSS Mode or during offline post-session evaluation. *(GNSS movement veya travel bearing fiziksel cihaz veya body heading'e eşdeğer değildir. Yalnızca açıkça authorized GNSS Mode içerisinde veya offline post-session evaluation sırasında travel-direction diagnostic bilgisi olarak incelenebilir.)*
+
+During a denied Evaluation interval, protected GNSS bearing is not authorized to correct or reset heading, enter the estimator, influence heading confidence, influence the navigation Quality Engine, or alter controller behavior. Motion or quality gates cannot override this prohibition. *(Denied Evaluation interval sırasında protected GNSS bearing heading'i düzeltemez veya resetleyemez, estimator'a giremez, heading confidence'i etkileyemez, navigation Quality Engine'i etkileyemez veya controller behavior'ı değiştiremez. Motion veya quality gate'leri bu yasağı geçersiz kılamaz.)*
 
 ---
 
@@ -1431,9 +1433,9 @@ An estimator-consistent absolute-position EKF measurement update should be compa
 
 # 166. TD-142 — Recovery Heading Reset (TD-142 — Recovery Heading Reset)
 
-**Status: REJECTED by default.** *(Durum: Default olarak REJECTED.)*
+**Status: REJECTED.** *(Durum: REJECTED.)*
 
-GNSS movement bearing does not reset phone heading during recovery. *(GNSS movement bearing recovery sırasında phone heading’i reset etmez.)*
+GNSS movement or travel bearing must never correct, reset, replace, or initialize phone/body heading during recovery. No manual action, justification, recovery condition, gate, operator action, controller decision, or non-default path can authorize it as a phone-heading input. *(GNSS movement veya travel bearing recovery sırasında phone/body heading’i hiçbir zaman düzeltemez, resetleyemez, değiştiremez veya initialize edemez. Hiçbir manual action, justification, recovery condition, gate, operator action, controller decision veya non-default path bu bilgiyi phone-heading input olarak authorize edemez.)*
 
 ---
 
@@ -1649,7 +1651,7 @@ Final research uses Configurations A, B, C, and D. *(Final research Configuratio
 
 **Status: FROZEN.** *(Durum: FROZEN.)*
 
-Configuration A is the PDR-only baseline. *(Configuration A PDR-only baseline’dır.)*
+Configuration A is the deterministic PDR baseline. It uses deterministic step detection, mandatory baseline step length, and the baseline true-north heading policy. It does not enable improved/fused heading, Motion AI navigation influence, ARCore relative tracking, full Quality Engine behavior, or fusion corrections. *(Configuration A deterministic PDR baseline'dır. Deterministic step detection, mandatory baseline step length ve baseline true-north heading policy kullanır. Improved/fused heading, Motion AI navigation influence, ARCore relative tracking, full Quality Engine behavior veya fusion correction etkinleştirmez.)*
 
 ---
 
@@ -1657,7 +1659,7 @@ Configuration A is the PDR-only baseline. *(Configuration A PDR-only baseline’
 
 **Status: FROZEN at conceptual level.** *(Durum: Conceptual level’da FROZEN.)*
 
-Configuration B isolates improved heading relative to the baseline. *(Configuration B baseline’a göre improved heading’i isolate eder.)*
+Configuration B is Configuration A plus the improved/fused heading method. All other Configuration A component policies remain unchanged. *(Configuration B, Configuration A'ya improved/fused heading method ekler. Diğer tüm Configuration A component policy'leri değişmeden kalır.)*
 
 ---
 
@@ -1665,7 +1667,7 @@ Configuration B isolates improved heading relative to the baseline. *(Configurat
 
 **Status: FROZEN at conceptual level.** *(Durum: Conceptual level’da FROZEN.)*
 
-Configuration C isolates validated ARCore enhancement relative to PDR. *(Configuration C PDR’a göre validated ARCore enhancement’ı isolate eder.)*
+Configuration C is Configuration A plus validated ARCore relative tracking. It preserves Configuration A's baseline heading, deterministic step detector, and baseline step-length policy; Configuration B's improved/fused heading is not enabled. Any minimum integration mechanism required for formal ARCore use is evidence-gated and must be explicitly documented without silently enabling other Configuration D components. *(Configuration C, Configuration A'ya validated ARCore relative tracking ekler. Configuration A'nın baseline heading, deterministic step detector ve baseline step-length policy'sini korur; Configuration B'nin improved/fused heading'i etkinleştirilmez. Formal ARCore kullanımı için gereken minimum integration mechanism evidence-gated'dir ve diğer Configuration D component'lerini sessizce etkinleştirmeden açıkça dokümante edilmelidir.)*
 
 ---
 
@@ -1673,7 +1675,26 @@ Configuration C isolates validated ARCore enhancement relative to PDR. *(Configu
 
 **Status: FROZEN at conceptual level.** *(Durum: Conceptual level’da FROZEN.)*
 
-Configuration D represents full NAVGUARD. *(Configuration D full NAVGUARD’ı represent eder.)*
+Configuration D represents the full frozen NAVGUARD AI-assisted, quality-aware fusion configuration. Evidence-gated optional components are included only if retained in the frozen final component set before final benchmark collection. *(Configuration D tam frozen NAVGUARD AI-assisted, quality-aware fusion configuration'ını temsil eder. Evidence-gated optional component'ler yalnızca final benchmark collection öncesinde frozen final component set içerisinde tutulmuşsa dahil edilir.)*
+
+| Component | Configuration A | Configuration B | Configuration C | Configuration D |
+|---|---|---|---|---|
+| Deterministic step detection | ON | ON | SAME AS BASELINE | ON |
+| Baseline step length / mandatory fallback | ON | ON | SAME AS BASELINE | ON |
+| Baseline heading | ON | ON — retained as fallback/reference | SAME AS BASELINE | ON — retained as fallback/reference |
+| Improved/fused heading | OFF | ON | OFF | ON |
+| Motion AI navigation influence | OFF | OFF | OFF | ON |
+| ARCore relative tracking | OFF | OFF | EVIDENCE-GATED — ON only after validation | EVIDENCE-GATED — included only if retained before freeze |
+| Full Quality Engine behavior | OFF | OFF | OFF — source-local hard validity checks still apply | ON |
+| EKF/fusion | OFF | OFF | EVIDENCE-GATED — only the minimum mechanism required for validated ARCore integration | ON |
+| GNSS estimator updates during denied interval | NOT AUTHORIZED | NOT AUTHORIZED | NOT AUTHORIZED | NOT AUTHORIZED |
+| Protected GNSS evaluation logging | ON | ON | ON | ON |
+
+Common timestamp, hard-validity, Ground Truth Firewall, logging, and replay-integrity checks apply to every configuration and do not count as full Quality Engine or fusion enablement. *(Ortak timestamp, hard-validity, Ground Truth Firewall, logging ve replay-integrity kontrolleri her configuration'a uygulanır ve full Quality Engine veya fusion enablement olarak sayılmaz.)*
+
+The existing documentation requires a validated true-north reference for ARCore-to-ENU alignment but does not require Configuration B's improved/fused heading. Configuration A's validated baseline heading is therefore preserved in Configuration C. *(Mevcut dokümantasyon ARCore-to-ENU alignment için validated true-north reference gerektirir ancak Configuration B improved/fused heading'ini zorunlu kılmaz. Bu nedenle Configuration A'nın validated baseline heading'i Configuration C'de korunur.)*
+
+If formal Configuration C integration uses the minimum EKF, that dependency must be frozen explicitly and must not enable improved heading, Motion AI, learned step length, or other Configuration D behavior. *(Formal Configuration C integration minimum EKF kullanırsa bu dependency açık biçimde frozen edilmeli ve improved heading, Motion AI, learned step length veya başka Configuration D davranışını etkinleştirmemelidir.)*
 
 ---
 
@@ -1737,7 +1758,7 @@ Post-relocalization position cannot be used as final denied-navigation accuracy.
 
 **Status: FROZEN.** *(Durum: FROZEN.)*
 
-Primary benchmark metrics are calculated per session before cross-session aggregation. *(Primary benchmark metric’leri cross-session aggregation öncesinde session başına calculated edilir.)*
+Required session-level position metrics are calculated per physical session before cross-session aggregation of the single project-level primary research metric. *(Gerekli session-level position metric'leri tek project-level primary research metric'in cross-session aggregation'ı öncesinde her physical session için hesaplanır.)*
 
 ---
 
@@ -2109,19 +2130,19 @@ Future work priorities are selected from measured bottlenecks after Page 41 resu
 
 ---
 
-# 251. TD-227 — Page 03 Documentation Gap (TD-227 — Page 03 Dokümantasyon Boşluğu)
+# 251. TD-227 — Page 03 Documentation Gap Closure (TD-227 — Page 03 Dokümantasyon Boşluğunun Kapatılması)
 
-**Status: OPEN DOCUMENTATION GAP.** *(Durum: OPEN DOCUMENTATION GAP.)*
+**Status: RESOLVED DOCUMENTATION UPDATE.** *(Durum: RESOLVED DOCUMENTATION UPDATE.)*
 
-`03 — Project Scope & Boundaries` remains unwritten and must not be falsely marked as completed. *(`03 — Project Scope & Boundaries` hâlâ yazılmamıştır ve falsely completed olarak işaretlenmemelidir.)*
+`03 — Project Scope & Boundaries` exists in the repository, contains substantive scope and boundary definitions, and is marked completed. The earlier statement that Page 03 was missing or unwritten is stale and is superseded by the current repository state. *(`03 — Project Scope & Boundaries` repository'de mevcuttur, substantive scope ve boundary tanımları içerir ve completed olarak işaretlenmiştir. Page 03'ün missing veya unwritten olduğunu belirten eski ifade stale'dir ve current repository state tarafından supersede edilmiştir.)*
 
 ---
 
-# 252. TD-228 — Page 03 Impact on Architecture (TD-228 — Page 03’ün Architecture Etkisi)
+# 252. TD-228 — Page 03 Architecture Consistency (TD-228 — Page 03 Architecture Tutarlılığı)
 
-**Status: DOCUMENTATION ONLY.** *(Durum: DOCUMENTATION ONLY.)*
+**Status: DOCUMENTATION CONSISTENCY CONFIRMED.** *(Durum: DOCUMENTATION CONSISTENCY CONFIRMED.)*
 
-The missing Page 03 does not invalidate the already frozen technical decisions, but it remains a documentation completeness gap. *(Missing Page 03 already frozen technical decision’ları invalidate etmez ancak documentation completeness gap olarak kalır.)*
+The completed Page 03 is consistent with the current pre-implementation architecture and does not alter or invalidate the frozen technical decisions recorded in this page. *(Tamamlanmış Page 03 current pre-implementation architecture ile tutarlıdır ve bu page'deki frozen technical decision'ları değiştirmez veya geçersiz kılmaz.)*
 
 ---
 
@@ -3400,7 +3421,7 @@ A measurable and traceable system has higher research value than an opaque syste
 
 **Known Quality-State Terminology Inconsistency:** Corrected in This Page *(Known Quality-State Terminology Inconsistency: Bu Page’de Düzeltildi)*
 
-**Page 03 — Project Scope & Boundaries:** Still Unwritten *(Page 03 — Project Scope & Boundaries: Hâlâ Yazılmadı)*
+**Page 03 — Project Scope & Boundaries:** Completed; Earlier Missing/Unwritten Status Resolved *(Page 03 — Project Scope & Boundaries: Tamamlandı; Önceki Missing/Unwritten Status Çözüldü)*
 
 **Implementation-Derived Change Records:** None Yet *(Implementation-Derived Change Record’lar: Henüz Yok)*
 

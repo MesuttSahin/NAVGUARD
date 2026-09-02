@@ -494,13 +494,13 @@ The fusion architecture must explicitly support missing optional measurements. *
 
 ---
 
-# 36. Candidate EKF State (Aday EKF Durumu)
+# 36. Authoritative Core EKF State (Authoritative Core EKF Durumu)
 
-The initial EKF state may include local east position, north position, east velocity, north velocity, and heading. *(İlk EKF durumu yerel doğu konumu, kuzey konumu, doğu hızı, kuzey hızı ve yönü içerebilir.)*
+The authoritative minimum EKF state is `[E, N, ψ]`, containing local East position, local North position, and true-north-referenced heading. *(Authoritative minimum EKF state, yerel Doğu konumu, yerel Kuzey konumu ve true-north-referenced heading içeren `[E, N, ψ]` durumudur.)*
 
-Additional states such as gyroscope bias or step-length scale may be introduced only if experiments justify the added complexity. *(Jiroskop bias veya adım uzunluğu ölçeği gibi ek durumlar yalnızca deneyler ek karmaşıklığı gerekçelendirirse dahil edilebilir.)*
+East and North velocity states may be evaluated only in a separate `[E, N, vE, vN, ψ]` optional, non-authoritative, evidence-gated extension after sufficient observability and measurable held-out navigation benefit are demonstrated. *(Doğu ve Kuzey velocity state'leri yalnızca yeterli observability ve ölçülebilir held-out navigation benefit gösterildikten sonra ayrı bir `[E, N, vE, vN, ψ]` optional, non-authoritative ve evidence-gated extension içerisinde değerlendirilebilir.)*
 
-The final state vector will be frozen in the dedicated sensor fusion document. *(Nihai durum vektörü özel sensör füzyonu dokümanında sabitlenecektir.)*
+Additional states such as gyroscope bias or step-length scale are also excluded from the authoritative minimum core unless an explicit Technical Decision and evidence justify a versioned extension. *(Gyroscope bias veya step-length scale gibi ek state'ler de explicit bir Technical Decision ve evidence versioned bir extension'ı gerekçelendirmedikçe authoritative minimum core dışında tutulur.)*
 
 ---
 
@@ -672,11 +672,13 @@ This profile will add improved heading estimation to the baseline PDR system. *(
 
 ### Configuration C — PDR + ARCore (Yapılandırma C — PDR + ARCore)
 
-This profile will add ARCore relative movement information. *(Bu profil ARCore göreli hareket bilgisini ekleyecektir.)*
+Configuration C adds validated ARCore relative-tracking information to Configuration A while preserving Configuration A's baseline heading, deterministic step-detection, and baseline step-length policies. Configuration B's improved/fused heading is not enabled in Configuration C. *(Configuration C, Configuration A'nın baseline heading, deterministic step-detection ve baseline step-length politikalarını korurken Configuration A'ya doğrulanmış ARCore relative-tracking bilgisi ekler. Configuration B'nin improved/fused heading yöntemi Configuration C'de etkinleştirilmez.)*
 
 ### Configuration D — NAVGUARD AI Fusion (Yapılandırma D — NAVGUARD AI Füzyonu)
 
 This profile will represent the intended full multi-source NAVGUARD architecture. *(Bu profil planlanan tam çok kaynaklı NAVGUARD mimarisini temsil edecektir.)*
+
+Any evidence-gated optional component is included in Configuration D only if it has been retained in the frozen final component set before final benchmark collection. *(Evidence-gated optional bir bileşen Configuration D'ye yalnızca final benchmark collection öncesinde frozen final component set içerisinde tutulmuşsa dahil edilir.)*
 
 ---
 

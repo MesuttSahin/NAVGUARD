@@ -2,7 +2,7 @@
 
 ## 1. Document Purpose (Dokümanın Amacı)
 
-This document defines the target software platform, primary physical test device, verified hardware capabilities, device-dependent assumptions, and hardware constraints of the NAVGUARD project. *(Bu doküman, NAVGUARD projesinin hedef yazılım platformunu, birincil fiziksel test cihazını, doğrulanmış donanım yeteneklerini, cihaza bağlı varsayımları ve donanım kısıtlarını tanımlar.)*
+This document defines the target software platform, primary physical test device, published-specification hardware baseline, device-dependent assumptions, and hardware constraints of the NAVGUARD project; physical runtime capabilities remain pending the Page 06 Device Capability Audit. *(Bu doküman NAVGUARD projesinin hedef yazılım platformunu, birincil fiziksel test cihazını, yayımlanmış teknik özelliklere dayalı donanım baseline'ını, cihaza bağlı varsayımları ve donanım kısıtlarını tanımlar; fiziksel runtime yetenekleri Page 06 Device Capability Audit tamamlanana kadar beklemededir.)*
 
 The purpose of this document is to establish a stable hardware and platform baseline before sensor acquisition, navigation algorithms, artificial intelligence models, and field experiments are designed in detail. *(Bu dokümanın amacı, sensör veri toplama, navigasyon algoritmaları, yapay zekâ modelleri ve saha deneyleri ayrıntılı olarak tasarlanmadan önce kararlı bir donanım ve platform temel referansı oluşturmaktır.)*
 
@@ -60,7 +60,7 @@ Runtime sensor information collected from the physical device will take preceden
 
 ---
 
-# 5. Verified Processor Baseline (Doğrulanmış İşlemci Temel Referansı)
+# 5. Published-Specification Processor Baseline (Yayımlanmış Teknik Özelliklere Dayalı İşlemci Temel Referansı)
 
 The Redmi Note 9 Pro is based on the Qualcomm Snapdragon 720G mobile platform. *(Redmi Note 9 Pro, Qualcomm Snapdragon 720G mobil platformunu temel almaktadır.)*
 
@@ -88,7 +88,7 @@ Performance optimization will focus on maintaining real-time navigation behavior
 
 ---
 
-# 7. Verified Physical Motion Sensors (Doğrulanmış Fiziksel Hareket Sensörleri)
+# 7. Published-Specification Motion-Sensor Baseline (Yayımlanmış Teknik Özelliklere Dayalı Hareket Sensörü Baseline'ı)
 
 The official Redmi Note 9 Pro specification lists an accelerometer. *(Resmî Redmi Note 9 Pro teknik özellikleri bir ivmeölçer bulunduğunu belirtmektedir.)*
 

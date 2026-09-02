@@ -863,11 +863,13 @@ NAVGUARD must therefore not use GNSS bearing as though it directly represented w
 
 # 61. GNSS Bearing at Low Speed (Düşük Hızda GNSS Yönü)
 
-GNSS-derived movement bearing may become unstable when horizontal displacement or speed is small. *(GNSS kaynaklı hareket yönü yatay yer değiştirme veya hız küçük olduğunda kararsız hale gelebilir.)*
+GNSS-derived movement bearing may become unstable when horizontal displacement or speed is small and must never be interpreted as physical device or body heading. *(GNSS kaynaklı hareket yönü yatay yer değiştirme veya hız küçük olduğunda kararsız hale gelebilir ve hiçbir zaman fiziksel cihaz veya vücut heading'i olarak yorumlanmamalıdır.)*
 
-The project will therefore apply a motion or quality condition before using GNSS bearing as a heading-reference measurement. *(Bu nedenle proje GNSS yönünü yön referans ölçümü olarak kullanmadan önce hareket veya kalite koşulu uygulayacaktır.)*
+GNSS bearing may be evaluated only as travel-direction diagnostic information in explicitly authorized GNSS Mode or during offline post-session evaluation. *(GNSS bearing yalnızca açıkça authorized GNSS Mode içerisinde travel-direction diagnostic bilgisi olarak veya offline post-session evaluation sırasında değerlendirilebilir.)*
 
-The exact threshold will be determined experimentally. *(Kesin eşik deneysel olarak belirlenecektir.)*
+During a denied Evaluation interval, protected GNSS bearing is not authorized as a heading correction, heading reset, estimator measurement, navigation-quality input, or controller input. No motion or quality threshold can override this authorization boundary. *(Denied Evaluation interval sırasında protected GNSS bearing heading correction, heading reset, estimator measurement, navigation-quality input veya controller input olarak authorized değildir. Hiçbir motion veya quality threshold bu authorization sınırını geçersiz kılamaz.)*
+
+Any diagnostic threshold for authorized GNSS Mode or offline evaluation remains pending physical evidence. *(Authorized GNSS Mode veya offline evaluation için kullanılabilecek diagnostic eşikler fiziksel kanıtı beklemektedir.)*
 
 ---
 
@@ -1341,14 +1343,17 @@ ARCore world coordinates themselves will not bypass this transformation chain. *
 
 The initial EKF will represent horizontal position in local metric coordinates rather than latitude and longitude. *(İlk EKF yatay konumu enlem ve boylam yerine yerel metrik koordinatlarda temsil edecektir.)*
 
-A candidate state may contain the following components. *(Aday durum aşağıdaki bileşenleri içerebilir.)*
+The authoritative minimum core state is the following. *(Authoritative minimum core state aşağıdaki gibidir.)*
 
 ```
-x =
-[E, N, v_E, v_N, ψ]ᵀ
+x_core = [E, N, ψ]ᵀ
+
+P_core ∈ ℝ³ˣ³
 ```
 
-This keeps state-transition mathematics numerically simple and physically meaningful. *(Bu durum geçiş matematiğini sayısal olarak basit ve fiziksel olarak anlamlı tutar.)*
+`E` and `N` are local metric position states, and `ψ` is heading clockwise from true north. The core implementation, covariance, and recovery matrices must use these three state semantics. *(`E` ve `N` local metric position state'leridir; `ψ` true north'tan clockwise heading'dir. Core implementation, covariance ve recovery matrix'leri bu üç state semantic'ini kullanmalıdır.)*
+
+**Optional / Non-Authoritative / Evidence-Gated Extension:** `[E, N, v_E, v_N, ψ]ᵀ`. This five-state form may be evaluated only as a separate versioned experiment after sufficient observability and measurable held-out benefit are demonstrated; it is not the initial authoritative EKF core. *(Optional / Non-Authoritative / Evidence-Gated Extension: `[E, N, v_E, v_N, ψ]ᵀ`. Bu five-state form yalnızca yeterli observability ve ölçülebilir held-out benefit gösterildikten sonra ayrı versioned experiment olarak değerlendirilebilir; initial authoritative EKF core değildir.)*
 
 ---
 
@@ -1361,7 +1366,7 @@ vᴺ =
 [v_E, v_N, v_U]ᵀ
 ```
 
-The initial pedestrian estimator may use only `v_E` and `v_N`. *(İlk yaya tahmin motoru yalnızca `v_E` ve `v_N` kullanabilir.)*
+`v_E` and `v_N` may be used by supporting motion calculations or by the optional velocity-augmented experiment, but they are not states in the authoritative `[E, N, ψ]` core. *(`v_E` ve `v_N` supporting motion calculation'larında veya optional velocity-augmented experiment içerisinde kullanılabilir ancak authoritative `[E, N, ψ]` core içerisinde state değildir.)*
 
 ---
 

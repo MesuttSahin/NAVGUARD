@@ -222,7 +222,7 @@ Configuration B represents PDR with the frozen improved-heading configuration. *
 
 # 16. Configuration C Definition (Configuration C Tanımı)
 
-Configuration C represents PDR enhanced by validated ARCore relative tracking according to the frozen ablation definition. *(Configuration C frozen ablation definition’a göre validated ARCore relative tracking ile enhanced edilmiş PDR’ı temsil eder.)*
+Configuration C represents Configuration A enhanced by validated ARCore relative tracking while preserving Configuration A's baseline heading, deterministic step detector, and baseline step-length policy. Configuration B's improved/fused heading remains disabled. Any unavoidable ARCore integration dependency must be recorded explicitly in the frozen Configuration C profile. *(Configuration C, Configuration A'nın baseline heading, deterministic step detector ve baseline step-length policy'sini korurken Configuration A'ya validated ARCore relative tracking ekler. Configuration B'nin improved/fused heading'i devre dışı kalır. Kaçınılmaz bir ARCore integration dependency frozen Configuration C profilinde açıkça kaydedilmelidir.)*
 
 ---
 

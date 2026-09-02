@@ -1588,7 +1588,7 @@ Changing success criteria after observing weak results would undermine the resea
 
 # 243. Target Freeze Mitigation (Hedef Freeze Mitigation)
 
-The primary ≥20% median position-error reduction target will only be changed before final benchmark inspection and with documented justification. *(Primary ≥%20 median position-error reduction target yalnızca final benchmark inspection öncesinde ve documented justification ile değiştirilebilecektir.)*
+The predeclared `≥20%` primary research target remains frozen. It must not be changed merely through documented justification, device-audit findings, pilot performance, or development results. Any unavoidable change before final benchmark collection requires an explicit, versioned, superseding Technical Decision under the project's benchmark-governance process. *(Predeclared `≥%20` primary research target frozen olarak kalır. Yalnızca documented justification, device-audit bulguları, pilot performansı veya development sonuçları nedeniyle değiştirilemez. Final benchmark collection öncesinde kaçınılmaz bir değişiklik gerekirse projenin benchmark-governance süreci altında explicit, versioned ve superseding Technical Decision gerekir.)*
 
 ---
 

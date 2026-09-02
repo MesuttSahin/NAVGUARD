@@ -1129,13 +1129,13 @@ The experiment will evaluate false-step suppression, AI `STATIONARY` behavior, c
 
 # 166. Running Scenario (Koşu Senaryosu)
 
-A controlled running segment may be added if running remains part of the final motion-classification scope. *(Running final motion-classification scope içerisinde kalırsa kontrollü running segment eklenebilir.)*
+A controlled running block is part of the required field-evaluation coverage because `RUNNING` belongs to the frozen four-class Motion Classification schema. *(Controlled running block, `RUNNING` frozen four-class Motion Classification schema'nın parçası olduğu için required field-evaluation coverage içerisindedir.)*
 
 ---
 
-# 167. Running Is Not Required for Minimum Navigation Success (Koşu Minimum Navigasyon Başarısı İçin Gerekli Değildir)
+# 167. Running Data Limitation Handling (Koşu Verisi Sınırlama Yönetimi)
 
-If running data proves too limited within the 24-day project, walking performance remains the primary navigation objective. *(Running verisi 24 günlük proje içerisinde fazla sınırlı kalırsa walking performance temel navigasyon hedefi olarak kalacaktır.)*
+If safe and defensible running data cannot be collected within the project, the limitation and affected benchmark/model scope will be reported and the relevant acceptance criteria will remain incomplete. Running-specific navigation influence may remain disabled, but the `RUNNING` trained class must not be silently removed or redefined. *(Safe ve defensible running data proje içerisinde toplanamazsa limitation ve etkilenen benchmark/model scope raporlanacak ve ilgili acceptance criteria incomplete kalacaktır. Running-specific navigation influence disabled kalabilir ancak `RUNNING` trained class sessizce kaldırılamaz veya yeniden tanımlanamaz.)*
 
 ---
 

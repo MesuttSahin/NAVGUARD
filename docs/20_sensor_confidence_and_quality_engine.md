@@ -936,11 +936,13 @@ This state does not violate GNSS-denied experiment integrity. *(Bu durum GNSS ke
 
 ---
 
-# 106. Overall Confidence States (Genel Güven Durumları)
+# 106. UI Confidence Labels (UI Güven Etiketleri)
 
-A user-facing state may initially use the following representation. *(Kullanıcıya yönelik durum başlangıçta aşağıdaki temsili kullanabilir.)*
+A separate UI-only type may initially use the following representation. *(Ayrı bir UI-only type başlangıçta aşağıdaki temsili kullanabilir.)*
 
-```text id="nmrb0x"
+```text
+UiConfidenceLabel
+
 HIGH
 MODERATE
 LOW
@@ -948,7 +950,11 @@ VERY_LOW
 UNAVAILABLE
 ```
 
-The mapping will be calibrated against actual navigation error before being presented as a validated uncertainty indicator. *(Eşleme doğrulanmış belirsizlik göstergesi olarak sunulmadan önce gerçek navigasyon hatasına karşı kalibre edilecektir.)*
+`UiConfidenceLabel` is not the canonical Sensor Quality enum and must be derived through an explicit, versioned mapping from quality and uncertainty information. *(UiConfidenceLabel canonical Sensor Quality enum değildir ve quality ile uncertainty bilgisinden explicit, versioned bir mapping üzerinden türetilmelidir.)*
+
+The canonical internal Sensor Quality enum remains `UNKNOWN`, `GOOD`, `USABLE`, `DEGRADED`, `UNRELIABLE`, and `UNAVAILABLE`. *(Canonical internal Sensor Quality enum `UNKNOWN`, `GOOD`, `USABLE`, `DEGRADED`, `UNRELIABLE` ve `UNAVAILABLE` olarak kalır.)*
+
+The UI mapping must be calibrated against actual navigation error before being presented as a validated uncertainty indicator. *(UI mapping doğrulanmış uncertainty indicator olarak sunulmadan önce actual navigation error'a karşı kalibre edilmelidir.)*
 
 ---
 
