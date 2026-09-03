@@ -281,9 +281,9 @@ Every major implementation decision will be documented before or during implemen
 
 ## 13. Project Status (Proje Durumu)
 
-**Current Phase:** Pre-Implementation *(Mevcut Aşama: Implementation Öncesi)*
+**Current Phase:** Flutter Android Bootstrap Completed; Navigation Subsystems Not Started *(Mevcut Aşama: Flutter Android Bootstrap Tamamlandı; Navigasyon Alt Sistemleri Başlamadı)*
 
-**Development Status:** Not Started *(Geliştirme Durumu: Başlanmadı)*
+**Development Status:** Bootstrap Implemented and Tested; Navigation Subsystems Not Implemented *(Geliştirme Durumu: Bootstrap Uygulandı ve Test Edildi; Navigasyon Alt Sistemleri Uygulanmadı)*
 
 **Documentation Status:** Technical Documentation Baseline Completed *(Dokümantasyon Durumu: Teknik Dokümantasyon Baseline'ı Tamamlandı)*
 
@@ -297,9 +297,9 @@ Every major implementation decision will be documented before or during implemen
 
 ## 14. Current Milestone (Mevcut Kilometre Taşı)
 
-The technical documentation baseline is complete. The current milestone is Development Environment Validation followed by the Xiaomi Redmi Note 9 Pro Physical Device Capability Audit. *(Teknik dokümantasyon baseline'ı tamamlanmıştır. Mevcut kilometre taşı Development Environment Validation ve ardından Xiaomi Redmi Note 9 Pro Physical Device Capability Audit'tir.)*
+The technical documentation baseline and development-environment validation are complete. The Flutter Android bootstrap has passed analysis, tests, debug APK build verification, and a physical run on the Xiaomi Redmi Note 9 Pro. *(Teknik dokümantasyon baseline'ı ve geliştirme ortamı doğrulaması tamamlanmıştır. Flutter Android bootstrap; analiz, test, debug APK build doğrulaması ve Xiaomi Redmi Note 9 Pro üzerinde fiziksel çalıştırma kontrollerini geçmiştir.)*
 
-Application implementation remains not started. Navigation-subsystem implementation will begin only after the development environment and physical device capabilities required by the corresponding architecture have been validated. *(Uygulama geliştirme henüz başlamamıştır. Navigasyon alt sistemi geliştirmesi yalnızca geliştirme ortamı ve ilgili mimarinin gerektirdiği fiziksel cihaz yetenekleri doğrulandıktan sonra başlayacaktır.)*
+Physical verification remains partial. SensorManager, GNSS, and ARCore runtime diagnostics and the PDR, Motion AI, Quality Engine, and EKF subsystems have not been implemented; the final benchmark has not been run. *(Fiziksel doğrulama kısmi durumdadır. SensorManager, GNSS ve ARCore runtime tanıları ile PDR, Motion AI, Quality Engine ve EKF alt sistemleri uygulanmamıştır; nihai benchmark çalıştırılmamıştır.)*
 
 ---
 

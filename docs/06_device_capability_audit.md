@@ -1283,9 +1283,9 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 # 59. Current Document Status (Mevcut Doküman Durumu)
 
-**Document Status:** Protocol Completed — Execution Pending *(Doküman Durumu: Protokol Tamamlandı — Uygulama Bekleniyor)*
+**Document Status:** Protocol Completed — Partial Execution *(Doküman Durumu: Protokol Tamamlandı — Kısmi Uygulama)*
 
-**Physical Device Audit Status:** Not Started *(Fiziksel Cihaz Denetim Durumu: Başlanmadı)*
+**Physical Device Audit Status:** Partial — Static Capability Review and Flutter Bootstrap Run Completed; Runtime Sensor/GNSS/ARCore Diagnostics Pending *(Fiziksel Cihaz Denetim Durumu: Kısmi — Statik Yetenek İncelemesi ve Flutter Bootstrap Çalıştırması Tamamlandı; Runtime Sensör/GNSS/ARCore Tanıları Bekleniyor)*
 
 **Device Baseline Status:** Not Frozen *(Cihaz Temel Referans Durumu: Sabitlenmedi)*
 
