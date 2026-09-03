@@ -281,9 +281,9 @@ Every major implementation decision will be documented before or during implemen
 
 ## 13. Project Status (Proje Durumu)
 
-**Current Phase:** Flutter Android Bootstrap Completed; Navigation Subsystems Not Started *(Mevcut Aşama: Flutter Android Bootstrap Tamamlandı; Navigasyon Alt Sistemleri Başlamadı)*
+**Current Phase:** Stage 2A SensorManager Runtime Capability Inventory Completed; Continuous Sensor Diagnostics Pending; Navigation Subsystems Not Started *(Mevcut Aşama: Stage 2A SensorManager Çalışma Zamanı Yetenek Envanteri Tamamlandı; Sürekli Sensör Tanıları Bekliyor; Navigasyon Alt Sistemleri Başlamadı)*
 
-**Development Status:** Bootstrap Implemented and Tested; Navigation Subsystems Not Implemented *(Geliştirme Durumu: Bootstrap Uygulandı ve Test Edildi; Navigasyon Alt Sistemleri Uygulanmadı)*
+**Development Status:** Flutter Android Bootstrap and Stage 2A SensorManager Capability Inventory Implemented, Tested, and Physically Verified; Continuous Sensor Acquisition and Navigation Subsystems Not Implemented *(Geliştirme Durumu: Flutter Android Bootstrap ve Stage 2A SensorManager Yetenek Envanteri Uygulandı, Test Edildi ve Fiziksel Olarak Doğrulandı; Sürekli Sensör Verisi Alımı ve Navigasyon Alt Sistemleri Uygulanmadı)*
 
 **Documentation Status:** Technical Documentation Baseline Completed *(Dokümantasyon Durumu: Teknik Dokümantasyon Baseline'ı Tamamlandı)*
 
@@ -297,9 +297,9 @@ Every major implementation decision will be documented before or during implemen
 
 ## 14. Current Milestone (Mevcut Kilometre Taşı)
 
-The technical documentation baseline and development-environment validation are complete. The Flutter Android bootstrap has passed analysis, tests, debug APK build verification, and a physical run on the Xiaomi Redmi Note 9 Pro. *(Teknik dokümantasyon baseline'ı ve geliştirme ortamı doğrulaması tamamlanmıştır. Flutter Android bootstrap; analiz, test, debug APK build doğrulaması ve Xiaomi Redmi Note 9 Pro üzerinde fiziksel çalıştırma kontrollerini geçmiştir.)*
+The technical documentation baseline and development-environment validation are complete. The Flutter Android bootstrap and Stage 2A SensorManager runtime capability inventory have passed analysis, tests, debug APK build verification, and a physical run on the Xiaomi Redmi Note 9 Pro. The verified Stage 2A runtime snapshot returned 14 requested records: 13 default sensors available and one unavailable; the `TYPE_PRESSURE` default sensor was unavailable in that snapshot. *(Teknik dokümantasyon baseline'ı ve geliştirme ortamı doğrulaması tamamlanmıştır. Flutter Android bootstrap ve Stage 2A SensorManager çalışma zamanı yetenek envanteri; analiz, test, debug APK build doğrulaması ve Xiaomi Redmi Note 9 Pro üzerinde fiziksel çalıştırma kontrollerini geçmiştir. Doğrulanan Stage 2A çalışma zamanı snapshot'ı 14 istenen kayıt döndürmüştür: 13 varsayılan sensör kullanılabilir ve biri kullanılamaz durumdadır; `TYPE_PRESSURE` varsayılan sensörü bu snapshot'ta kullanılamıyordu.)*
 
-Physical verification remains partial. SensorManager, GNSS, and ARCore runtime diagnostics and the PDR, Motion AI, Quality Engine, and EKF subsystems have not been implemented; the final benchmark has not been run. *(Fiziksel doğrulama kısmi durumdadır. SensorManager, GNSS ve ARCore runtime tanıları ile PDR, Motion AI, Quality Engine ve EKF alt sistemleri uygulanmamıştır; nihai benchmark çalıştırılmamıştır.)*
+Physical verification remains partial. Continuous `SensorEvent` acquisition, delivered sampling rates, and timestamp behavior have not been verified; GNSS and ARCore runtime diagnostics are pending; the PDR, Motion AI, Quality Engine, and EKF / Sensor Fusion subsystems are not implemented; and the final benchmark has not been run. *(Fiziksel doğrulama kısmi durumdadır. Sürekli `SensorEvent` verisi alımı, sağlanan örnekleme hızları ve zaman damgası davranışı doğrulanmamıştır; GNSS ve ARCore çalışma zamanı tanıları beklemektedir; PDR, Motion AI, Quality Engine ve EKF / Sensör Füzyonu alt sistemleri uygulanmamıştır ve nihai benchmark çalıştırılmamıştır.)*
 
 ---
 

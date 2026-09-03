@@ -4,13 +4,13 @@
 
 ### Current State
 
-**Project Phase:** Flutter Android Bootstrap Completed — Navigation Subsystems Not Started
+**Project Phase:** Stage 2A SensorManager Runtime Capability Inventory Completed — Continuous Sensor Diagnostics Pending
 
-**Repository Status:** Flutter Android Bootstrap Staged — First Implementation Commit Pending
+**Repository Status:** Stage 2A Implementation and Documentation Changes Unstaged — Commit Pending
 
 **Technical Documentation:** Baseline Completed
 
-**Application Development:** Started — Flutter Android Bootstrap Only
+**Application Development:** Started — Bootstrap + SensorManager Capability Inventory
 
 **Experimental Evaluation:** Not Started
 
@@ -18,7 +18,7 @@
 
 ### Current Milestone
 
-Bootstrap status synchronization and commit-gate validation before the first implementation commit.
+Stage 2A documentation synchronization and final combined commit-readiness validation before controlled staging.
 
 ---
 
@@ -33,40 +33,47 @@ Bootstrap status synchronization and commit-gate validation before the first imp
 * Flutter Android bootstrap implemented and tested.
 * Debug APK identity and minimum SDK verified.
 * Bootstrap application installed, run, and interactively checked on the Xiaomi Redmi Note 9 Pro.
+* Stage 2A native SensorManager runtime capability inventory implemented.
+* Flutter–Kotlin MethodChannel physically verified.
+* Fourteen deterministic requested sensor records returned on the tested Xiaomi Redmi Note 9 Pro.
+* The verified Stage 2A runtime snapshot contained 13 available default sensor records and one unavailable record; the `TYPE_PRESSURE` default sensor was unavailable in that snapshot.
+* Stage 2A analysis, tests, debug build, and physical-run verification passed.
 
 ---
 
 ### In Progress
 
-* Bootstrap status synchronization and first implementation commit preparation.
+* Stage 2A documentation synchronization and final combined commit-readiness validation.
 
 ---
 
 ### Next
 
-* Complete bootstrap status synchronization and the final commit-gate audit.
-* Commit the verified Flutter Android bootstrap.
-* Implement and execute runtime device-capability diagnostics before navigation-subsystem implementation.
+* Complete Stage 2A documentation synchronization and commit-readiness validation.
+* Commit the verified Stage 2A implementation.
+* Continue physical runtime diagnostics for live `SensorEvent` delivery, timing, and delivered rates before PDR implementation.
 
 ---
 
 ### Implementation Status
 
-| Component                         | Status                                  |
-| --------------------------------- | --------------------------------------- |
-| Development Environment           | Completed                               |
-| Android / Flutter Project         | Implemented — Bootstrap Only            |
-| Device Capability Verification    | Partial — Static Checks + Bootstrap Run |
-| SensorManager Runtime Diagnostics | Not Implemented                         |
-| GNSS Runtime Integration          | Not Implemented                         |
-| ARCore Runtime Integration        | Not Implemented                         |
-| PDR                               | Not Implemented                         |
-| Motion AI                         | Not Implemented                         |
-| Quality Engine                    | Not Implemented                         |
-| EKF / Sensor Fusion               | Not Implemented                         |
-| Testing                           | Bootstrap Scope Passed                  |
-| Field Experiments                 | Not Started                             |
-| Final Benchmark / Evaluation      | Not Run                                 |
+| Component                                   | Status                                                            |
+| ------------------------------------------- | ----------------------------------------------------------------- |
+| Development Environment                     | Completed                                                         |
+| Android / Flutter Project                   | Implemented — Bootstrap                                           |
+| Device Capability Verification              | Partial — Static Checks + Bootstrap Run + Runtime Sensor Metadata |
+| SensorManager Capability Inventory          | Implemented and Physically Verified                               |
+| Continuous Sensor Acquisition               | Not Implemented                                                   |
+| Actual Sensor Rate / Timestamp Verification | Not Verified                                                      |
+| GNSS Runtime Integration                    | Not Implemented                                                   |
+| ARCore Runtime Integration                  | Not Implemented                                                   |
+| PDR                                         | Not Implemented                                                   |
+| Motion AI                                   | Not Implemented                                                   |
+| Quality Engine                              | Not Implemented                                                   |
+| EKF / Sensor Fusion                         | Not Implemented                                                   |
+| Testing                                     | Bootstrap + Stage 2A Scope Passed                                 |
+| Field Experiments                           | Not Started                                                       |
+| Final Benchmark / Evaluation                | Not Run                                                           |
 
 ---
 
@@ -98,9 +105,9 @@ Raw experimental data, precise location logs, credentials, secrets, and other se
 
 ### Current Development Rule
 
-Flutter Android bootstrap implementation and bootstrap-scope verification are complete.
+Flutter Android bootstrap and Stage 2A SensorManager runtime capability inventory implementation and scope verification are complete.
 
-Navigation-subsystem implementation has not started. SensorManager, GNSS, and ARCore runtime diagnostics must be implemented and verified before their results can authorize subsequent subsystem decisions.
+The inventory verifies one-shot runtime default-sensor availability and metadata; it does not verify continuous `SensorEvent` delivery, actual delivered rates, timestamp behavior, or sensor performance. Navigation-subsystem implementation has not started. Continuous sensor diagnostics and GNSS and ARCore runtime diagnostics must be implemented and verified before their results can authorize subsequent subsystem decisions.
 
 ---
 
@@ -116,13 +123,13 @@ Navigation-subsystem implementation has not started. SensorManager, GNSS, and AR
 
 ### Mevcut Durum
 
-**Proje Aşaması:** Flutter Android Bootstrap Tamamlandı — Navigasyon Alt Sistemleri Başlamadı
+**Proje Aşaması:** Stage 2A SensorManager Çalışma Zamanı Yetenek Envanteri Tamamlandı — Sürekli Sensör Tanıları Bekliyor
 
-**Repository Durumu:** Flutter Android Bootstrap Staged — İlk Uygulama Commit'i Bekleniyor
+**Repository Durumu:** Stage 2A Uygulama ve Dokümantasyon Değişiklikleri Unstaged — Commit Bekleniyor
 
 **Teknik Dokümantasyon:** Baseline Tamamlandı
 
-**Uygulama Geliştirme:** Başladı — Yalnızca Flutter Android Bootstrap
+**Uygulama Geliştirme:** Başladı — Bootstrap + SensorManager Yetenek Envanteri
 
 **Deneysel Değerlendirme:** Başlamadı
 
@@ -130,7 +137,7 @@ Navigation-subsystem implementation has not started. SensorManager, GNSS, and AR
 
 ### Mevcut Kilometre Taşı
 
-İlk uygulama commit'i öncesinde bootstrap durum senkronizasyonu ve commit-gate doğrulaması.
+Kontrollü staging öncesinde Stage 2A dokümantasyon senkronizasyonu ve nihai birleşik commit-readiness doğrulaması.
 
 ---
 
@@ -145,40 +152,47 @@ Navigation-subsystem implementation has not started. SensorManager, GNSS, and AR
 * Flutter Android bootstrap uygulandı ve test edildi.
 * Debug APK kimliği ve minimum SDK değeri doğrulandı.
 * Bootstrap uygulaması Xiaomi Redmi Note 9 Pro üzerine kuruldu, çalıştırıldı ve etkileşimli olarak kontrol edildi.
+* Stage 2A native SensorManager çalışma zamanı yetenek envanteri uygulandı.
+* Flutter–Kotlin MethodChannel fiziksel olarak doğrulandı.
+* Test edilen Xiaomi Redmi Note 9 Pro üzerinde deterministik 14 istenen sensör kaydı döndürüldü.
+* Doğrulanan Stage 2A çalışma zamanı snapshot'ında 13 kullanılabilir varsayılan sensör kaydı ve bir kullanılamayan kayıt vardı; `TYPE_PRESSURE` varsayılan sensörü bu snapshot'ta kullanılamıyordu.
+* Stage 2A analiz, test, debug build ve fiziksel çalıştırma doğrulamaları geçti.
 
 ---
 
 ### Devam Edenler
 
-* Bootstrap durum senkronizasyonu ve ilk uygulama commit'i hazırlığı.
+* Stage 2A dokümantasyon senkronizasyonu ve nihai birleşik commit-readiness doğrulaması.
 
 ---
 
 ### Sonraki Adımlar
 
-* Bootstrap durum senkronizasyonunu ve nihai commit-gate audit'ini tamamla.
-* Doğrulanmış Flutter Android bootstrap'ı commit et.
-* Navigasyon alt sistemi geliştirmesinden önce runtime cihaz-yetenek tanılarını uygula ve çalıştır.
+* Stage 2A dokümantasyon senkronizasyonunu ve commit-readiness doğrulamasını tamamla.
+* Doğrulanmış Stage 2A uygulamasını commit et.
+* PDR uygulamasından önce canlı `SensorEvent` iletimi, zamanlama ve sağlanan hızlar için fiziksel çalışma zamanı tanılarına devam et.
 
 ---
 
 ### Uygulama Durumu
 
-| Bileşen                            | Durum                                      |
-| ---------------------------------- | ------------------------------------------ |
-| Geliştirme Ortamı                  | Tamamlandı                                 |
-| Android / Flutter Projesi          | Uygulandı — Yalnızca Bootstrap             |
-| Cihaz Yetenek Doğrulaması          | Kısmi — Statik Kontroller + Bootstrap Run  |
-| SensorManager Runtime Tanıları     | Uygulanmadı                                |
-| GNSS Runtime Entegrasyonu          | Uygulanmadı                                |
-| ARCore Runtime Entegrasyonu        | Uygulanmadı                                |
-| PDR                                | Uygulanmadı                                |
-| Motion AI                          | Uygulanmadı                                |
-| Quality Engine                     | Uygulanmadı                                |
-| EKF / Sensör Füzyonu               | Uygulanmadı                                |
-| Test                               | Bootstrap Kapsamı Geçti                    |
-| Saha Deneyleri                     | Başlamadı                                  |
-| Nihai Benchmark / Değerlendirme    | Çalıştırılmadı                             |
+| Bileşen                                     | Durum                                                             |
+| ------------------------------------------- | ----------------------------------------------------------------- |
+| Geliştirme Ortamı                           | Tamamlandı                                                        |
+| Android / Flutter Projesi                   | Uygulandı — Bootstrap                                             |
+| Cihaz Yetenek Doğrulaması                   | Kısmi — Statik Kontroller + Bootstrap Run + Runtime Sensör Metadata |
+| SensorManager Yetenek Envanteri             | Uygulandı ve Fiziksel Olarak Doğrulandı                           |
+| Sürekli Sensör Verisi Alımı                 | Uygulanmadı                                                       |
+| Gerçek Sensör Hızı / Zaman Damgası Doğrulaması | Doğrulanmadı                                                   |
+| GNSS Runtime Entegrasyonu                   | Uygulanmadı                                                       |
+| ARCore Runtime Entegrasyonu                 | Uygulanmadı                                                       |
+| PDR                                         | Uygulanmadı                                                       |
+| Motion AI                                   | Uygulanmadı                                                       |
+| Quality Engine                              | Uygulanmadı                                                       |
+| EKF / Sensör Füzyonu                        | Uygulanmadı                                                       |
+| Test                                        | Bootstrap + Stage 2A Kapsamı Geçti                               |
+| Saha Deneyleri                              | Başlamadı                                                         |
+| Nihai Benchmark / Değerlendirme             | Çalıştırılmadı                                                    |
 
 ---
 
@@ -210,9 +224,9 @@ Ham deneysel veriler, hassas konum logları, kimlik bilgileri, gizli bilgiler ve
 
 ### Mevcut Geliştirme Kuralı
 
-Flutter Android bootstrap uygulaması ve bootstrap-scope doğrulaması tamamlandı.
+Flutter Android bootstrap ve Stage 2A SensorManager çalışma zamanı yetenek envanteri uygulaması ile kapsam doğrulaması tamamlandı.
 
-Navigasyon alt sistemi geliştirmesi başlamadı. SensorManager, GNSS ve ARCore runtime tanıları uygulanmalı ve sonuçları sonraki alt sistem kararlarını yetkilendirmeden önce doğrulanmalıdır.
+Envanter, tek seferlik çalışma zamanı varsayılan sensör kullanılabilirliğini ve metadata'yı doğrular; sürekli `SensorEvent` iletimini, gerçekten sağlanan hızları, zaman damgası davranışını veya sensör performansını doğrulamaz. Navigasyon alt sistemi geliştirmesi başlamadı. Sürekli sensör tanıları ile GNSS ve ARCore çalışma zamanı tanıları uygulanmalı ve sonuçları sonraki alt sistem kararlarını yetkilendirmeden önce doğrulanmalıdır.
 
 ---
 

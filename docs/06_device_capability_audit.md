@@ -1285,7 +1285,11 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 **Document Status:** Protocol Completed — Partial Execution *(Doküman Durumu: Protokol Tamamlandı — Kısmi Uygulama)*
 
-**Physical Device Audit Status:** Partial — Static Capability Review and Flutter Bootstrap Run Completed; Runtime Sensor/GNSS/ARCore Diagnostics Pending *(Fiziksel Cihaz Denetim Durumu: Kısmi — Statik Yetenek İncelemesi ve Flutter Bootstrap Çalıştırması Tamamlandı; Runtime Sensör/GNSS/ARCore Tanıları Bekleniyor)*
+**Physical Device Audit Status:** Partial — Static Capability Review, Flutter Bootstrap Run, and Stage 2A Runtime SensorManager Capability Inventory Completed; Continuous Sensor Event/Timing, GNSS, and ARCore Diagnostics Pending *(Fiziksel Cihaz Denetim Durumu: Kısmi — Statik Yetenek İncelemesi, Flutter Bootstrap Çalıştırması ve Stage 2A Runtime SensorManager Yetenek Envanteri Tamamlandı; Sürekli Sensör Olayı/Zamanlama, GNSS ve ARCore Tanıları Bekleniyor)*
+
+**Stage 2A Runtime Sensor Inventory Evidence:** Verified on the tested Xiaomi Redmi Note 9 Pro — SensorManager runtime access, the Flutter–Kotlin diagnostic bridge, and runtime Sensor metadata retrieval were verified; the inventory returned 14 requested records: 13 default sensors available and one unavailable; the `TYPE_PRESSURE` default sensor had `available=false` in this snapshot. This is capability metadata evidence, not sensor-performance evidence. *(Stage 2A Çalışma Zamanı Sensör Envanteri Kanıtı: Test edilen Xiaomi Redmi Note 9 Pro üzerinde doğrulandı — SensorManager çalışma zamanı erişimi, Flutter–Kotlin tanı köprüsü ve çalışma zamanı Sensor metadata alımı doğrulandı; envanter 14 istenen kayıt döndürdü: 13 varsayılan sensör kullanılabilir ve biri kullanılamaz durumdaydı; `TYPE_PRESSURE` varsayılan sensörü bu snapshot'ta `available=false` değerine sahipti. Bu, yetenek metadata kanıtıdır; sensör performansı kanıtı değildir.)*
+
+**Outstanding Sensor Evidence:** Actual delivered sampling rates, `SensorEvent.timestamp` behavior and monotonicity, event gap/drop behavior, and accuracy callback behavior remain pending. *(Bekleyen Sensör Kanıtı: Gerçekte sağlanan örnekleme hızları, `SensorEvent.timestamp` davranışı ve monotonluğu, olay boşluğu/kayıp davranışı ve doğruluk callback davranışı beklemektedir.)*
 
 **Device Baseline Status:** Not Frozen *(Cihaz Temel Referans Durumu: Sabitlenmedi)*
 

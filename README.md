@@ -6,7 +6,7 @@ NAVGUARD is an Android-based research and development project focused on pedestr
 
 ## Status
 
-The technical documentation baseline and development-environment validation are complete. The Flutter Android bootstrap has been implemented, tested within bootstrap scope, and physically run on the Xiaomi Redmi Note 9 Pro. Physical verification remains partial; runtime sensor, GNSS, ARCore, PDR, Motion AI, Quality Engine, and EKF implementation has not started, and the final benchmark has not been run.
+The technical documentation baseline and development-environment validation are complete. The Flutter Android bootstrap and Stage 2A SensorManager runtime capability inventory have been implemented, tested, and physically verified on the Xiaomi Redmi Note 9 Pro. Physical verification remains partial: continuous sensor acquisition, delivered sampling rates, and `SensorEvent.timestamp` behavior have not been verified. GNSS and ARCore runtime diagnostics and the PDR, Motion AI, Quality Engine, and EKF / Sensor Fusion subsystems are not implemented, and the final benchmark has not been run.
 
 ## Platform
 
