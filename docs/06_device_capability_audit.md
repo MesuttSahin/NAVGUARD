@@ -591,43 +591,145 @@ A manually counted walking sequence will be used for comparison. *(Karşılaşt�
 
 # 23. GNSS Availability Audit — AUD-GNSS-001 (GNSS Kullanılabilirlik Denetimi — AUD-GNSS-001)
 
-The physical device must successfully acquire geographic position information outdoors under ordinary open-sky conditions. *(Fiziksel cihaz normal açık gökyüzü koşullarında dış mekânda coğrafi konum bilgisini başarıyla elde etmelidir.)*
+### English
 
-### Values to Record (Kaydedilecek Değerler)
+The physical device must successfully acquire geographic position information outdoors under ordinary open-sky conditions.
 
-- **Latitude** *(Enlem)*
-- **Longitude** *(Boylam)*
-- **Reported Accuracy** *(Bildirilen Doğruluk)*
-- **Altitude if available** *(Mevcutsa Yükseklik)*
-- **Speed if available** *(Mevcutsa Hız)*
-- **Bearing if available** *(Mevcutsa Yön Açısı)*
-- **Timestamp** *(Zaman Damgası)*
+#### Values Planned for the Full Audit
 
-### Acceptance Criterion (Kabul Kriteri)
+- **Latitude**
+- **Longitude**
+- **Reported accuracy**
+- **Altitude if available**
+- **Speed if available**
+- **Bearing if available**
+- **Timestamp**
 
-The device must provide stable enough outdoor location updates to establish the initial NAVGUARD position and record an evaluation reference trajectory. *(Cihaz başlangıç NAVGUARD konumunu oluşturmak ve değerlendirme referans rotasını kaydetmek için yeterince kararlı dış mekân konum güncellemeleri sağlamalıdır.)*
+#### Acceptance Criterion
 
-**Criticality:** CRITICAL *(Kritiklik: KRİTİK)*
+The device must provide stable enough outdoor location updates to establish the initial NAVGUARD position and record an evaluation reference trajectory.
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+#### Stage 2C Runtime Timing Evidence
+
+Stage 2C implemented a foreground-only native diagnostic using Android `LocationManager`, `GPS_PROVIDER`, `LocationListener`, `GnssStatus.Callback`, and a dedicated `HandlerThread`. Formal sessions requested `requestedMinTimeMs = 1,000 ms` and `requestedMinDistanceM = 0 m`, allowed up to 120 seconds for the first received GPS location callback, and then collected for 60 seconds. The timing authority was `Location.elapsedRealtimeNanos` in the `elapsed_realtime_nanoseconds` domain; callback arrival wall-clock time was not used.
+
+The foreground precise-location flow and preflight were physically verified on the Xiaomi Redmi Note 9 Pro running Android 12 / API 31. Before permission, coarse and fine location were not granted and `canRunFormalDiagnostic` was false while `GPS_PROVIDER` and location services were available and enabled. After the user granted precise foreground location, both coarse and fine permission states were granted and `canRunFormalDiagnostic` became true. Stage 2C added only `ACCESS_COARSE_LOCATION` and `ACCESS_FINE_LOCATION`; it added no background-location permission, location foreground service, Flutter dependency, or Android dependency.
+
+Three formal physical sessions completed normally. Location-update and `GnssStatus` registrations succeeded in 3/3 sessions, all three timing summaries were valid, all three `Location.elapsedRealtimeNanos` sequences were monotonic, and 0/3 sessions contained mock locations.
+
+| Session | Location Events | Duration | Delta Count | Min Interval | Mean Interval | Median Interval | P95 Interval | Max Interval | Mean Fix Rate |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 61 | 60 s | 60 | 1.000 s | 1.000 s | 1.000 s | 1.000 s | 1.000 s | 1.000 Hz |
+| 2 | 61 | 60 s | 60 | 1.000 s | 1.000 s | 1.000 s | 1.000 s | 1.000 s | 1.000 Hz |
+| 3 | 59 | 59 s | 58 | 1.000 s | ~1.017241379 s | 1.000 s | 1.000 s | 2.000 s | ~0.9830508475 Hz |
+
+Across the tested device, configuration, and sessions, the median and p95 callback intervals were 1.000 s in 3/3 sessions, the observed timestamp-derived mean rate range was approximately 0.983–1.000 Hz, and the observed maximum consecutive interval range was 1–2 seconds. The 2.000 s interval in Session 3 did not invalidate the monotonic, mock-free timing summary. No GNSS large-gap threshold is defined, and the provisional Stage 2B sensor threshold of 60 ms does not apply to GNSS. A requested 1,000 ms minimum interval does not guarantee fixed 1 Hz delivery.
+
+`GnssStatus.Callback.onFirstFix()` reported 36.609 s, 20.646 s, and 9.716 s in Sessions 1–3. These TTFF values are GNSS-engine metadata and are not the measured wait to the first received GPS `Location` callback.
+
+| Session | Reported Accuracy Min | Reported Accuracy Median | Reported Accuracy Max | Last / Max Satellites | Last / Max Used in Fix |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | ~18.376 m | ~53.901 m | ~78.789 m | 30 / 30 | 7 / 16 |
+| 2 | ~15.508 m | ~30.388 m | ~93.592 m | 30 / 31 | 6 / 9 |
+| 3 | ~24.265 m | ~59.101 m | ~256.142 m | 31 / 31 | 4 / 8 |
+
+Horizontal-accuracy metadata was present for every recorded callback. These values are only Android-reported metadata; they do not measure coordinate error or validate GNSS accuracy, quality, bias, calibration, or EKF covariance. Satellite values are sanitized aggregate status counts only and do not validate satellite geometry, signal quality, position accuracy, or navigation performance.
+
+The Stage 2C diagnostic does not read, store, return, log, or persist latitude, longitude, altitude, speed, bearing, raw `Location` objects, raw GPS tracks, NMEA, `GnssMeasurements`, pseudorange, carrier phase, navigation messages, satellite identities, or per-satellite C/N0. Therefore Stage 2C physically verifies GPS runtime callback availability and characterizes timing only; GNSS coordinate accuracy, initial-position/anchor behavior, reference-trajectory recording, denial control, and Ground Truth Firewall enforcement remain unimplemented or unverified.
+
+**Criticality:** CRITICAL
+
+**Actual Status:** PARTIAL — Stage 2C runtime callback, permission/preflight, timing, TTFF, sanitized satellite-count, and reported horizontal-accuracy metadata scopes were physically verified. The full coordinate-based AUD-GNSS-001 acceptance criterion remains pending, and GNSS coordinate accuracy is not validated.
+
+### Türkçe
+
+Fiziksel cihaz, normal açık gökyüzü koşullarında dış mekânda coğrafi konum bilgisini başarıyla elde etmelidir.
+
+#### Tam Denetim İçin Planlanan Değerler
+
+- **Enlem**
+- **Boylam**
+- **Bildirilen doğruluk**
+- **Mevcutsa yükseklik**
+- **Mevcutsa hız**
+- **Mevcutsa yön açısı**
+- **Zaman damgası**
+
+#### Kabul Kriteri
+
+Cihaz, başlangıç NAVGUARD konumunu oluşturmak ve değerlendirme referans rotasını kaydetmek için yeterince kararlı dış mekân konum güncellemeleri sağlamalıdır.
+
+#### Stage 2C Çalışma Zamanı Zamanlama Kanıtı
+
+Stage 2C; Android `LocationManager`, yalnızca `GPS_PROVIDER`, `LocationListener`, `GnssStatus.Callback` ve özel bir `HandlerThread` kullanan yalnızca ön planda çalışan native bir tanı uyguladı. Resmî oturumlarda `requestedMinTimeMs = 1.000 ms` ve `requestedMinDistanceM = 0 m` talep edildi, ilk alınan GPS konum callback'i için en fazla 120 saniye beklendi ve ardından 60 saniye veri toplandı. Zamanlama otoritesi `elapsed_realtime_nanoseconds` alanındaki `Location.elapsedRealtimeNanos` idi; callback varış duvar saati kullanılmadı.
+
+Hassas ön plan konum izni akışı ve preflight, Android 12 / API 31 çalıştıran Xiaomi Redmi Note 9 Pro üzerinde fiziksel olarak doğrulandı. İzin öncesinde coarse ve fine konum izinleri verilmemişti ve `GPS_PROVIDER` ile konum hizmetleri kullanılabilir ve etkin durumdayken `canRunFormalDiagnostic` false idi. Kullanıcı hassas ön plan konum izni verdikten sonra coarse ve fine izin durumlarının ikisi de granted oldu ve `canRunFormalDiagnostic` true değerine geçti. Stage 2C yalnızca `ACCESS_COARSE_LOCATION` ve `ACCESS_FINE_LOCATION` izinlerini ekledi; arka plan konum izni, konum foreground service'i, Flutter dependency'si veya Android dependency'si eklemedi.
+
+Üç resmî fiziksel oturum normal biçimde tamamlandı. Konum güncellemesi ve `GnssStatus` kayıtları 3/3 oturumda başarılı oldu, üç zamanlama özetinin tamamı geçerliydi, üç `Location.elapsedRealtimeNanos` dizisinin tamamı monotonikti ve 0/3 oturum mock konum içerdi.
+
+| Oturum | Konum Olayı | Süre | Delta Sayısı | Min Aralık | Ortalama Aralık | Medyan Aralık | P95 Aralık | Maks Aralık | Ortalama Fix Hızı |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 61 | 60 s | 60 | 1,000 s | 1,000 s | 1,000 s | 1,000 s | 1,000 s | 1,000 Hz |
+| 2 | 61 | 60 s | 60 | 1,000 s | 1,000 s | 1,000 s | 1,000 s | 1,000 s | 1,000 Hz |
+| 3 | 59 | 59 s | 58 | 1,000 s | ~1,017241379 s | 1,000 s | 1,000 s | 2,000 s | ~0,9830508475 Hz |
+
+Test edilen cihaz, yapılandırma ve oturumlarda medyan ve p95 callback aralıkları 3/3 oturumda 1,000 s, gözlenen timestamp-türevli ortalama hız aralığı yaklaşık 0,983–1,000 Hz ve gözlenen maksimum ardışık aralık 1–2 saniye oldu. Oturum 3'teki 2,000 s aralık, monotonik ve mock içermeyen zamanlama özetini geçersiz kılmadı. Tanımlı bir GNSS büyük-boşluk eşiği yoktur ve Stage 2B'nin geçici 60 ms sensör eşiği GNSS için uygulanmaz. Talep edilen 1.000 ms minimum aralık, sabit 1 Hz teslimi garanti etmez.
+
+`GnssStatus.Callback.onFirstFix()` Oturum 1–3 için 36,609 s, 20,646 s ve 9,716 s bildirdi. Bu TTFF değerleri GNSS motoru metadata'sıdır ve ilk alınan GPS `Location` callback'ine kadar ölçülen bekleme süresi değildir.
+
+| Oturum | Bildirilen Doğruluk Min | Bildirilen Doğruluk Medyan | Bildirilen Doğruluk Maks | Son / Maks Uydu | Son / Maks Fix'te Kullanılan |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | ~18,376 m | ~53,901 m | ~78,789 m | 30 / 30 | 7 / 16 |
+| 2 | ~15,508 m | ~30,388 m | ~93,592 m | 30 / 31 | 6 / 9 |
+| 3 | ~24,265 m | ~59,101 m | ~256,142 m | 31 / 31 | 4 / 8 |
+
+Yatay doğruluk metadata'sı kaydedilen her callback'te mevcuttu. Bu değerler yalnızca Android tarafından bildirilen metadata'dır; koordinat hatasını ölçmez ve GNSS doğruluğunu, kaliteyi, bias'ı, kalibrasyonu veya EKF kovaryansını doğrulamaz. Uydu değerleri yalnızca sanitize edilmiş birleşik durum sayılarıdır; uydu geometrisini, sinyal kalitesini, konum doğruluğunu veya navigasyon performansını doğrulamaz.
+
+Stage 2C tanısı; enlem, boylam, yükseklik, hız, yön açısı, ham `Location` nesneleri, ham GPS rotaları, NMEA, `GnssMeasurements`, pseudorange, carrier phase, navigasyon mesajları, uydu kimlikleri veya uydu başına C/N0 değerlerini okumaz, saklamaz, döndürmez, loglamaz ya da kalıcılaştırmaz. Bu nedenle Stage 2C yalnızca GPS çalışma zamanı callback kullanılabilirliğini fiziksel olarak doğrular ve zamanlamayı karakterize eder; GNSS koordinat doğruluğu, başlangıç konumu/anchor davranışı, referans rota kaydı, kesinti denetimi ve Ground Truth Firewall uygulaması uygulanmamış veya doğrulanmamış durumda kalır.
+
+**Kritiklik:** KRİTİK
+
+**Gerçek Durum:** KISMİ — Stage 2C çalışma zamanı callback, izin/preflight, zamanlama, TTFF, sanitize edilmiş uydu sayısı ve bildirilen yatay doğruluk metadata kapsamları fiziksel olarak doğrulandı. Koordinat tabanlı tam AUD-GNSS-001 kabul kriteri beklemektedir ve GNSS koordinat doğruluğu doğrulanmamıştır.
 
 ---
 
 # 24. GNSS Cold and Warm Acquisition Observation — AUD-GNSS-002 (GNSS Soğuk ve Sıcak Konum Alma Gözlemi — AUD-GNSS-002)
 
-GNSS acquisition behavior will be observed after application startup under ordinary outdoor conditions. *(GNSS konum alma davranışı normal dış mekân koşullarında uygulama başlangıcından sonra gözlemlenecektir.)*
+### English
 
-The objective is to characterize practical initialization delay rather than certify receiver performance. *(Amaç alıcı performansını sertifikalandırmak yerine pratik başlatma gecikmesini karakterize etmektir.)*
+GNSS acquisition behavior will be observed after application startup under ordinary outdoor conditions. The objective is to characterize practical initialization delay rather than certify receiver performance.
 
-### Record (Kayıt)
+#### Full Audit Record
 
-| Metric (Metrik) | Result (Sonuç) |
+| Metric | Result |
 | --- | --- |
-| Time to First Acceptable Location *(İlk Kabul Edilebilir Konuma Kadar Süre)* | TBD |
-| Initial Reported Accuracy *(İlk Bildirilen Doğruluk)* | TBD |
-| Stable Accuracy After 30 Seconds *(30 Saniye Sonraki Kararlı Doğruluk)* | TBD |
+| Time to First Acceptable Location | TBD |
+| Initial Reported Accuracy | TBD |
+| Stable Accuracy After 30 Seconds | TBD |
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+#### Stage 2C TTFF Metadata
+
+`GnssStatus.Callback.onFirstFix()` was observed in all three formal Stage 2C sessions, reporting 36.609 s, 20.646 s, and 9.716 s. These values are session-specific GNSS-engine TTFF metadata. They are not a universal TTFF result and are not the wait time to the first received GPS `Location` callback. Stage 2C did not run a separately controlled cold-versus-warm acquisition protocol or validate a first acceptable coordinate.
+
+**Actual Status:** PARTIAL — `GnssStatus.onFirstFix` metadata was observed, but the planned cold/warm acquisition comparison and first-acceptable-location assessment remain pending.
+
+### Türkçe
+
+GNSS konum alma davranışı normal dış mekân koşullarında uygulama başlangıcından sonra gözlemlenecektir. Amaç alıcı performansını sertifikalandırmak yerine pratik başlatma gecikmesini karakterize etmektir.
+
+#### Tam Denetim Kaydı
+
+| Metrik | Sonuç |
+| --- | --- |
+| İlk Kabul Edilebilir Konuma Kadar Süre | TBD |
+| İlk Bildirilen Doğruluk | TBD |
+| 30 Saniye Sonraki Kararlı Doğruluk | TBD |
+
+#### Stage 2C TTFF Metadata'sı
+
+`GnssStatus.Callback.onFirstFix()` üç resmî Stage 2C oturumunun tamamında gözlendi ve 36,609 s, 20,646 s ve 9,716 s değerlerini bildirdi. Bu değerler oturuma özgü GNSS motoru TTFF metadata'sıdır. Evrensel bir TTFF sonucu değildir ve ilk alınan GPS `Location` callback'ine kadar geçen bekleme süresi değildir. Stage 2C ayrı kontrollü bir soğuk-sıcak konum alma protokolü çalıştırmadı veya ilk kabul edilebilir koordinatı doğrulamadı.
+
+**Gerçek Durum:** KISMİ — `GnssStatus.onFirstFix` metadata'sı gözlendi ancak planlanan soğuk/sıcak konum alma karşılaştırması ve ilk kabul edilebilir konum değerlendirmesi beklemektedir.
 
 ---
 
@@ -961,24 +1063,47 @@ Verify the behavior when the application temporarily loses foreground focus. *(U
 
 # 40. Permission Audit — AUD-PERM-001 (İzin Denetimi — AUD-PERM-001)
 
-NAVGUARD must identify and test every runtime permission required by the selected Android configuration. *(NAVGUARD, seçilen Android yapılandırması tarafından gerekli her çalışma zamanı iznini belirlemeli ve test etmelidir.)*
+### English
 
-### Planned Permission Categories (Planlanan İzin Kategorileri)
+NAVGUARD must identify and test every runtime permission required by the selected Android configuration.
 
-| Permission Area (İzin Alanı) | Required Use (Gerekli Kullanım) | Result (Sonuç) |
+#### Planned Permission Categories
+
+| Permission Area | Required Use | Result |
 | --- | --- | --- |
-| Precise Location *(Hassas Konum)* | GNSS initialization and ground truth *(GNSS başlatma ve gerçek referans)* | TBD |
-| Camera *(Kamera)* | ARCore tracking *(ARCore takibi)* | TBD |
-| Local File / Media Access if Required *(Gerekirse Yerel Dosya / Medya Erişimi)* | Session export *(Oturum dışa aktarma)* | TBD |
-| High Sampling Rate Sensors *(Yüksek Örnekleme Hızlı Sensörler)* | Not expected to be required *(Gerekmesi beklenmiyor)* | TBD |
+| Precise Location | GNSS initialization and ground truth | VERIFIED — STAGE 2C DIAGNOSTIC SCOPE |
+| Camera | ARCore tracking | TBD |
+| Local File / Media Access if Required | Session export | TBD |
+| High Sampling Rate Sensors | Not expected to be required | TBD |
 
-### Acceptance Criterion (Kabul Kriteri)
+Stage 2C added exactly `ACCESS_COARSE_LOCATION` and `ACCESS_FINE_LOCATION`. Both permissions were requested together through the native foreground permission flow. The pre-permission state was not granted and not formal-ready; after the user selected precise location, coarse and fine states were granted and the preflight became formal-ready. Approximate-only access is not treated as sufficient for the formal GNSS diagnostic. No `ACCESS_BACKGROUND_LOCATION` permission or location foreground service was added.
 
-The application must handle granted and denied permission states without crashing. *(Uygulama izin verilmiş ve reddedilmiş durumları çökmeden yönetmelidir.)*
+#### Acceptance Criterion
 
-The user must receive a clear explanation when a required permission prevents a selected navigation configuration from running. *(Zorunlu bir izin seçilen navigasyon yapılandırmasının çalışmasını engellediğinde kullanıcı açık bir açıklama almalıdır.)*
+The application must handle granted and denied permission states without crashing. The user must receive a clear explanation when a required permission prevents a selected navigation configuration from running.
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+**Actual Status:** PARTIAL — Foreground location permission and precise-versus-approximate readiness are verified for the Stage 2C GNSS diagnostic. Camera and any later configuration-specific permission audits remain pending.
+
+### Türkçe
+
+NAVGUARD, seçilen Android yapılandırması tarafından gerekli her çalışma zamanı iznini belirlemeli ve test etmelidir.
+
+#### Planlanan İzin Kategorileri
+
+| İzin Alanı | Gerekli Kullanım | Sonuç |
+| --- | --- | --- |
+| Hassas Konum | GNSS başlatma ve gerçek referans | DOĞRULANDI — STAGE 2C TANI KAPSAMI |
+| Kamera | ARCore takibi | TBD |
+| Gerekirse Yerel Dosya / Medya Erişimi | Oturum dışa aktarma | TBD |
+| Yüksek Örnekleme Hızlı Sensörler | Gerekmesi beklenmiyor | TBD |
+
+Stage 2C tam olarak `ACCESS_COARSE_LOCATION` ve `ACCESS_FINE_LOCATION` izinlerini ekledi. Her iki izin native ön plan izin akışında birlikte talep edildi. İzin öncesi durum not-granted ve resmî tanı için hazır değilken kullanıcı hassas konumu seçtikten sonra coarse ve fine durumları granted oldu ve preflight resmî tanı için hazır duruma geçti. Yalnızca yaklaşık konum erişimi resmî GNSS tanısı için yeterli kabul edilmez. `ACCESS_BACKGROUND_LOCATION` izni veya konum foreground service'i eklenmedi.
+
+#### Kabul Kriteri
+
+Uygulama izin verilmiş ve reddedilmiş durumları çökmeden yönetmelidir. Zorunlu bir izin seçilen navigasyon yapılandırmasının çalışmasını engellediğinde kullanıcı açık bir açıklama almalıdır.
+
+**Gerçek Durum:** KISMİ — Ön plan konum izni ve hassas-yaklaşık konum hazır olma ayrımı Stage 2C GNSS tanısı için doğrulandı. Kamera ve daha sonraki yapılandırmalara özgü izin denetimleri beklemektedir.
 
 ---
 
@@ -1031,19 +1156,33 @@ The resulting session must be suitable for offline analysis without manual repai
 
 # 43. Clock Alignment Audit — AUD-TIME-002 (Saat Hizalama Denetimi — AUD-TIME-002)
 
-NAVGUARD must define how sensor timestamps, GNSS timestamps, ARCore timestamps, and application event timestamps are represented and aligned. *(NAVGUARD; sensör zaman damgalarının, GNSS zaman damgalarının, ARCore zaman damgalarının ve uygulama olay zaman damgalarının nasıl temsil edilip hizalanacağını tanımlamalıdır.)*
+### English
 
-The audit must identify whether each source uses a monotonic elapsed-time reference, wall-clock time, or another timestamp basis. *(Denetim her kaynağın monotonik geçen zaman referansı, duvar saati zamanı veya başka bir zaman damgası temeli kullanıp kullanmadığını belirlemelidir.)*
+NAVGUARD must define how sensor timestamps, GNSS timestamps, ARCore timestamps, and application event timestamps are represented and aligned. The audit must identify whether each source uses a monotonic elapsed-time reference, wall-clock time, or another timestamp basis. A documented conversion or synchronization strategy must exist before multi-source fusion begins.
 
-A documented conversion or synchronization strategy must exist before multi-source fusion begins. *(Çok kaynaklı füzyon başlamadan önce dokümante edilmiş bir dönüşüm veya senkronizasyon stratejisi mevcut olmalıdır.)*
+Stage 2B established `SensorEvent.timestamp` as the sensor timing authority for its tested scope. Stage 2C established `Location.elapsedRealtimeNanos` in the `elapsed_realtime_nanoseconds` domain as the GNSS diagnostic timing authority and physically characterized monotonic sequences in 3/3 sessions. Stage 2C did not use `Location.time`, wall-clock time, or callback arrival time for interval or rate calculations.
 
-### Acceptance Criterion (Kabul Kriteri)
+#### Acceptance Criterion
 
-Measurements from different sources must be alignable onto a common experiment timeline. *(Farklı kaynaklardan gelen ölçümler ortak bir deney zaman çizelgesine hizalanabilir olmalıdır.)*
+Measurements from different sources must be alignable onto a common experiment timeline.
 
-**Criticality:** CRITICAL *(Kritiklik: KRİTİK)*
+**Criticality:** CRITICAL
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+**Actual Status:** PARTIAL — Sensor and GNSS monotonic timestamp domains are identified and physically observed for their tested scopes. ARCore and application-event domains plus the documented multi-source conversion/alignment strategy remain pending; fusion is not implemented.
+
+### Türkçe
+
+NAVGUARD; sensör zaman damgalarının, GNSS zaman damgalarının, ARCore zaman damgalarının ve uygulama olay zaman damgalarının nasıl temsil edilip hizalanacağını tanımlamalıdır. Denetim her kaynağın monotonik geçen zaman referansı, duvar saati zamanı veya başka bir zaman damgası temeli kullanıp kullanmadığını belirlemelidir. Çok kaynaklı füzyon başlamadan önce dokümante edilmiş bir dönüşüm veya senkronizasyon stratejisi mevcut olmalıdır.
+
+Stage 2B, test edilen kapsamı için `SensorEvent.timestamp` değerini sensör zamanlama otoritesi olarak belirledi. Stage 2C, `elapsed_realtime_nanoseconds` alanındaki `Location.elapsedRealtimeNanos` değerini GNSS tanı zamanlama otoritesi olarak belirledi ve 3/3 oturumda monotonik dizileri fiziksel olarak karakterize etti. Stage 2C aralık veya hız hesaplamalarında `Location.time`, duvar saati ya da callback varış zamanını kullanmadı.
+
+#### Kabul Kriteri
+
+Farklı kaynaklardan gelen ölçümler ortak bir deney zaman çizelgesine hizalanabilir olmalıdır.
+
+**Kritiklik:** KRİTİK
+
+**Gerçek Durum:** KISMİ — Sensör ve GNSS monotonik zaman damgası alanları tanımlı kapsamlarında belirlenmiş ve fiziksel olarak gözlenmiştir. ARCore ve uygulama olayı zaman alanları ile dokümante edilmiş çok-kaynaklı dönüşüm/hizalama stratejisi beklemektedir; füzyon uygulanmamıştır.
 
 ---
 
@@ -1069,6 +1208,18 @@ The screen is intended for engineering validation rather than normal end-user na
 - **Session logging status** *(Oturum kayıt durumu)*
 
 This screen may later become part of a permanent Research or Developer Mode. *(Bu ekran daha sonra kalıcı bir Araştırma veya Geliştirici Modunun parçası olabilir.)*
+
+### Stage 2C Evidence — English
+
+The Flutter runtime-diagnostics screen preserves the Stage 2A sensor inventory and Stage 2B sensor timing controls and adds GNSS preflight, precise foreground permission, and GNSS timing controls. It displays only sanitized JSON summaries and uses dedicated console markers; it does not display coordinates. The timing action is enabled only when the most recently known preflight reports formal readiness, and the shared busy state prevents simultaneous UI-triggered diagnostics.
+
+**Actual Status:** PARTIAL — Sensor inventory, sensor timing, and GNSS timing diagnostic UI scopes are implemented. ARCore, TFLite, storage, and other recommended diagnostic areas remain pending.
+
+### Stage 2C Kanıtı — Türkçe
+
+Flutter çalışma zamanı tanı ekranı Stage 2A sensör envanteri ile Stage 2B sensör zamanlama kontrollerini korur ve GNSS preflight, hassas ön plan konum izni ve GNSS zamanlama kontrollerini ekler. Yalnızca sanitize edilmiş JSON özetleri gösterir ve özel konsol işaretleyicileri kullanır; koordinat göstermez. Zamanlama eylemi yalnızca en son bilinen preflight resmî hazır olma durumu bildirdiğinde etkinleşir ve ortak busy durumu aynı anda birden fazla UI tetiklemeli tanıyı engeller.
+
+**Gerçek Durum:** KISMİ — Sensör envanteri, sensör zamanlaması ve GNSS zamanlama tanı kullanıcı arayüzü kapsamları uygulanmıştır. ARCore, TFLite, depolama ve önerilen diğer tanı alanları beklemektedir.
 
 ---
 
@@ -1122,13 +1273,13 @@ The evidence filename or location should be linked to the corresponding audit it
 | AUD-ACC-002 | Accelerometer Stability *(İvmeölçer Kararlılığı)* | CRITICAL *(KRİTİK)* | TBD |
 | AUD-GYR-002 | Gyroscope Stability *(Jiroskop Kararlılığı)* | CRITICAL *(KRİTİK)* | TBD |
 | AUD-MAG-002 | Magnetometer Usability *(Manyetometre Kullanılabilirliği)* | HIGH *(YÜKSEK)* | TBD |
-| AUD-GNSS-001 | GNSS Availability *(GNSS Kullanılabilirliği)* | CRITICAL *(KRİTİK)* | TBD |
+| AUD-GNSS-001 | GNSS Availability *(GNSS Kullanılabilirliği)* | CRITICAL *(KRİTİK)* | PARTIAL — STAGE 2C TIMING SCOPE |
 | AUD-GNSS-003 | Ground Truth Isolation *(Gerçek Referans İzolasyonu)* | CRITICAL *(KRİTİK)* | TBD |
 | AUD-AR-001 | ARCore Startup *(ARCore Başlatma)* | HIGH *(YÜKSEK)* | TBD |
 | AUD-AR-002 | ARCore Relative Pose *(ARCore Göreli Poz)* | HIGH *(YÜKSEK)* | TBD |
 | AUD-AI-001 | Local TFLite Runtime *(Yerel TFLite Çalışma Zamanı)* | HIGH *(YÜKSEK)* | TBD |
 | AUD-STO-001 | Continuous Logging *(Sürekli Kayıt)* | CRITICAL *(KRİTİK)* | TBD |
-| AUD-TIME-002 | Multi-Source Clock Alignment *(Çok Kaynaklı Saat Hizalama)* | CRITICAL *(KRİTİK)* | TBD |
+| AUD-TIME-002 | Multi-Source Clock Alignment *(Çok Kaynaklı Saat Hizalama)* | CRITICAL *(KRİTİK)* | PARTIAL — SENSOR/GNSS DOMAINS IDENTIFIED |
 | AUD-OFF-001 | Offline Core Runtime *(Çevrimdışı Temel Çalışma)* | HIGH *(YÜKSEK)* | TBD |
 
 ---
@@ -1265,9 +1416,9 @@ File names may change during implementation, but the information represented by 
 - [ ]  **Target architecture gate evaluated.** *(Hedef mimari kapısı değerlendirildi.)*
 - [ ]  **Final device baseline frozen.** *(Nihai cihaz temel referansı sabitlendi.)*
 
-**Stage 2B boundary:** The four-sensor timing evidence does not complete this checklist. GNSS runtime timing, ARCore runtime tracking, the full sensor-audit procedures, and other required device/runtime checks remain pending.
+**Stage 2C boundary:** Stage 2A sensor inventory, Stage 2B four-sensor timing, and Stage 2C GNSS runtime timing are verified for their defined scopes, but they do not complete this checklist. The coordinate-based GNSS availability audit, GNSS ground-truth isolation, ARCore runtime tracking, full sensor-audit procedures, clock-alignment strategy, and other required device/runtime checks remain pending.
 
-**Stage 2B sınırı:** Dört sensörlü zamanlama kanıtı bu kontrol listesini tamamlamaz. GNSS çalışma zamanı zamanlaması, ARCore çalışma zamanı takibi, tam sensör denetimi prosedürleri ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir.
+**Stage 2C sınırı:** Stage 2A sensör envanteri, Stage 2B dört sensörlü zamanlama ve Stage 2C GNSS çalışma zamanı zamanlaması tanımlı kapsamlarında doğrulanmıştır ancak bu kontrol listesini tamamlamaz. Koordinat tabanlı GNSS kullanılabilirlik denetimi, GNSS gerçek referans izolasyonu, ARCore çalışma zamanı takibi, tam sensör denetimi prosedürleri, saat hizalama stratejisi ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir.
 
 ---
 
@@ -1277,7 +1428,7 @@ File names may change during implementation, but the information represented by 
 
 | Area | Result | Notes |
 | --- | --- | --- |
-| Device Environment | PARTIAL | Stage 2B tested on Xiaomi Redmi Note 9 Pro, Android 12 / API 31; full environment audit pending. |
+| Device Environment | PARTIAL | Stage 2B and Stage 2C tested on Xiaomi Redmi Note 9 Pro, Android 12 / API 31; full environment audit pending. |
 | Static Sensor Availability | VERIFIED — STAGE 2A SCOPE | Runtime default-sensor availability and metadata verified; this is not sensor-performance evidence. |
 | Accelerometer | PARTIAL | Stage 2B live delivery/timing verified; signal quality, noise, bias, and calibration pending. |
 | Gyroscope | PARTIAL | Stage 2B live delivery/timing verified; signal quality, noise, bias, and calibration pending. |
@@ -1287,10 +1438,14 @@ File names may change during implementation, but the information represented by 
 | Sensor Timing | PARTIAL | 12/12 tested timestamp sequences were monotonic; 0/12 sessions had a gap above the provisional 60 ms threshold. Full AUD-TIME-001 pending. |
 | Sensor Sampling | PARTIAL | Requested 20,000 µs (~50 Hz nominal) versus timestamp-derived observed rates characterized for the tested configuration; full multi-rate audit pending. |
 | Sensor Signal Quality / Noise | NOT VERIFIED | Stage 2B was a timing characterization test only. |
-| GNSS Runtime Timing | PENDING / NOT IMPLEMENTED | Required before the device baseline can be frozen. |
-| Ground Truth Isolation | TBD | TBD |
-| Raw GNSS | TBD | TBD |
-| ARCore Runtime Tracking | PENDING / NOT IMPLEMENTED | Required before the device baseline can be frozen. |
+| GNSS Foreground Permission / Preflight | VERIFIED — STAGE 2C SCOPE | Precise foreground permission and formal-ready preflight transition physically verified; only coarse and fine foreground permissions added. |
+| GNSS Runtime Timing | VERIFIED — STAGE 2C SCOPE | 3/3 formal sessions valid, monotonic, and mock-free; median/p95 1.000 s in all sessions, observed mean rate ~0.983–1.000 Hz, and one 2.000 s interval. No GNSS gap threshold is defined. |
+| GNSS Coordinate Accuracy | NOT VALIDATED | Android-reported horizontal-accuracy metadata was observed, but coordinate error or GNSS accuracy was not measured. |
+| GNSS Anchor | NOT IMPLEMENTED | Stage 2C diagnostic output is not connected to a navigation estimator. |
+| GNSS Denial Controller / Ground Truth Firewall | NOT IMPLEMENTED | No denial, isolation-enforcement, or recovery path was implemented by Stage 2C. |
+| Ground Truth Isolation | NOT IMPLEMENTED | Coordinate logging and estimator-isolation behavior were not tested. |
+| Raw GNSS | NOT VERIFIED | Stage 2C used sanitized `GnssStatus` counts only; NMEA and raw GNSS measurements were not used or verified. |
+| ARCore Runtime Tracking | PENDING / NOT VERIFIED | Required before the device baseline can be frozen. |
 | Camera | TBD | TBD |
 | TensorFlow Lite | TBD | TBD |
 | Local Storage | TBD | TBD |
@@ -1299,17 +1454,20 @@ File names may change during implementation, but the information represented by 
 | Battery | TBD | TBD |
 | Thermal Behavior | TBD | TBD |
 | PDR | NOT IMPLEMENTED | Production PDR acquisition and navigation pipeline not implemented. |
-| Heading | NOT IMPLEMENTED | Heading correctness was not evaluated by Stage 2B. |
+| Heading | NOT IMPLEMENTED | Heading correctness was not evaluated by Stage 2B or Stage 2C. |
+| Motion AI | NOT IMPLEMENTED | No motion-classification runtime is connected to navigation. |
+| Quality Engine | NOT IMPLEMENTED | Reported GNSS accuracy metadata was not converted into a quality score. |
+| EKF / Sensor Fusion | NOT IMPLEMENTED | No Stage 2C GNSS diagnostic value enters an estimator or fusion update. |
 | Minimum Architecture Gate | TBD | TBD |
 | Target Architecture Gate | TBD | TBD |
 | Device Baseline | NOT FROZEN | Critical runtime audit items remain pending. |
-| Overall Physical Verification | PARTIAL | Stage 2A and Stage 2B scopes verified; full device audit incomplete. |
+| Overall Physical Verification | PARTIAL | Stage 2A, Stage 2B, and Stage 2C diagnostic scopes verified; full device audit incomplete. |
 
 ### Türkçe
 
 | Alan | Sonuç | Notlar |
 | --- | --- | --- |
-| Cihaz Ortamı | KISMİ | Stage 2B, Xiaomi Redmi Note 9 Pro ve Android 12 / API 31 üzerinde test edildi; tam ortam denetimi bekliyor. |
+| Cihaz Ortamı | KISMİ | Stage 2B ve Stage 2C, Xiaomi Redmi Note 9 Pro ve Android 12 / API 31 üzerinde test edildi; tam ortam denetimi bekliyor. |
 | Statik Sensör Kullanılabilirliği | DOĞRULANDI — STAGE 2A KAPSAMI | Çalışma zamanı varsayılan sensör kullanılabilirliği ve metadata doğrulandı; bu sensör performansı kanıtı değildir. |
 | İvmeölçer | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; sinyal kalitesi, gürültü, bias ve kalibrasyon bekliyor. |
 | Jiroskop | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; sinyal kalitesi, gürültü, bias ve kalibrasyon bekliyor. |
@@ -1319,10 +1477,14 @@ File names may change during implementation, but the information represented by 
 | Sensör Zamanlaması | KISMİ | Test edilen 12/12 zaman damgası dizisi monotonikti; 0/12 oturumda geçici 60 ms eşiğinin üzerinde boşluk vardı. Tam AUD-TIME-001 bekliyor. |
 | Sensör Örnekleme | KISMİ | Talep edilen 20.000 µs (~50 Hz nominal) ile timestamp-türevli gözlenen hızlar test edilen yapılandırma için karakterize edildi; tam çoklu hız denetimi bekliyor. |
 | Sensör Sinyal Kalitesi / Gürültü | DOĞRULANMADI | Stage 2B yalnızca zamanlama karakterizasyon testiydi. |
-| GNSS Çalışma Zamanı Zamanlaması | BEKLİYOR / UYGULANMADI | Cihaz baseline'ı sabitlenmeden önce gereklidir. |
-| Gerçek Referans İzolasyonu | TBD | TBD |
-| Ham GNSS | TBD | TBD |
-| ARCore Çalışma Zamanı Takibi | BEKLİYOR / UYGULANMADI | Cihaz baseline'ı sabitlenmeden önce gereklidir. |
+| GNSS Ön Plan İzni / Preflight | DOĞRULANDI — STAGE 2C KAPSAMI | Hassas ön plan izni ve resmî hazır olma preflight geçişi fiziksel olarak doğrulandı; yalnızca coarse ve fine ön plan izinleri eklendi. |
+| GNSS Çalışma Zamanı Zamanlaması | DOĞRULANDI — STAGE 2C KAPSAMI | 3/3 resmî oturum geçerli, monotonik ve mock içermeyen sonuç verdi; medyan/p95 tüm oturumlarda 1,000 s, gözlenen ortalama hız ~0,983–1,000 Hz ve bir adet 2,000 s aralık. Tanımlı GNSS boşluk eşiği yoktur. |
+| GNSS Koordinat Doğruluğu | DOĞRULANMADI | Android tarafından bildirilen yatay doğruluk metadata'sı gözlendi ancak koordinat hatası veya GNSS doğruluğu ölçülmedi. |
+| GNSS Anchor | UYGULANMADI | Stage 2C tanı çıktısı bir navigasyon tahmin motoruna bağlı değildir. |
+| GNSS Kesinti Denetleyicisi / Ground Truth Firewall | UYGULANMADI | Stage 2C tarafından kesinti, izolasyon uygulaması veya recovery yolu uygulanmadı. |
+| Gerçek Referans İzolasyonu | UYGULANMADI | Koordinat kaydı ve tahmin motoru izolasyon davranışı test edilmedi. |
+| Ham GNSS | DOĞRULANMADI | Stage 2C yalnızca sanitize edilmiş `GnssStatus` sayılarını kullandı; NMEA ve ham GNSS ölçümleri kullanılmadı veya doğrulanmadı. |
+| ARCore Çalışma Zamanı Takibi | BEKLİYOR / DOĞRULANMADI | Cihaz baseline'ı sabitlenmeden önce gereklidir. |
 | Kamera | TBD | TBD |
 | TensorFlow Lite | TBD | TBD |
 | Yerel Depolama | TBD | TBD |
@@ -1331,11 +1493,14 @@ File names may change during implementation, but the information represented by 
 | Batarya | TBD | TBD |
 | Termal Davranış | TBD | TBD |
 | PDR | UYGULANMADI | Üretim PDR veri alımı ve navigasyon hattı uygulanmadı. |
-| Heading | UYGULANMADI | Heading doğruluğu Stage 2B tarafından değerlendirilmedi. |
+| Heading | UYGULANMADI | Heading doğruluğu Stage 2B veya Stage 2C tarafından değerlendirilmedi. |
+| Motion AI | UYGULANMADI | Navigasyona bağlı bir hareket sınıflandırma çalışma zamanı yoktur. |
+| Quality Engine | UYGULANMADI | Bildirilen GNSS doğruluk metadata'sı bir kalite skoruna dönüştürülmedi. |
+| EKF / Sensör Füzyonu | UYGULANMADI | Hiçbir Stage 2C GNSS tanı değeri tahmin motoru veya füzyon güncellemesine girmez. |
 | Minimum Mimari Kapısı | TBD | TBD |
 | Hedef Mimari Kapısı | TBD | TBD |
 | Cihaz Baseline'ı | SABİTLENMEDİ | Kritik çalışma zamanı denetim öğeleri bekliyor. |
-| Genel Fiziksel Doğrulama | KISMİ | Stage 2A ve Stage 2B kapsamları doğrulandı; tam cihaz denetimi tamamlanmadı. |
+| Genel Fiziksel Doğrulama | KISMİ | Stage 2A, Stage 2B ve Stage 2C tanı kapsamları doğrulandı; tam cihaz denetimi tamamlanmadı. |
 
 ---
 
@@ -1349,9 +1514,9 @@ File names may change during implementation, but the information represented by 
 
 **Device Model:** Xiaomi Redmi Note 9 Pro *(Cihaz Modeli: Xiaomi Redmi Note 9 Pro)*
 
-**Android Version:** Android 12 / API 31 — Stage 2B tested environment; final baseline pending
+**Android Version:** Android 12 / API 31 — Stage 2B and Stage 2C tested environment; final baseline pending
 
-**Android Sürümü:** Android 12 / API 31 — Stage 2B test ortamı; nihai baseline bekliyor
+**Android Sürümü:** Android 12 / API 31 — Stage 2B ve Stage 2C test ortamı; nihai baseline bekliyor
 
 **Minimum Architecture Gate:** TBD *(Minimum Mimari Kapısı: TBD)*
 
@@ -1389,13 +1554,15 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 **Document Status:** Protocol Completed — Partial Execution
 
-**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A runtime SensorManager capability inventory, and Stage 2B four-sensor live timing characterization are complete for their defined scopes. The full device capability audit is not complete.
+**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A runtime SensorManager capability inventory, Stage 2B four-sensor live timing characterization, and Stage 2C GNSS runtime timing characterization are complete for their defined scopes. The full device capability audit is not complete.
 
 **Stage 2A Runtime Sensor Inventory Evidence:** VERIFIED on the tested Xiaomi Redmi Note 9 Pro. SensorManager runtime access, the Flutter–Kotlin diagnostic bridge, and runtime sensor metadata retrieval were verified. The inventory returned 14 requested records: 13 default sensors available and `TYPE_PRESSURE` unavailable. This is capability metadata evidence, not sensor-performance evidence.
 
 **Stage 2B Live Timing Evidence:** VERIFIED for the tested accelerometer, gyroscope, magnetometer, and rotation-vector configuration. Three 10-second sessions per sensor produced 12/12 valid timing summaries and monotonic `SensorEvent.timestamp` sequences. No session contained a gap above the provisional 60 ms threshold (0/12 sessions with such gaps). Timestamp-derived aggregate mean rates were approximately 52.10 Hz, 51.07 Hz, 50.00 Hz, and 51.10 Hz respectively under the 20,000 µs (~50 Hz requested) configuration. These are scoped observations, not universal fixed rates.
 
-**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, the complete timing/multi-rate procedures, GNSS runtime timing, ARCore runtime tracking, and other required device/runtime checks remain pending. PDR, heading, Motion AI, Quality Engine, and EKF / Sensor Fusion are not implemented.
+**Stage 2C GNSS Runtime Timing Evidence:** VERIFIED for the tested diagnostic scope on the Xiaomi Redmi Note 9 Pro running Android 12 / API 31. The native implementation, static validation, debug build, final source audit, foreground precise-location permission flow, and GNSS preflight passed. Three of three formal `GPS_PROVIDER` sessions completed with valid, monotonic, and mock-free `Location.elapsedRealtimeNanos` summaries. Median and p95 callback intervals were 1.000 s in every session; the observed mean timestamp-derived rate range was approximately 0.983–1.000 Hz, and Session 3 contained one 2.000 s consecutive interval. The requested 1,000 ms minimum interval is not a guaranteed fixed 1 Hz delivery rate, and no GNSS gap threshold is defined. `GnssStatus.onFirstFix`, sanitized satellite counts, and Android-reported horizontal-accuracy metadata were observed; coordinate accuracy was not validated.
+
+**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, complete sensor timing/multi-rate procedures, GNSS coordinate accuracy and anchor behavior, GNSS ground-truth isolation, ARCore runtime tracking, multi-source clock alignment, and other required device/runtime checks remain pending. The GNSS denial controller, Ground Truth Firewall runtime, production PDR acquisition, PDR, heading, Motion AI, Quality Engine, relocalization, and EKF / Sensor Fusion are not implemented. No navigation benchmark or improvement target has been evaluated.
 
 **Device Baseline Status:** NOT FROZEN
 
@@ -1409,13 +1576,15 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 **Doküman Durumu:** Protokol Tamamlandı — Kısmi Uygulama
 
-**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A çalışma zamanı SensorManager yetenek envanteri ve Stage 2B dört sensörlü canlı zamanlama karakterizasyonu tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
+**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A çalışma zamanı SensorManager yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama karakterizasyonu ve Stage 2C GNSS çalışma zamanı zamanlama karakterizasyonu tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
 
 **Stage 2A Çalışma Zamanı Sensör Envanteri Kanıtı:** Test edilen Xiaomi Redmi Note 9 Pro üzerinde DOĞRULANDI. SensorManager çalışma zamanı erişimi, Flutter–Kotlin tanı köprüsü ve çalışma zamanı sensör metadata alımı doğrulandı. Envanter 14 istenen kayıt döndürdü: 13 varsayılan sensör kullanılabilirdi ve `TYPE_PRESSURE` kullanılamıyordu. Bu yetenek metadata kanıtıdır; sensör performansı kanıtı değildir.
 
 **Stage 2B Canlı Zamanlama Kanıtı:** Test edilen ivmeölçer, jiroskop, manyetometre ve dönüş vektörü yapılandırması için DOĞRULANDI. Sensör başına üç adet 10 saniyelik oturum; 12/12 geçerli zamanlama özeti ve monoton `SensorEvent.timestamp` dizisi üretti. 0/12 oturumda geçici 60 ms eşiğinin üzerinde boşluk gözlendi. Timestamp-türevli birleşik ortalama hızlar, 20.000 µs (~50 Hz talep edilen) yapılandırma altında sırasıyla yaklaşık 52,10 Hz, 51,07 Hz, 50,00 Hz ve 51,10 Hz idi. Bunlar evrensel sabit hızlar değil, kapsamı belirli gözlemlerdir.
 
-**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam zamanlama/çoklu hız prosedürleri, GNSS çalışma zamanı zamanlaması, ARCore çalışma zamanı takibi ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. PDR, heading, Motion AI, Quality Engine ve EKF / Sensör Füzyonu uygulanmamıştır.
+**Stage 2C GNSS Çalışma Zamanı Zamanlama Kanıtı:** Android 12 / API 31 çalıştıran test cihazı Xiaomi Redmi Note 9 Pro üzerindeki tanı kapsamı için DOĞRULANDI. Native uygulama, statik doğrulama, debug build, nihai kaynak denetimi, hassas ön plan konum izni akışı ve GNSS preflight geçti. Üç resmî `GPS_PROVIDER` oturumunun 3/3'ü geçerli, monotonik ve mock içermeyen `Location.elapsedRealtimeNanos` özetleriyle tamamlandı. Medyan ve p95 callback aralıkları her oturumda 1,000 s idi; gözlenen timestamp-türevli ortalama hız aralığı yaklaşık 0,983–1,000 Hz oldu ve Oturum 3 ardışık bir 2,000 s aralık içerdi. Talep edilen 1.000 ms minimum aralık garanti edilen sabit 1 Hz teslim hızı değildir ve tanımlı bir GNSS boşluk eşiği yoktur. `GnssStatus.onFirstFix`, sanitize edilmiş uydu sayıları ve Android tarafından bildirilen yatay doğruluk metadata'sı gözlendi; koordinat doğruluğu doğrulanmadı.
+
+**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam sensör zamanlama/çoklu hız prosedürleri, GNSS koordinat doğruluğu ve anchor davranışı, GNSS gerçek referans izolasyonu, ARCore çalışma zamanı takibi, çok-kaynaklı saat hizalama ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. GNSS kesinti denetleyicisi, Ground Truth Firewall runtime, üretim PDR veri alımı, PDR, heading, Motion AI, Quality Engine, relocalization ve EKF / Sensör Füzyonu uygulanmamıştır. Hiçbir navigasyon benchmark'ı veya iyileştirme hedefi değerlendirilmemiştir.
 
 **Cihaz Baseline Durumu:** SABİTLENMEDİ
 
