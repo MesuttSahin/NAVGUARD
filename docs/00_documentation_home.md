@@ -281,25 +281,53 @@ Every major implementation decision will be documented before or during implemen
 
 ## 13. Project Status (Proje Durumu)
 
-**Current Phase:** Stage 2A SensorManager Runtime Capability Inventory Completed; Continuous Sensor Diagnostics Pending; Navigation Subsystems Not Started *(Mevcut Aşama: Stage 2A SensorManager Çalışma Zamanı Yetenek Envanteri Tamamlandı; Sürekli Sensör Tanıları Bekliyor; Navigasyon Alt Sistemleri Başlamadı)*
+### English
 
-**Development Status:** Flutter Android Bootstrap and Stage 2A SensorManager Capability Inventory Implemented, Tested, and Physically Verified; Continuous Sensor Acquisition and Navigation Subsystems Not Implemented *(Geliştirme Durumu: Flutter Android Bootstrap ve Stage 2A SensorManager Yetenek Envanteri Uygulandı, Test Edildi ve Fiziksel Olarak Doğrulandı; Sürekli Sensör Verisi Alımı ve Navigasyon Alt Sistemleri Uygulanmadı)*
+**Current Phase:** Stage 2B Four-Sensor Live Timing Diagnostics Completed; Final Combined Commit-Readiness Audit Pending; Navigation Subsystems Not Started
 
-**Documentation Status:** Technical Documentation Baseline Completed *(Dokümantasyon Durumu: Teknik Dokümantasyon Baseline'ı Tamamlandı)*
+**Development Status:** Flutter Android Bootstrap, Stage 2A SensorManager Capability Inventory, and Stage 2B Live Timing Diagnostics Implemented, Tested, and Physically Verified for Their Defined Scopes; Production Sensor Acquisition and Navigation Subsystems Not Implemented
 
-**Primary Test Device:** Xiaomi Redmi Note 9 Pro *(Birincil Test Cihazı: Xiaomi Redmi Note 9 Pro)*
+**Documentation Status:** Technical Documentation Baseline Completed; Current Status Synchronized Through Stage 2B
 
-**Target Platform:** Android Only *(Hedef Platform: Yalnızca Android)*
+**Primary Test Device:** Xiaomi Redmi Note 9 Pro
 
-**Planned Development Duration:** 24 Business Days *(Planlanan Geliştirme Süresi: 24 İş Günü)*
+**Target Platform:** Android Only
+
+**Planned Development Duration:** 24 Business Days
+
+### Türkçe
+
+**Mevcut Aşama:** Stage 2B Dört Sensörlü Canlı Zamanlama Tanıları Tamamlandı; Nihai Birleşik Commit-Readiness Denetimi Bekliyor; Navigasyon Alt Sistemleri Başlamadı
+
+**Geliştirme Durumu:** Flutter Android Bootstrap, Stage 2A SensorManager Yetenek Envanteri ve Stage 2B Canlı Zamanlama Tanıları Tanımlı Kapsamlarında Uygulandı, Test Edildi ve Fiziksel Olarak Doğrulandı; Üretim Sensör Veri Alımı ve Navigasyon Alt Sistemleri Uygulanmadı
+
+**Dokümantasyon Durumu:** Teknik Dokümantasyon Baseline'ı Tamamlandı; Mevcut Durum Stage 2B'ye Kadar Senkronize Edildi
+
+**Birincil Test Cihazı:** Xiaomi Redmi Note 9 Pro
+
+**Hedef Platform:** Yalnızca Android
+
+**Planlanan Geliştirme Süresi:** 24 İş Günü
 
 ---
 
 ## 14. Current Milestone (Mevcut Kilometre Taşı)
 
-The technical documentation baseline and development-environment validation are complete. The Flutter Android bootstrap and Stage 2A SensorManager runtime capability inventory have passed analysis, tests, debug APK build verification, and a physical run on the Xiaomi Redmi Note 9 Pro. The verified Stage 2A runtime snapshot returned 14 requested records: 13 default sensors available and one unavailable; the `TYPE_PRESSURE` default sensor was unavailable in that snapshot. *(Teknik dokümantasyon baseline'ı ve geliştirme ortamı doğrulaması tamamlanmıştır. Flutter Android bootstrap ve Stage 2A SensorManager çalışma zamanı yetenek envanteri; analiz, test, debug APK build doğrulaması ve Xiaomi Redmi Note 9 Pro üzerinde fiziksel çalıştırma kontrollerini geçmiştir. Doğrulanan Stage 2A çalışma zamanı snapshot'ı 14 istenen kayıt döndürmüştür: 13 varsayılan sensör kullanılabilir ve biri kullanılamaz durumdadır; `TYPE_PRESSURE` varsayılan sensörü bu snapshot'ta kullanılamıyordu.)*
+### English
 
-Physical verification remains partial. Continuous `SensorEvent` acquisition, delivered sampling rates, and timestamp behavior have not been verified; GNSS and ARCore runtime diagnostics are pending; the PDR, Motion AI, Quality Engine, and EKF / Sensor Fusion subsystems are not implemented; and the final benchmark has not been run. *(Fiziksel doğrulama kısmi durumdadır. Sürekli `SensorEvent` verisi alımı, sağlanan örnekleme hızları ve zaman damgası davranışı doğrulanmamıştır; GNSS ve ARCore çalışma zamanı tanıları beklemektedir; PDR, Motion AI, Quality Engine ve EKF / Sensör Füzyonu alt sistemleri uygulanmamıştır ve nihai benchmark çalıştırılmamıştır.)*
+The technical documentation baseline and development-environment validation are complete. The Flutter Android bootstrap and Stage 2A SensorManager runtime capability inventory passed their static and physical checks. The Stage 2A snapshot returned 14 requested records: 13 default sensors were available and `TYPE_PRESSURE` was unavailable.
+
+Stage 2B live timing diagnostics were implemented and physically verified for the accelerometer, gyroscope, magnetometer, and rotation vector on the tested Xiaomi Redmi Note 9 Pro configuration. Three 10-second sessions per sensor used a 20,000 µs (~50 Hz requested) configuration. All 12 sessions returned valid timing summaries and monotonic `SensorEvent.timestamp` sequences, and no gap above the provisional 60 ms threshold was observed. Requested rate and timestamp-derived observed rate remain distinct.
+
+Physical verification remains partial and the device baseline is **NOT FROZEN**. GNSS runtime timing and ARCore runtime tracking remain pending; production sensor acquisition, PDR, heading, Motion AI, Quality Engine, and EKF / Sensor Fusion are not implemented; and the final benchmark has not been run.
+
+### Türkçe
+
+Teknik dokümantasyon baseline'ı ve geliştirme ortamı doğrulaması tamamlandı. Flutter Android bootstrap ve Stage 2A SensorManager çalışma zamanı yetenek envanteri statik ve fiziksel kontrollerini geçti. Stage 2A snapshot'ı 14 istenen kayıt döndürdü: 13 varsayılan sensör kullanılabilirdi ve `TYPE_PRESSURE` kullanılamıyordu.
+
+Stage 2B canlı zamanlama tanıları, test edilen Xiaomi Redmi Note 9 Pro yapılandırmasında ivmeölçer, jiroskop, manyetometre ve dönüş vektörü için uygulandı ve fiziksel olarak doğrulandı. Sensör başına üç adet 10 saniyelik oturumda 20.000 µs (~50 Hz talep edilen) yapılandırması kullanıldı. On iki oturumun tamamı geçerli zamanlama özetleri ve monoton `SensorEvent.timestamp` dizileri döndürdü; geçici 60 ms eşiğinin üzerinde boşluk gözlenmedi. Talep edilen hız ile timestamp-türevli gözlenen hız ayrı değerler olarak korunur.
+
+Fiziksel doğrulama kısmi durumdadır ve cihaz baseline'ı **SABİTLENMEMİŞTİR**. GNSS çalışma zamanı zamanlaması ile ARCore çalışma zamanı takibi beklemektedir; üretim sensör veri alımı, PDR, heading, Motion AI, Quality Engine ve EKF / Sensör Füzyonu uygulanmamıştır ve nihai benchmark çalıştırılmamıştır.
 
 ---
 

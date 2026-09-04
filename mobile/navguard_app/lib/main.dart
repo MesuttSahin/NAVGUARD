@@ -7,6 +7,22 @@ void main() {
   runApp(const NavguardApp());
 }
 
+enum _DiagnosticOperation { inventory, timing }
+
+class _SensorOption {
+  const _SensorOption({required this.key, required this.label});
+
+  final String key;
+  final String label;
+}
+
+const List<_SensorOption> _sensorOptions = <_SensorOption>[
+  _SensorOption(key: 'accelerometer', label: 'Accelerometer'),
+  _SensorOption(key: 'gyroscope', label: 'Gyroscope'),
+  _SensorOption(key: 'magnetometer', label: 'Magnetometer'),
+  _SensorOption(key: 'rotation_vector', label: 'Rotation Vector'),
+];
+
 class NavguardApp extends StatelessWidget {
   const NavguardApp({super.key});
 
@@ -38,55 +54,98 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
 
   static const JsonEncoder _jsonEncoder = JsonEncoder.withIndent('  ');
 
-  bool _isLoading = false;
-  String? _formattedInventory;
+  _DiagnosticOperation? _activeOperation;
+  _SensorOption _selectedSensor = _sensorOptions.first;
+  String? _formattedOutput;
   String? _errorMessage;
 
-  Future<void> _readSensorInventory() async {
+  bool get _isBusy => _activeOperation != null;
+
+  bool get _isInventoryLoading =>
+      _activeOperation == _DiagnosticOperation.inventory;
+
+  bool get _isTimingLoading => _activeOperation == _DiagnosticOperation.timing;
+
+  Future<void> _readSensorInventory() {
+    return _runDiagnosticRequest(
+      operation: _DiagnosticOperation.inventory,
+      methodName: 'getSensorCapabilityInventory',
+      operationLabel: 'Sensor inventory',
+      invalidResponseMessage: 'Native sensor inventory did not return a map.',
+      beginMarker: 'NAVGUARD_SENSOR_INVENTORY_BEGIN',
+      endMarker: 'NAVGUARD_SENSOR_INVENTORY_END',
+    );
+  }
+
+  Future<void> _runSensorTimingDiagnostic() {
+    return _runDiagnosticRequest(
+      operation: _DiagnosticOperation.timing,
+      methodName: 'runSensorTimingDiagnostic',
+      arguments: <String, Object?>{'sensorKey': _selectedSensor.key},
+      operationLabel: 'Sensor timing diagnostic',
+      invalidResponseMessage:
+          'Native sensor timing diagnostic did not return a map.',
+      beginMarker: 'NAVGUARD_SENSOR_TIMING_BEGIN',
+      endMarker: 'NAVGUARD_SENSOR_TIMING_END',
+    );
+  }
+
+  Future<void> _runDiagnosticRequest({
+    required _DiagnosticOperation operation,
+    required String methodName,
+    required String operationLabel,
+    required String invalidResponseMessage,
+    required String beginMarker,
+    required String endMarker,
+    Map<String, Object?>? arguments,
+  }) async {
+    if (_isBusy) {
+      return;
+    }
+
     setState(() {
-      _isLoading = true;
-      _formattedInventory = null;
+      _activeOperation = operation;
+      _formattedOutput = null;
       _errorMessage = null;
     });
 
-    String? nextInventory;
+    String? nextOutput;
     String? nextError;
 
     try {
       final Object? rawSnapshot = await _channel.invokeMethod<Object?>(
-        'getSensorCapabilityInventory',
+        methodName,
+        arguments,
       );
 
       if (rawSnapshot is! Map) {
-        throw const FormatException(
-          'Native sensor inventory did not return a map.',
-        );
+        throw FormatException(invalidResponseMessage);
       }
 
       final Object? normalizedSnapshot = _normalizeForJson(rawSnapshot);
       final String formattedJson = _jsonEncoder.convert(normalizedSnapshot);
 
-      debugPrint('NAVGUARD_SENSOR_INVENTORY_BEGIN');
+      debugPrint(beginMarker);
       for (final String line in formattedJson.split('\n')) {
         debugPrint(line);
       }
-      debugPrint('NAVGUARD_SENSOR_INVENTORY_END');
+      debugPrint(endMarker);
 
-      nextInventory = formattedJson;
+      nextOutput = formattedJson;
     } on PlatformException catch (error) {
       final String? nativeMessage = error.message;
 
       if (nativeMessage == null || nativeMessage.isEmpty) {
-        nextError = 'Sensor inventory failed (${error.code}).';
+        nextError = '$operationLabel failed (${error.code}).';
       } else {
-        nextError = 'Sensor inventory failed (${error.code}): $nativeMessage';
+        nextError = '$operationLabel failed (${error.code}): $nativeMessage';
       }
     } on MissingPluginException {
       nextError = 'Sensor diagnostic channel is unavailable on this platform.';
     } on FormatException catch (error) {
-      nextError = 'Invalid sensor inventory response: ${error.message}';
+      nextError = 'Invalid diagnostic response: ${error.message}';
     } catch (_) {
-      nextError = 'Unexpected error while reading the sensor inventory.';
+      nextError = 'Unexpected error while running the sensor diagnostic.';
     }
 
     if (!mounted) {
@@ -94,8 +153,8 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     }
 
     setState(() {
-      _isLoading = false;
-      _formattedInventory = nextInventory;
+      _activeOperation = null;
+      _formattedOutput = nextOutput;
       _errorMessage = nextError;
     });
   }
@@ -126,13 +185,13 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               const Text(
-                'Capability metadata only — no live sensor sampling.',
+                'Inventory: capability metadata only — no live sensor sampling.',
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               FilledButton.icon(
-                onPressed: _isLoading ? null : _readSensorInventory,
-                icon: _isLoading
+                onPressed: _isBusy ? null : _readSensorInventory,
+                icon: _isInventoryLoading
                     ? const SizedBox(
                         width: 18,
                         height: 18,
@@ -140,9 +199,66 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
                       )
                     : const Icon(Icons.sensors),
                 label: Text(
-                  _isLoading
+                  _isInventoryLoading
                       ? 'Reading Sensor Inventory...'
                       : 'Read Sensor Inventory',
+                ),
+              ),
+              const Divider(height: 32),
+              Text(
+                'Live Sensor Timing Diagnostic',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<_SensorOption>(
+                initialValue: _selectedSensor,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Sensor',
+                  border: OutlineInputBorder(),
+                ),
+                items: _sensorOptions
+                    .map((option) {
+                      return DropdownMenuItem<_SensorOption>(
+                        value: option,
+                        child: Text(option.label),
+                      );
+                    })
+                    .toList(growable: false),
+                onChanged: _isBusy
+                    ? null
+                    : (_SensorOption? option) {
+                        if (option == null) {
+                          return;
+                        }
+
+                        setState(() {
+                          _selectedSensor = option;
+                        });
+                      },
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Requested period: 20,000 µs (~50 Hz requested)',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              const Text('Duration: 10 seconds', textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: _isBusy ? null : _runSensorTimingDiagnostic,
+                icon: _isTimingLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.timer),
+                label: Text(
+                  _isTimingLoading
+                      ? 'Running 10-second diagnostic...'
+                      : 'Run Timing Diagnostic',
                 ),
               ),
               const SizedBox(height: 16),
@@ -167,12 +283,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   }
 
   Widget _buildOutput() {
-    final String? inventory = _formattedInventory;
+    final String? output = _formattedOutput;
 
-    if (inventory != null) {
+    if (output != null) {
       return SingleChildScrollView(
         child: SelectableText(
-          inventory,
+          output,
           style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
         ),
       );
@@ -188,7 +304,7 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
 
     return const Center(
       child: Text(
-        'Press the button to read the runtime sensor inventory.',
+        'Run an inventory or timing diagnostic to display its JSON summary.',
         textAlign: TextAlign.center,
       ),
     );

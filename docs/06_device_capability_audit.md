@@ -317,70 +317,125 @@ At least one reliable orientation strategy must be available from physical senso
 
 # 15. Sensor Timestamp Audit — AUD-TIME-001 (Sensör Zaman Damgası Denetimi — AUD-TIME-001)
 
-NAVGUARD must verify that sensor events contain monotonically increasing timestamps suitable for relative timing calculations. *(NAVGUARD, sensör olaylarının göreli zamanlama hesaplamaları için uygun monotonik olarak artan zaman damgaları içerdiğini doğrulamalıdır.)*
+### English
 
-The application must not assume that callbacks arrive at perfectly constant wall-clock intervals. *(Uygulama callback’lerin tamamen sabit duvar saati aralıklarında geldiğini varsaymamalıdır.)*
+NAVGUARD must verify that sensor events contain monotonically increasing timestamps suitable for relative timing calculations. The application must not assume that callbacks arrive at perfectly constant wall-clock intervals.
 
-### Test Procedure (Test Prosedürü)
+#### Full Audit Procedure
 
-Record at least 60 seconds of continuous accelerometer and gyroscope data while the device is stationary. *(Cihaz sabit durumdayken en az 60 saniye sürekli ivmeölçer ve jiroskop verisi kaydet.)*
+The full audit records at least 60 seconds of continuous stationary accelerometer and gyroscope data, calculates interval statistics from consecutive event timestamps, and checks for non-monotonic timestamps, duplicates, and unusually long gaps.
 
-Calculate the difference between consecutive event timestamps. *(Ardışık olay zaman damgaları arasındaki farkı hesapla.)*
+#### Stage 2B Physical Evidence
 
-Calculate minimum, maximum, mean, median, standard deviation, and percentile values for the observed intervals. *(Gözlemlenen aralıklar için minimum, maksimum, ortalama, medyan, standart sapma ve yüzdelik değerlerini hesapla.)*
+Stage 2B used `SensorEvent.timestamp` as the event timestamp authority; it did not treat callback arrival time as the sample timestamp. The accelerometer, gyroscope, magnetometer, and rotation vector were each measured in three 10-second requested-duration sessions on the tested Xiaomi Redmi Note 9 Pro running Android 12 / API 31. The phone remained stationary on a stable surface with the screen awake, the application in the foreground, USB connected, one diagnostic active at a time, and no intended interaction during each run.
 
-Check for non-monotonic timestamps, duplicated timestamps, and unusually long gaps. *(Monotonik olmayan zaman damgalarını, yinelenen zaman damgalarını ve olağandışı uzun boşlukları kontrol et.)*
+All 12 sessions completed with valid timing summaries and monotonically increasing timestamp sequences. No non-monotonic timestamp was observed. Using `gapThresholdMultiplier = 3.0`, no interval above the provisional `60,000,000 ns` threshold was observed in any session. This threshold remains provisional and is not a general device guarantee.
 
-### Result Table (Sonuç Tablosu)
+| Sensor | Sessions | Event Count per Session | Monotonic Sessions | Sessions with Provisional >60 ms Gaps |
+| --- | ---: | --- | ---: | ---: |
+| Accelerometer | 3 | 518 / 518 / 518 | 3/3 | 0/3 |
+| Gyroscope | 3 | 504 / 504 / 503 | 3/3 | 0/3 |
+| Magnetometer | 3 | 500 / 500 / 500 | 3/3 | 0/3 |
+| Rotation Vector | 3 | 502 / 502 / 502 | 3/3 | 0/3 |
 
-| Metric (Metrik) | Accelerometer (İvmeölçer) | Gyroscope (Jiroskop) | Magnetometer (Manyetometre) |
-| --- | --- | --- | --- |
-| Duration *(Süre)* | TBD | TBD | TBD |
-| Samples *(Örnekler)* | TBD | TBD | TBD |
-| Minimum Interval *(Minimum Aralık)* | TBD | TBD | TBD |
-| Median Interval *(Medyan Aralık)* | TBD | TBD | TBD |
-| Mean Interval *(Ortalama Aralık)* | TBD | TBD | TBD |
-| Maximum Interval *(Maksimum Aralık)* | TBD | TBD | TBD |
-| Standard Deviation *(Standart Sapma)* | TBD | TBD | TBD |
-| Non-Monotonic Events *(Monotonik Olmayan Olaylar)* | TBD | TBD | TBD |
+#### Acceptance Criterion
 
-### Acceptance Criterion (Kabul Kriteri)
+Timestamps must be suitable for determining measurement intervals and synchronizing the navigation pipeline.
 
-Timestamps must be suitable for determining actual measurement intervals and synchronizing the navigation pipeline. *(Zaman damgaları gerçek ölçüm aralıklarını belirlemek ve navigasyon hattını senkronize etmek için uygun olmalıdır.)*
+**Actual Status:** PARTIAL — Stage 2B physically verified monotonic timestamp capture for the tested four-sensor configuration and 12 sessions. The full 60-second AUD-TIME-001 procedure and broader runtime-condition coverage remain pending; sensor signal quality, noise, bias, and calibration were not evaluated.
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+### Türkçe
+
+NAVGUARD, sensör olaylarının göreli zamanlama hesaplamalarına uygun monotonik olarak artan zaman damgaları içerdiğini doğrulamalıdır. Uygulama, callback'lerin tamamen sabit duvar saati aralıklarında geldiğini varsaymamalıdır.
+
+#### Tam Denetim Prosedürü
+
+Tam denetim, sabit durumdaki ivmeölçer ve jiroskoptan en az 60 saniye sürekli veri kaydeder, ardışık olay zaman damgalarından aralık istatistiklerini hesaplar ve monotonik olmayan zaman damgalarını, yinelenen zaman damgalarını ve olağandışı uzun boşlukları kontrol eder.
+
+#### Stage 2B Fiziksel Kanıtı
+
+Stage 2B, olay zaman damgası otoritesi olarak `SensorEvent.timestamp` kullandı; callback varış zamanını örnek zaman damgası olarak ele almadı. İvmeölçer, jiroskop, manyetometre ve dönüş vektörünün her biri, Android 12 / API 31 çalıştıran test cihazı Xiaomi Redmi Note 9 Pro üzerinde talep edilen 10 saniyelik üç oturumda ölçüldü. Her oturum sırasında telefon kararlı bir yüzey üzerinde sabit tutuldu; ekran açık, uygulama ön planda ve USB bağlantısı etkin durumdaydı, aynı anda yalnızca bir tanı çalıştı ve amaçlı kullanıcı etkileşimi yapılmadı.
+
+On iki oturumun tamamı geçerli zamanlama özetleri ve monotonik olarak artan zaman damgası dizileriyle tamamlandı. Monotonik olmayan zaman damgası gözlenmedi. `gapThresholdMultiplier = 3.0` kullanıldığında hiçbir oturumda geçici `60.000.000 ns` eşiğinin üzerinde aralık gözlenmedi. Bu eşik geçici kalır ve genel bir cihaz garantisi değildir.
+
+| Sensör | Oturum | Oturum Başına Olay Sayısı | Monotonik Oturum | Geçici >60 ms Boşluk İçeren Oturum |
+| --- | ---: | --- | ---: | ---: |
+| İvmeölçer | 3 | 518 / 518 / 518 | 3/3 | 0/3 |
+| Jiroskop | 3 | 504 / 504 / 503 | 3/3 | 0/3 |
+| Manyetometre | 3 | 500 / 500 / 500 | 3/3 | 0/3 |
+| Dönüş Vektörü | 3 | 502 / 502 / 502 | 3/3 | 0/3 |
+
+#### Kabul Kriteri
+
+Zaman damgaları, ölçüm aralıklarını belirlemek ve navigasyon hattını senkronize etmek için uygun olmalıdır.
+
+**Gerçek Durum:** KISMİ — Stage 2B, test edilen dört sensörlü yapılandırma ve 12 oturum için monotonik zaman damgası yakalamayı fiziksel olarak doğruladı. Tam 60 saniyelik AUD-TIME-001 prosedürü ve daha geniş çalışma koşulu kapsamı beklemektedir; sensör sinyal kalitesi, gürültü, bias ve kalibrasyon değerlendirilmemiştir.
 
 ---
 
 # 16. Effective Sampling Rate Audit — AUD-RATE-001 (Etkin Örnekleme Hızı Denetimi — AUD-RATE-001)
 
-Requested sensor frequency and delivered sensor frequency must be treated as separate values. *(Talep edilen sensör frekansı ile sağlanan sensör frekansı ayrı değerler olarak ele alınmalıdır.)*
+### English
 
-Android sensor delivery timing can vary, so effective sampling frequency must be calculated from actual event timestamps. *(Android sensör teslim zamanlaması değişebileceği için etkin örnekleme frekansı gerçek olay zaman damgalarından hesaplanmalıdır.)*
+Requested sensor frequency and delivered sensor frequency must be treated as separate values. Android sensor delivery timing can vary, so effective event/sample rate must be calculated from event timestamps.
 
-### Planned Test Rates (Planlanan Test Hızları)
+#### Full Audit Planned Rates
 
-- **Approximately 20 Hz** *(Yaklaşık 20 Hz)*
-- **Approximately 50 Hz** *(Yaklaşık 50 Hz)*
-- **Approximately 100 Hz where appropriate** *(Uygun olduğunda yaklaşık 100 Hz)*
+- Approximately 20 Hz
+- Approximately 50 Hz
+- Approximately 100 Hz where appropriate
 
-NAVGUARD does not require sampling above 200 Hz for the planned architecture. *(NAVGUARD planlanan mimari için 200 Hz’in üzerinde örneklemeye ihtiyaç duymaz.)*
+NAVGUARD does not require sampling above 200 Hz for the planned architecture.
 
-### Result Table (Sonuç Tablosu)
+#### Stage 2B Requested Configuration and Observations
 
-| Sensor (Sensör) | Requested Rate (Talep Edilen Hız) | Measured Median Rate (Ölçülen Medyan Hız) | Measured Mean Rate (Ölçülen Ortalama Hız) | Result (Sonuç) |
-| --- | --- | --- | --- | --- |
-| Accelerometer *(İvmeölçer)* | 50 Hz Target *(50 Hz Hedef)* | TBD | TBD | TBD |
-| Gyroscope *(Jiroskop)* | 50 Hz Target *(50 Hz Hedef)* | TBD | TBD | TBD |
-| Magnetometer *(Manyetometre)* | 20–50 Hz Target *(20–50 Hz Hedef)* | TBD | TBD | TBD |
+All Stage 2B sessions used `requestedSamplingPeriodUs = 20,000 µs`, `requestedNominalRateHz = 50.0 Hz`, `collectionDurationTargetMs = 10,000 ms`, and `maxReportLatencyUs = 0`. The 50.0 Hz value is the requested nominal configuration, not a guaranteed delivered rate.
 
-### Acceptance Criterion (Kabul Kriteri)
+| Sensor | Requested Nominal Rate | Observed Timestamp-Derived Aggregate Mean Rate | Observed Run Range |
+| --- | ---: | ---: | ---: |
+| Accelerometer | 50.0 Hz | ~52.10 Hz | ~52.079–52.125 Hz |
+| Gyroscope | 50.0 Hz | ~51.07 Hz | ~51.072–51.076 Hz |
+| Magnetometer | 50.0 Hz | ~50.00 Hz | ~50.000 Hz; 20.000 ms median interval in all runs |
+| Rotation Vector | 50.0 Hz | ~51.10 Hz | ~51.072–51.130 Hz |
 
-The accelerometer and gyroscope should provide sufficiently stable sampling around the selected navigation rate for time-series processing. *(İvmeölçer ve jiroskop zaman serisi işleme için seçilen navigasyon hızının çevresinde yeterince kararlı örnekleme sağlamalıdır.)*
+These values are timestamp-derived effective event/sample-rate observations for the tested Redmi Note 9 Pro, Stage 2B configuration, and 12 sessions. They are not callback-arrival frequencies, universal hardware constants, or production-rate selections.
 
-The exact accepted frequency will be selected based on measured stability rather than maximum capability. *(Kesin kabul edilen frekans maksimum yetenek yerine ölçülen kararlılığa göre seçilecektir.)*
+#### Acceptance Criterion
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+The accelerometer and gyroscope should provide sufficiently stable sampling around the selected navigation rate for time-series processing. The exact accepted production frequency will be selected from broader measured evidence rather than maximum capability or a single requested value.
+
+**Actual Status:** PARTIAL — Requested-versus-observed timing was physically characterized for the fixed Stage 2B configuration. The full planned multi-rate audit and production sampling-rate decision remain pending.
+
+### Türkçe
+
+Talep edilen sensör frekansı ile sağlanan sensör frekansı ayrı değerler olarak ele alınmalıdır. Android sensör teslim zamanlaması değişebileceği için etkin olay/örnek hızı olay zaman damgalarından hesaplanmalıdır.
+
+#### Tam Denetimde Planlanan Hızlar
+
+- Yaklaşık 20 Hz
+- Yaklaşık 50 Hz
+- Uygun olduğunda yaklaşık 100 Hz
+
+NAVGUARD, planlanan mimari için 200 Hz'in üzerinde örneklemeye ihtiyaç duymaz.
+
+#### Stage 2B Talep Yapılandırması ve Gözlemleri
+
+Tüm Stage 2B oturumlarında `requestedSamplingPeriodUs = 20.000 µs`, `requestedNominalRateHz = 50,0 Hz`, `collectionDurationTargetMs = 10.000 ms` ve `maxReportLatencyUs = 0` kullanıldı. 50,0 Hz değeri talep edilen nominal yapılandırmadır; garanti edilen sağlanan hız değildir.
+
+| Sensör | Talep Edilen Nominal Hız | Gözlenen Timestamp-Türevli Birleşik Ortalama Hız | Gözlenen Oturum Aralığı |
+| --- | ---: | ---: | ---: |
+| İvmeölçer | 50,0 Hz | ~52,10 Hz | ~52,079–52,125 Hz |
+| Jiroskop | 50,0 Hz | ~51,07 Hz | ~51,072–51,076 Hz |
+| Manyetometre | 50,0 Hz | ~50,00 Hz | ~50,000 Hz; tüm oturumlarda 20,000 ms medyan aralık |
+| Dönüş Vektörü | 50,0 Hz | ~51,10 Hz | ~51,072–51,130 Hz |
+
+Bu değerler test edilen Redmi Note 9 Pro, Stage 2B yapılandırması ve 12 oturum için timestamp-türevli etkin olay/örnek hızı gözlemleridir. Callback varış frekansları, evrensel donanım sabitleri veya üretim hızı seçimleri değildir.
+
+#### Kabul Kriteri
+
+İvmeölçer ve jiroskop, zaman serisi işleme için seçilen navigasyon hızının çevresinde yeterince kararlı örnekleme sağlamalıdır. Kesin kabul edilen üretim frekansı, maksimum yetenek veya tek bir talep değeri yerine daha geniş ölçüm kanıtlarından seçilecektir.
+
+**Gerçek Durum:** KISMİ — Talep edilen ve gözlenen zamanlama, sabit Stage 2B yapılandırması için fiziksel olarak karakterize edildi. Planlanan tam çoklu hız denetimi ve üretim örnekleme hızı kararı beklemektedir.
 
 ---
 
@@ -1210,32 +1265,77 @@ File names may change during implementation, but the information represented by 
 - [ ]  **Target architecture gate evaluated.** *(Hedef mimari kapısı değerlendirildi.)*
 - [ ]  **Final device baseline frozen.** *(Nihai cihaz temel referansı sabitlendi.)*
 
+**Stage 2B boundary:** The four-sensor timing evidence does not complete this checklist. GNSS runtime timing, ARCore runtime tracking, the full sensor-audit procedures, and other required device/runtime checks remain pending.
+
+**Stage 2B sınırı:** Dört sensörlü zamanlama kanıtı bu kontrol listesini tamamlamaz. GNSS çalışma zamanı zamanlaması, ARCore çalışma zamanı takibi, tam sensör denetimi prosedürleri ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir.
+
 ---
 
 # 55. Final Audit Summary Table (Nihai Denetim Özet Tablosu)
 
-| Area (Alan) | Result (Sonuç) | Notes (Notlar) |
+### English
+
+| Area | Result | Notes |
 | --- | --- | --- |
-| Device Environment *(Cihaz Ortamı)* | TBD | TBD |
-| Accelerometer *(İvmeölçer)* | TBD | TBD |
-| Gyroscope *(Jiroskop)* | TBD | TBD |
-| Magnetometer *(Manyetometre)* | TBD | TBD |
-| Rotation Vector *(Dönüş Vektörü)* | TBD | TBD |
-| Sensor Timing *(Sensör Zamanlaması)* | TBD | TBD |
-| Sensor Sampling *(Sensör Örnekleme)* | TBD | TBD |
-| GNSS | TBD | TBD |
-| Ground Truth Isolation *(Gerçek Referans İzolasyonu)* | TBD | TBD |
-| Raw GNSS *(Ham GNSS)* | TBD | TBD |
-| ARCore | TBD | TBD |
-| Camera *(Kamera)* | TBD | TBD |
+| Device Environment | PARTIAL | Stage 2B tested on Xiaomi Redmi Note 9 Pro, Android 12 / API 31; full environment audit pending. |
+| Static Sensor Availability | VERIFIED — STAGE 2A SCOPE | Runtime default-sensor availability and metadata verified; this is not sensor-performance evidence. |
+| Accelerometer | PARTIAL | Stage 2B live delivery/timing verified; signal quality, noise, bias, and calibration pending. |
+| Gyroscope | PARTIAL | Stage 2B live delivery/timing verified; signal quality, noise, bias, and calibration pending. |
+| Magnetometer | PARTIAL | Stage 2B live delivery/timing verified; signal quality, noise, bias, and calibration pending. |
+| Rotation Vector | PARTIAL | Stage 2B live delivery/timing verified; orientation/heading accuracy not verified. |
+| Live Sensor Event Delivery | VERIFIED — STAGE 2B SCOPE | Four selected sensors; 12/12 timing sessions completed with valid summaries. |
+| Sensor Timing | PARTIAL | 12/12 tested timestamp sequences were monotonic; 0/12 sessions had a gap above the provisional 60 ms threshold. Full AUD-TIME-001 pending. |
+| Sensor Sampling | PARTIAL | Requested 20,000 µs (~50 Hz nominal) versus timestamp-derived observed rates characterized for the tested configuration; full multi-rate audit pending. |
+| Sensor Signal Quality / Noise | NOT VERIFIED | Stage 2B was a timing characterization test only. |
+| GNSS Runtime Timing | PENDING / NOT IMPLEMENTED | Required before the device baseline can be frozen. |
+| Ground Truth Isolation | TBD | TBD |
+| Raw GNSS | TBD | TBD |
+| ARCore Runtime Tracking | PENDING / NOT IMPLEMENTED | Required before the device baseline can be frozen. |
+| Camera | TBD | TBD |
 | TensorFlow Lite | TBD | TBD |
-| Local Storage *(Yerel Depolama)* | TBD | TBD |
-| Offline Runtime *(Çevrimdışı Çalışma)* | TBD | TBD |
-| Performance *(Performans)* | TBD | TBD |
-| Battery *(Batarya)* | TBD | TBD |
-| Thermal Behavior *(Termal Davranış)* | TBD | TBD |
-| Minimum Architecture Gate *(Minimum Mimari Kapısı)* | TBD | TBD |
-| Target Architecture Gate *(Hedef Mimari Kapısı)* | TBD | TBD |
+| Local Storage | TBD | TBD |
+| Offline Runtime | TBD | TBD |
+| Performance | NOT VERIFIED | Startup warnings remain a separate future application-performance QA item. |
+| Battery | TBD | TBD |
+| Thermal Behavior | TBD | TBD |
+| PDR | NOT IMPLEMENTED | Production PDR acquisition and navigation pipeline not implemented. |
+| Heading | NOT IMPLEMENTED | Heading correctness was not evaluated by Stage 2B. |
+| Minimum Architecture Gate | TBD | TBD |
+| Target Architecture Gate | TBD | TBD |
+| Device Baseline | NOT FROZEN | Critical runtime audit items remain pending. |
+| Overall Physical Verification | PARTIAL | Stage 2A and Stage 2B scopes verified; full device audit incomplete. |
+
+### Türkçe
+
+| Alan | Sonuç | Notlar |
+| --- | --- | --- |
+| Cihaz Ortamı | KISMİ | Stage 2B, Xiaomi Redmi Note 9 Pro ve Android 12 / API 31 üzerinde test edildi; tam ortam denetimi bekliyor. |
+| Statik Sensör Kullanılabilirliği | DOĞRULANDI — STAGE 2A KAPSAMI | Çalışma zamanı varsayılan sensör kullanılabilirliği ve metadata doğrulandı; bu sensör performansı kanıtı değildir. |
+| İvmeölçer | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; sinyal kalitesi, gürültü, bias ve kalibrasyon bekliyor. |
+| Jiroskop | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; sinyal kalitesi, gürültü, bias ve kalibrasyon bekliyor. |
+| Manyetometre | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; sinyal kalitesi, gürültü, bias ve kalibrasyon bekliyor. |
+| Dönüş Vektörü | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; yönelim/heading doğruluğu doğrulanmadı. |
+| Canlı Sensör Olay İletimi | DOĞRULANDI — STAGE 2B KAPSAMI | Seçilen dört sensörde 12/12 zamanlama oturumu geçerli özetlerle tamamlandı. |
+| Sensör Zamanlaması | KISMİ | Test edilen 12/12 zaman damgası dizisi monotonikti; 0/12 oturumda geçici 60 ms eşiğinin üzerinde boşluk vardı. Tam AUD-TIME-001 bekliyor. |
+| Sensör Örnekleme | KISMİ | Talep edilen 20.000 µs (~50 Hz nominal) ile timestamp-türevli gözlenen hızlar test edilen yapılandırma için karakterize edildi; tam çoklu hız denetimi bekliyor. |
+| Sensör Sinyal Kalitesi / Gürültü | DOĞRULANMADI | Stage 2B yalnızca zamanlama karakterizasyon testiydi. |
+| GNSS Çalışma Zamanı Zamanlaması | BEKLİYOR / UYGULANMADI | Cihaz baseline'ı sabitlenmeden önce gereklidir. |
+| Gerçek Referans İzolasyonu | TBD | TBD |
+| Ham GNSS | TBD | TBD |
+| ARCore Çalışma Zamanı Takibi | BEKLİYOR / UYGULANMADI | Cihaz baseline'ı sabitlenmeden önce gereklidir. |
+| Kamera | TBD | TBD |
+| TensorFlow Lite | TBD | TBD |
+| Yerel Depolama | TBD | TBD |
+| Çevrimdışı Çalışma | TBD | TBD |
+| Performans | DOĞRULANMADI | Başlangıç uyarıları gelecekteki ayrı bir uygulama performansı QA konusu olarak kalır. |
+| Batarya | TBD | TBD |
+| Termal Davranış | TBD | TBD |
+| PDR | UYGULANMADI | Üretim PDR veri alımı ve navigasyon hattı uygulanmadı. |
+| Heading | UYGULANMADI | Heading doğruluğu Stage 2B tarafından değerlendirilmedi. |
+| Minimum Mimari Kapısı | TBD | TBD |
+| Hedef Mimari Kapısı | TBD | TBD |
+| Cihaz Baseline'ı | SABİTLENMEDİ | Kritik çalışma zamanı denetim öğeleri bekliyor. |
+| Genel Fiziksel Doğrulama | KISMİ | Stage 2A ve Stage 2B kapsamları doğrulandı; tam cihaz denetimi tamamlanmadı. |
 
 ---
 
@@ -1249,7 +1349,9 @@ File names may change during implementation, but the information represented by 
 
 **Device Model:** Xiaomi Redmi Note 9 Pro *(Cihaz Modeli: Xiaomi Redmi Note 9 Pro)*
 
-**Android Version:** TBD *(Android Sürümü: TBD)*
+**Android Version:** Android 12 / API 31 — Stage 2B tested environment; final baseline pending
+
+**Android Sürümü:** Android 12 / API 31 — Stage 2B test ortamı; nihai baseline bekliyor
 
 **Minimum Architecture Gate:** TBD *(Minimum Mimari Kapısı: TBD)*
 
@@ -1283,20 +1385,44 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 # 59. Current Document Status (Mevcut Doküman Durumu)
 
-**Document Status:** Protocol Completed — Partial Execution *(Doküman Durumu: Protokol Tamamlandı — Kısmi Uygulama)*
+### English
 
-**Physical Device Audit Status:** Partial — Static Capability Review, Flutter Bootstrap Run, and Stage 2A Runtime SensorManager Capability Inventory Completed; Continuous Sensor Event/Timing, GNSS, and ARCore Diagnostics Pending *(Fiziksel Cihaz Denetim Durumu: Kısmi — Statik Yetenek İncelemesi, Flutter Bootstrap Çalıştırması ve Stage 2A Runtime SensorManager Yetenek Envanteri Tamamlandı; Sürekli Sensör Olayı/Zamanlama, GNSS ve ARCore Tanıları Bekleniyor)*
+**Document Status:** Protocol Completed — Partial Execution
 
-**Stage 2A Runtime Sensor Inventory Evidence:** Verified on the tested Xiaomi Redmi Note 9 Pro — SensorManager runtime access, the Flutter–Kotlin diagnostic bridge, and runtime Sensor metadata retrieval were verified; the inventory returned 14 requested records: 13 default sensors available and one unavailable; the `TYPE_PRESSURE` default sensor had `available=false` in this snapshot. This is capability metadata evidence, not sensor-performance evidence. *(Stage 2A Çalışma Zamanı Sensör Envanteri Kanıtı: Test edilen Xiaomi Redmi Note 9 Pro üzerinde doğrulandı — SensorManager çalışma zamanı erişimi, Flutter–Kotlin tanı köprüsü ve çalışma zamanı Sensor metadata alımı doğrulandı; envanter 14 istenen kayıt döndürdü: 13 varsayılan sensör kullanılabilir ve biri kullanılamaz durumdaydı; `TYPE_PRESSURE` varsayılan sensörü bu snapshot'ta `available=false` değerine sahipti. Bu, yetenek metadata kanıtıdır; sensör performansı kanıtı değildir.)*
+**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A runtime SensorManager capability inventory, and Stage 2B four-sensor live timing characterization are complete for their defined scopes. The full device capability audit is not complete.
 
-**Outstanding Sensor Evidence:** Actual delivered sampling rates, `SensorEvent.timestamp` behavior and monotonicity, event gap/drop behavior, and accuracy callback behavior remain pending. *(Bekleyen Sensör Kanıtı: Gerçekte sağlanan örnekleme hızları, `SensorEvent.timestamp` davranışı ve monotonluğu, olay boşluğu/kayıp davranışı ve doğruluk callback davranışı beklemektedir.)*
+**Stage 2A Runtime Sensor Inventory Evidence:** VERIFIED on the tested Xiaomi Redmi Note 9 Pro. SensorManager runtime access, the Flutter–Kotlin diagnostic bridge, and runtime sensor metadata retrieval were verified. The inventory returned 14 requested records: 13 default sensors available and `TYPE_PRESSURE` unavailable. This is capability metadata evidence, not sensor-performance evidence.
 
-**Device Baseline Status:** Not Frozen *(Cihaz Temel Referans Durumu: Sabitlenmedi)*
+**Stage 2B Live Timing Evidence:** VERIFIED for the tested accelerometer, gyroscope, magnetometer, and rotation-vector configuration. Three 10-second sessions per sensor produced 12/12 valid timing summaries and monotonic `SensorEvent.timestamp` sequences. No session contained a gap above the provisional 60 ms threshold (0/12 sessions with such gaps). Timestamp-derived aggregate mean rates were approximately 52.10 Hz, 51.07 Hz, 50.00 Hz, and 51.10 Hz respectively under the 20,000 µs (~50 Hz requested) configuration. These are scoped observations, not universal fixed rates.
 
-**Dataset Collection Authorization:** Pending Device Audit *(Veri Seti Toplama Yetkisi: Cihaz Denetimi Bekleniyor)*
+**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, the complete timing/multi-rate procedures, GNSS runtime timing, ARCore runtime tracking, and other required device/runtime checks remain pending. PDR, heading, Motion AI, Quality Engine, and EKF / Sensor Fusion are not implemented.
 
-**Minimum Architecture Authorization:** Pending GATE-MIN *(Minimum Mimari Yetkisi: GATE-MIN Bekleniyor)*
+**Device Baseline Status:** NOT FROZEN
 
-**Target Architecture Authorization:** Pending GATE-TGT *(Hedef Mimari Yetkisi: GATE-TGT Bekleniyor)*
+**Dataset Collection Authorization:** Pending Device Audit
+
+**Minimum Architecture Authorization:** Pending GATE-MIN
+
+**Target Architecture Authorization:** Pending GATE-TGT
+
+### Türkçe
+
+**Doküman Durumu:** Protokol Tamamlandı — Kısmi Uygulama
+
+**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A çalışma zamanı SensorManager yetenek envanteri ve Stage 2B dört sensörlü canlı zamanlama karakterizasyonu tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
+
+**Stage 2A Çalışma Zamanı Sensör Envanteri Kanıtı:** Test edilen Xiaomi Redmi Note 9 Pro üzerinde DOĞRULANDI. SensorManager çalışma zamanı erişimi, Flutter–Kotlin tanı köprüsü ve çalışma zamanı sensör metadata alımı doğrulandı. Envanter 14 istenen kayıt döndürdü: 13 varsayılan sensör kullanılabilirdi ve `TYPE_PRESSURE` kullanılamıyordu. Bu yetenek metadata kanıtıdır; sensör performansı kanıtı değildir.
+
+**Stage 2B Canlı Zamanlama Kanıtı:** Test edilen ivmeölçer, jiroskop, manyetometre ve dönüş vektörü yapılandırması için DOĞRULANDI. Sensör başına üç adet 10 saniyelik oturum; 12/12 geçerli zamanlama özeti ve monoton `SensorEvent.timestamp` dizisi üretti. 0/12 oturumda geçici 60 ms eşiğinin üzerinde boşluk gözlendi. Timestamp-türevli birleşik ortalama hızlar, 20.000 µs (~50 Hz talep edilen) yapılandırma altında sırasıyla yaklaşık 52,10 Hz, 51,07 Hz, 50,00 Hz ve 51,10 Hz idi. Bunlar evrensel sabit hızlar değil, kapsamı belirli gözlemlerdir.
+
+**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam zamanlama/çoklu hız prosedürleri, GNSS çalışma zamanı zamanlaması, ARCore çalışma zamanı takibi ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. PDR, heading, Motion AI, Quality Engine ve EKF / Sensör Füzyonu uygulanmamıştır.
+
+**Cihaz Baseline Durumu:** SABİTLENMEDİ
+
+**Veri Seti Toplama Yetkisi:** Cihaz Denetimi Bekliyor
+
+**Minimum Mimari Yetkisi:** GATE-MIN Bekliyor
+
+**Hedef Mimari Yetkisi:** GATE-TGT Bekliyor
 
 **Next Documentation Item:** 07 — Software Requirements Specification — SRS *(Sonraki Dokümantasyon Öğesi: 07 — Yazılım Gereksinimleri Şartnamesi — SRS)*
