@@ -13,6 +13,9 @@ enum _DiagnosticOperation {
   gnssPreflight,
   gnssPermission,
   gnssTiming,
+  arCorePreflight,
+  arCorePermission,
+  arCoreTracking,
 }
 
 class _SensorOption {
@@ -67,6 +70,41 @@ class _GnssDisplayState {
   final bool canRunFormalDiagnostic;
 }
 
+class _ArCoreDisplayState {
+  const _ArCoreDisplayState({
+    required this.cameraPermission,
+    required this.availability,
+    required this.ready,
+    required this.canRunFormalDiagnostic,
+  });
+
+  factory _ArCoreDisplayState.fromSnapshot(Map<Object?, Object?> snapshot) {
+    final bool cameraPermissionGranted =
+        snapshot['cameraPermissionGranted'] == true;
+    final String availability =
+        snapshot['availabilityRaw']?.toString() ?? 'Unknown';
+    final Object? installedAndCurrent = snapshot['arCoreInstalledAndCurrent'];
+
+    final String ready = installedAndCurrent == true
+        ? 'Yes'
+        : installedAndCurrent == false
+        ? 'No'
+        : 'Unknown';
+
+    return _ArCoreDisplayState(
+      cameraPermission: cameraPermissionGranted ? 'Granted' : 'Not granted',
+      availability: availability,
+      ready: ready,
+      canRunFormalDiagnostic: snapshot['canRunFormalDiagnostic'] == true,
+    );
+  }
+
+  final String cameraPermission;
+  final String availability;
+  final String ready;
+  final bool canRunFormalDiagnostic;
+}
+
 const List<_SensorOption> _sensorOptions = <_SensorOption>[
   _SensorOption(key: 'accelerometer', label: 'Accelerometer'),
   _SensorOption(key: 'gyroscope', label: 'Gyroscope'),
@@ -107,6 +145,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     'io.github.mesuttsahin.navguard/gnss_diagnostics',
   );
 
+  static const MethodChannel _arCoreChannel = MethodChannel(
+    'io.github.mesuttsahin.navguard/arcore_diagnostics',
+  );
+
   static const JsonEncoder _jsonEncoder = JsonEncoder.withIndent('  ');
 
   _DiagnosticOperation? _activeOperation;
@@ -115,6 +157,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   String _gpsProvider = 'Unknown';
   String _locationServices = 'Unknown';
   bool? _canRunFormalGnssDiagnostic;
+  String _cameraPermission = 'Unknown';
+  String _arCoreAvailability = 'Unknown';
+  String _arCoreReady = 'Unknown';
+  bool? _canRunFormalArCoreDiagnostic;
   String? _formattedOutput;
   String? _errorMessage;
 
@@ -134,6 +180,15 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
 
   bool get _isGnssTimingLoading =>
       _activeOperation == _DiagnosticOperation.gnssTiming;
+
+  bool get _isArCorePreflightLoading =>
+      _activeOperation == _DiagnosticOperation.arCorePreflight;
+
+  bool get _isArCorePermissionLoading =>
+      _activeOperation == _DiagnosticOperation.arCorePermission;
+
+  bool get _isArCoreTrackingLoading =>
+      _activeOperation == _DiagnosticOperation.arCoreTracking;
 
   Future<void> _readSensorInventory() {
     return _runDiagnosticRequest(
@@ -201,6 +256,46 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     );
   }
 
+  Future<void> _refreshArCorePreflight() {
+    return _runDiagnosticRequest(
+      channel: _arCoreChannel,
+      operation: _DiagnosticOperation.arCorePreflight,
+      methodName: 'getArCoreDiagnosticPreflight',
+      operationLabel: 'ARCore diagnostic preflight',
+      invalidResponseMessage: 'Native ARCore preflight did not return a map.',
+      beginMarker: 'NAVGUARD_ARCORE_PREFLIGHT_BEGIN',
+      endMarker: 'NAVGUARD_ARCORE_PREFLIGHT_END',
+      updateArCoreState: true,
+    );
+  }
+
+  Future<void> _requestArCoreCameraPermission() {
+    return _runDiagnosticRequest(
+      channel: _arCoreChannel,
+      operation: _DiagnosticOperation.arCorePermission,
+      methodName: 'requestArCoreCameraPermission',
+      operationLabel: 'ARCore camera permission request',
+      invalidResponseMessage:
+          'Native ARCore camera permission result did not return a map.',
+      beginMarker: 'NAVGUARD_ARCORE_PERMISSION_BEGIN',
+      endMarker: 'NAVGUARD_ARCORE_PERMISSION_END',
+      updateArCoreState: true,
+    );
+  }
+
+  Future<void> _runArCoreTrackingDiagnostic() {
+    return _runDiagnosticRequest(
+      channel: _arCoreChannel,
+      operation: _DiagnosticOperation.arCoreTracking,
+      methodName: 'runArCoreTrackingDiagnostic',
+      operationLabel: 'ARCore tracking diagnostic',
+      invalidResponseMessage:
+          'Native ARCore tracking diagnostic did not return a map.',
+      beginMarker: 'NAVGUARD_ARCORE_TRACKING_BEGIN',
+      endMarker: 'NAVGUARD_ARCORE_TRACKING_END',
+    );
+  }
+
   Future<void> _runDiagnosticRequest({
     required MethodChannel channel,
     required _DiagnosticOperation operation,
@@ -211,6 +306,7 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     required String endMarker,
     Map<String, Object?>? arguments,
     bool updateGnssState = false,
+    bool updateArCoreState = false,
   }) async {
     if (_isBusy) {
       return;
@@ -225,6 +321,7 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     String? nextOutput;
     String? nextError;
     _GnssDisplayState? nextGnssState;
+    _ArCoreDisplayState? nextArCoreState;
 
     try {
       final Object? rawSnapshot = await channel.invokeMethod<Object?>(
@@ -238,6 +335,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
 
       if (updateGnssState) {
         nextGnssState = _GnssDisplayState.fromSnapshot(rawSnapshot);
+      }
+
+      if (updateArCoreState) {
+        nextArCoreState = _ArCoreDisplayState.fromSnapshot(rawSnapshot);
       }
 
       final Object? normalizedSnapshot = _normalizeForJson(rawSnapshot);
@@ -280,6 +381,13 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         _gpsProvider = nextGnssState.gpsProvider;
         _locationServices = nextGnssState.locationServices;
         _canRunFormalGnssDiagnostic = nextGnssState.canRunFormalDiagnostic;
+      }
+
+      if (nextArCoreState != null) {
+        _cameraPermission = nextArCoreState.cameraPermission;
+        _arCoreAvailability = nextArCoreState.availability;
+        _arCoreReady = nextArCoreState.ready;
+        _canRunFormalArCoreDiagnostic = nextArCoreState.canRunFormalDiagnostic;
       }
     });
   }
@@ -466,6 +574,77 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
               ),
               const Divider(height: 32),
               Text(
+                'ARCore Runtime Diagnostics',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text('Camera Permission: $_cameraPermission'),
+              const SizedBox(height: 4),
+              Text('ARCore Availability: $_arCoreAvailability'),
+              const SizedBox(height: 4),
+              Text('ARCore Ready: $_arCoreReady'),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isBusy ? null : _refreshArCorePreflight,
+                icon: _isArCorePreflightLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(
+                  _isArCorePreflightLoading
+                      ? 'Refreshing ARCore Preflight...'
+                      : 'Refresh ARCore Preflight',
+                ),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _isBusy ? null : _requestArCoreCameraPermission,
+                icon: _isArCorePermissionLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.camera_alt_outlined),
+                label: Text(
+                  _isArCorePermissionLoading
+                      ? 'Requesting Camera Permission...'
+                      : 'Request Camera Permission',
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('Tracking Acquisition Timeout: 30 s'),
+              const SizedBox(height: 4),
+              const Text('Tracking Collection Duration: 30 s'),
+              const SizedBox(height: 8),
+              const Text(
+                'Privacy: camera images and raw pose trajectories are not saved or returned.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: !_isBusy && _canRunFormalArCoreDiagnostic == true
+                    ? _runArCoreTrackingDiagnostic
+                    : null,
+                icon: _isArCoreTrackingLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.view_in_ar),
+                label: Text(
+                  _isArCoreTrackingLoading
+                      ? 'Running ARCore tracking diagnostic...'
+                      : 'Run ARCore Tracking Diagnostic',
+                ),
+              ),
+              const Divider(height: 32),
+              Text(
                 _isBusy ? _activeOperationLabel : 'Diagnostic Output',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
@@ -504,6 +683,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         return 'Requesting GNSS foreground permission...';
       case _DiagnosticOperation.gnssTiming:
         return 'Running GNSS diagnostic...';
+      case _DiagnosticOperation.arCorePreflight:
+        return 'Refreshing ARCore preflight...';
+      case _DiagnosticOperation.arCorePermission:
+        return 'Requesting ARCore camera permission...';
+      case _DiagnosticOperation.arCoreTracking:
+        return 'Running ARCore tracking diagnostic...';
       case null:
         return 'Diagnostic Output';
     }

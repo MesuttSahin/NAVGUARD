@@ -39,5 +39,15 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Run GNSS Timing Diagnostic'), findsOneWidget);
+
+    expect(find.text('ARCore Runtime Diagnostics'), findsOneWidget);
+    expect(find.text('Camera Permission: Unknown'), findsOneWidget);
+    expect(find.text('ARCore Availability: Unknown'), findsOneWidget);
+    expect(find.text('ARCore Ready: Unknown'), findsOneWidget);
+    expect(find.text('Refresh ARCore Preflight'), findsOneWidget);
+    expect(find.text('Request Camera Permission'), findsOneWidget);
+    expect(find.text('Tracking Acquisition Timeout: 30 s'), findsOneWidget);
+    expect(find.text('Tracking Collection Duration: 30 s'), findsOneWidget);
+    expect(find.text('Run ARCore Tracking Diagnostic'), findsOneWidget);
   });
 }

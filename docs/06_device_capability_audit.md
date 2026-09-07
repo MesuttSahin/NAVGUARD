@@ -776,56 +776,125 @@ Failure of raw GNSS measurement access will not reduce the project below target 
 
 # 27. ARCore Installation Audit — AUD-AR-001 (ARCore Kurulum Denetimi — AUD-AR-001)
 
-Google officially lists the Redmi Note 9 Pro as an ARCore-supported device. *(Google, Redmi Note 9 Pro’yu resmî olarak ARCore destekli bir cihaz olarak listelemektedir.)*
+### English
 
-The physical device must nevertheless be tested because project success depends on the installed software environment and actual runtime behavior. *(Bununla birlikte proje başarısı yüklü yazılım ortamına ve gerçek çalışma zamanı davranışına bağlı olduğu için fiziksel cihaz test edilmelidir.)*
+Google officially lists the Redmi Note 9 Pro as an ARCore-supported device. The physical device must nevertheless be tested because project success depends on the installed software environment and actual runtime behavior.
 
-### Required Checks (Gerekli Kontroller)
+#### Required Checks
 
-- **Google Play Services for AR availability** *(Google Play Services for AR kullanılabilirliği)*
-- **ARCore session creation** *(ARCore oturumu oluşturma)*
-- **Camera permission** *(Kamera izni)*
-- **Rear camera startup** *(Arka kamera başlatma)*
-- **AR tracking initialization** *(AR takip başlatma)*
+- **Google Play Services for AR availability**
+- **ARCore session creation**
+- **Camera permission**
+- **Rear camera startup**
+- **AR tracking initialization**
 
-### Acceptance Criterion (Kabul Kriteri)
+#### Stage 2D Physical Evidence
 
-An ARCore session must initialize successfully on the physical Redmi Note 9 Pro. *(Bir ARCore oturumu fiziksel Redmi Note 9 Pro üzerinde başarıyla başlatılmalıdır.)*
+The Stage 2D preflight on the tested Xiaomi Redmi Note 9 Pro running Android 12 / API 31 reported `cameraPermissionGranted = true`, `availabilityRaw = SUPPORTED_INSTALLED`, `availabilityCategory = ready`, `arCoreSupported = true`, `arCoreInstalledAndCurrent = true`, and `canRunFormalDiagnostic = true`. This confirms tested-device support and readiness; `SUPPORTED_INSTALLED` alone is not treated as live-tracking evidence.
 
-**Criticality:** HIGH *(Kritiklik: YÜKSEK)*
+Live behavior was independently exercised in three formal physical sessions. ARCore `Session` creation, configuration, and resume passed in 3/3 sessions. Dedicated GL/EGL initialization and camera-texture setup also passed in 3/3 sessions, and real `TrackingState.TRACKING` was observed in every session.
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+The application remains AR Optional. Stage 2D added `android.permission.CAMERA`, declared `com.google.ar.core` as `optional`, and used `com.google.ar:core:1.54.0`. It did not add an AR-required installation constraint, background-location permission, location foreground service, microphone permission, storage permission, or unrelated dependency.
+
+#### Acceptance Criterion
+
+An ARCore session must initialize successfully on the physical Redmi Note 9 Pro.
+
+**Criticality:** HIGH
+
+**Actual Status:** VERIFIED — STAGE 2D DIAGNOSTIC SCOPE
+
+### Türkçe
+
+Google, Redmi Note 9 Pro'yu resmî olarak ARCore destekli bir cihaz olarak listeler. Bununla birlikte proje başarısı yüklü yazılım ortamına ve gerçek çalışma zamanı davranışına bağlı olduğu için fiziksel cihaz test edilmelidir.
+
+#### Gerekli Kontroller
+
+- **Google Play Services for AR kullanılabilirliği**
+- **ARCore oturumu oluşturma**
+- **Kamera izni**
+- **Arka kamera başlatma**
+- **AR takip başlatma**
+
+#### Stage 2D Fiziksel Kanıtı
+
+Android 12 / API 31 çalıştıran test cihazı Xiaomi Redmi Note 9 Pro üzerindeki Stage 2D preflight; `cameraPermissionGranted = true`, `availabilityRaw = SUPPORTED_INSTALLED`, `availabilityCategory = ready`, `arCoreSupported = true`, `arCoreInstalledAndCurrent = true` ve `canRunFormalDiagnostic = true` bildirdi. Bu, test edilen cihazda destek ve hazır olma durumunu doğrular; yalnızca `SUPPORTED_INSTALLED` değeri canlı takip kanıtı olarak ele alınmaz.
+
+Canlı davranış üç resmî fiziksel oturumda bağımsız olarak çalıştırıldı. ARCore `Session` oluşturma, yapılandırma ve resume 3/3 oturumda geçti. Özel GL/EGL başlatma ile kamera texture kurulumu da 3/3 oturumda geçti ve her oturumda gerçek `TrackingState.TRACKING` gözlendi.
+
+Uygulama AR Optional kalır. Stage 2D `android.permission.CAMERA` ekledi, `com.google.ar.core` özelliğini `optional` olarak bildirdi ve `com.google.ar:core:1.54.0` kullandı. AR-required kurulum kısıtı, arka plan konum izni, konum foreground service'i, mikrofon izni, depolama izni veya ilgisiz dependency eklemedi.
+
+#### Kabul Kriteri
+
+Bir ARCore oturumu fiziksel Redmi Note 9 Pro üzerinde başarıyla başlatılmalıdır.
+
+**Kritiklik:** YÜKSEK
+
+**Gerçek Durum:** DOĞRULANDI — STAGE 2D TANI KAPSAMI
 
 ---
 
 # 28. ARCore Pose Audit — AUD-AR-002 (ARCore Poz Denetimi — AUD-AR-002)
 
-The audit must verify that ARCore produces changing relative pose values as the device is physically moved. *(Denetim, cihaz fiziksel olarak hareket ettirildiğinde ARCore’un değişen göreli poz değerleri ürettiğini doğrulamalıdır.)*
+### English
 
-### Required Pose Information (Gerekli Poz Bilgisi)
+The audit must verify that ARCore produces changing relative pose values as the device is physically moved. Required information includes translation X/Y/Z, rotation quaternion X/Y/Z/W, `Frame.timestamp`, and tracking state.
 
-- **Translation X, Y, and Z** *(Öteleme X, Y ve Z)*
-- **Rotation Quaternion X, Y, Z, and W** *(Dönüş Quaternion X, Y, Z ve W)*
-- **Frame Timestamp** *(Kare Zaman Damgası)*
-- **Tracking State** *(Takip Durumu)*
+#### Stage 2D Physical Evidence
 
-### Planned Test (Planlanan Test)
+Three formal physical sessions were run: (1) the phone held approximately stationary while facing a visually detailed environment, (2) an approximately 120-degree rightward handheld/camera rotation with pauses, and (3) approximately 2–3 steps of rightward walking. All 3/3 sessions produced valid summaries, reached real `TrackingState.TRACKING`, exposed local-session tracking pose, produced monotonic `Frame.timestamp` sequences, completed without terminal errors, and contained no `STOPPED` frames.
 
-Initialize ARCore while the device is stationary. *(Cihaz sabitken ARCore’u başlat.)*
+| Session | Physical Scenario | Tracking Fraction | Net Local-Session Relative Translation | Maximum Displacement from First Tracking Pose |
+| --- | --- | ---: | ---: | ---: |
+| 1 | Approximately stationary | ~98.26% | ~0.0386 m | ~0.1027 m |
+| 2 | Approximately 120-degree rightward rotation with pauses | ~98.15% | ~0.6313 m | ~0.7161 m |
+| 3 | Approximately 2–3 steps rightward; exact distance not measured | ~98.36% | ~3.0063 m | ~3.0146 m |
 
-Move the device slowly forward and backward. *(Cihazı yavaşça ileri ve geri hareket ettir.)*
+Session 2 showed that ARCore maintained live tracking during controlled handheld rotational motion, but the diagnostic did not calculate a rotation-angle aggregate or validate the approximately 120-degree rotation. The translation values are not rotation-angle measurements. Session 3 showed a clear local-session relative pose change during real rightward walking, but the physical distance was not independently measured; the ARCore translation is not a ground-truth walking distance or distance-accuracy result.
 
-Move the device laterally. *(Cihazı yanal olarak hareket ettir.)*
+The observed unique-frame rate was approximately 30.0295–30.0304 Hz. The median interval-derived rate was approximately 30.0304 Hz in all three sessions, the median frame interval was approximately 33.299584 ms, and the observed p95 interval range was approximately 33.325–33.350 ms. Non-monotonic `Frame.timestamp` count was zero in all sessions. These are tested-device/configuration/session observations, not a fixed or guaranteed 30 Hz rate. The time base of `Frame.timestamp` remains undefined for cross-source alignment.
 
-Perform a controlled rotation. *(Kontrollü bir dönüş gerçekleştir.)*
+`trackingFraction` is the fraction of unique ARCore frames observed in `TrackingState.TRACKING` during a tested diagnostic session. Its observed range was approximately 98.15%–98.36%; it is not a final NAVGUARD quality score, a universal reliability percentage, or a navigation-accuracy result. No quality threshold is frozen from these sessions.
 
-Return approximately to the starting position. *(Yaklaşık olarak başlangıç konumuna geri dön.)*
+Stage 2D applied no ARCore frame-gap threshold (`frameGapThresholdApplied = false`). The provisional 60 ms Stage 2B sensor threshold does not apply to ARCore, and no threshold is inferred from these sessions.
 
-### Acceptance Criterion (Kabul Kriteri)
+Stage 2D verified pose only in ARCore local-session coordinates. It did not implement or verify ARCore-to-ENU conversion, true north, WGS84 or map coordinates, GNSS-relative pose, absolute position, distance accuracy, scale accuracy, rotation accuracy, or absolute accuracy. Raw camera frames and raw pose trajectories were not persisted.
 
-The pose output must respond consistently to physical movement and remain usable for relative displacement estimation during ordinary tracking conditions. *(Poz çıktısı fiziksel harekete tutarlı şekilde tepki vermeli ve normal takip koşullarında göreli yer değiştirme tahmini için kullanılabilir kalmalıdır.)*
+#### Acceptance Criterion
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+The pose output must respond consistently to physical movement and remain usable for relative displacement observation during ordinary tracking conditions.
+
+**Actual Status:** VERIFIED — STAGE 2D DIAGNOSTIC SCOPE; COORDINATE, SCALE, AND ACCURACY VALIDATION PENDING
+
+### Türkçe
+
+Denetim, cihaz fiziksel olarak hareket ettirildiğinde ARCore'un değişen göreli poz değerleri ürettiğini doğrulamalıdır. Gerekli bilgiler öteleme X/Y/Z, dönüş quaternion X/Y/Z/W, `Frame.timestamp` ve takip durumudur.
+
+#### Stage 2D Fiziksel Kanıtı
+
+Üç resmî fiziksel oturum çalıştırıldı: (1) görsel olarak ayrıntılı bir ortama bakarken telefonun yaklaşık sabit tutulması, (2) duraklamalarla sağa doğru yaklaşık 120 derecelik elde telefon/kamera dönüşü ve (3) sağa doğru yaklaşık 2–3 adım yürüyüş. Oturumların 3/3'ü geçerli özet üretti, gerçek `TrackingState.TRACKING` durumuna ulaştı, yerel-oturum takip pozu sağladı, monotonik `Frame.timestamp` dizileri üretti, terminal hatası olmadan tamamlandı ve hiçbirinde `STOPPED` kare bulunmadı.
+
+| Oturum | Fiziksel Senaryo | Tracking Fraction | Net Yerel-Oturum Göreli Ötelemesi | İlk Takip Pozundan Maksimum Yer Değiştirme |
+| --- | --- | ---: | ---: | ---: |
+| 1 | Yaklaşık sabit | ~%98,26 | ~0,0386 m | ~0,1027 m |
+| 2 | Duraklamalarla sağa doğru yaklaşık 120 derece dönüş | ~%98,15 | ~0,6313 m | ~0,7161 m |
+| 3 | Sağa doğru yaklaşık 2–3 adım; kesin mesafe ölçülmedi | ~%98,36 | ~3,0063 m | ~3,0146 m |
+
+Oturum 2, ARCore'un kontrollü elde dönüş hareketi boyunca canlı takibi koruduğunu gösterdi; ancak tanı bir dönüş açısı özeti hesaplamadı veya yaklaşık 120 derecelik dönüşü doğrulamadı. Öteleme değerleri dönüş açısı ölçümü değildir. Oturum 3, gerçek sağa yürüme hareketi sırasında belirgin bir yerel-oturum göreli poz değişimi gösterdi; ancak fiziksel mesafe bağımsız olarak ölçülmedi. ARCore ötelemesi gerçek referans yürüme mesafesi veya mesafe doğruluğu sonucu değildir.
+
+Gözlenen benzersiz-kare hızı yaklaşık 30,0295–30,0304 Hz idi. Medyan aralık-türevli hız üç oturumun tamamında yaklaşık 30,0304 Hz, medyan kare aralığı yaklaşık 33,299584 ms ve gözlenen p95 aralık yaklaşık 33,325–33,350 ms idi. Monotonik olmayan `Frame.timestamp` sayısı tüm oturumlarda sıfırdı. Bunlar test edilen cihaz/yapılandırma/oturum gözlemleridir; sabit veya garanti edilen 30 Hz hız değildir. Kaynaklar arası hizalama için `Frame.timestamp` zaman tabanı tanımsız kalır.
+
+`trackingFraction`, test edilen bir tanı oturumunda `TrackingState.TRACKING` durumunda gözlenen benzersiz ARCore karelerinin oranıdır. Gözlenen aralık yaklaşık %98,15–%98,36 idi; bu değer nihai NAVGUARD kalite skoru, evrensel güvenilirlik yüzdesi veya navigasyon doğruluğu sonucu değildir. Bu oturumlardan bir kalite eşiği sabitlenmemiştir.
+
+Stage 2D herhangi bir ARCore kare-boşluk eşiği uygulamadı (`frameGapThresholdApplied = false`). Stage 2B'nin geçici 60 ms sensör eşiği ARCore'a uygulanmaz ve bu oturumlardan bir eşik çıkarılmaz.
+
+Stage 2D pozu yalnızca ARCore yerel-oturum koordinatlarında doğruladı. ARCore-to-ENU dönüşümü, true north, WGS84 veya harita koordinatları, GNSS'e göre poz, mutlak konum, mesafe doğruluğu, ölçek doğruluğu, dönüş doğruluğu veya mutlak doğruluğu uygulamadı ya da doğrulamadı. Ham kamera kareleri ve ham poz rotaları kalıcılaştırılmadı.
+
+#### Kabul Kriteri
+
+Poz çıktısı fiziksel harekete tutarlı şekilde tepki vermeli ve normal takip koşullarında göreli yer değiştirme gözlemi için kullanılabilir kalmalıdır.
+
+**Gerçek Durum:** DOĞRULANDI — STAGE 2D TANI KAPSAMI; KOORDİNAT, ÖLÇEK VE DOĞRULUK DOĞRULAMASI BEKLİYOR
 
 ---
 
@@ -850,7 +919,17 @@ The measured stationary drift must be characterized before ARCore is assigned a 
 
 No fixed absolute threshold will be frozen until this experiment is performed. *(Bu deney gerçekleştirilene kadar sabit bir mutlak eşik sabitlenmeyecektir.)*
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+### Stage 2D Observation — English
+
+During the approximately stationary session, the tracking fraction was approximately 98.26%, net local-session relative translation was approximately 0.0386 m, and maximum displacement from the first tracking pose was approximately 0.1027 m. This is a small non-zero local-session pose variation, or apparent drift-like motion, while the device was intended to remain approximately stationary. Because no independent reference position existed, it is not a formal drift benchmark, an error measurement, or an accuracy validation.
+
+**Actual Status:** PARTIAL — STAGE 2D STATIONARY OBSERVATION RECORDED; FORMAL DRIFT BENCHMARK PENDING
+
+### Stage 2D Gözlemi — Türkçe
+
+Yaklaşık sabit oturumda tracking fraction yaklaşık %98,26, net yerel-oturum göreli ötelemesi yaklaşık 0,0386 m ve ilk takip pozundan maksimum yer değiştirme yaklaşık 0,1027 m idi. Bu, cihazın yaklaşık sabit kalması amaçlanırken gözlenen küçük, sıfır olmayan bir yerel-oturum poz değişimi veya görünür sürüklenme-benzeri harekettir. Bağımsız bir referans konum bulunmadığından resmî bir sürüklenme benchmark'ı, hata ölçümü veya doğruluk doğrulaması değildir.
+
+**Gerçek Durum:** KISMİ — STAGE 2D SABİT DURUM GÖZLEMİ KAYDEDİLDİ; RESMÎ SÜRÜKLENME BENCHMARK'I BEKLİYOR
 
 ---
 
@@ -871,7 +950,17 @@ The test should include ordinary conditions likely to reduce visual tracking qua
 
 NAVGUARD must detect when ARCore tracking is unavailable or degraded and must avoid blindly treating invalid pose measurements as reliable navigation input. *(NAVGUARD, ARCore takibi kullanılamaz veya bozulmuş olduğunda bunu tespit etmeli ve geçersiz poz ölçümlerini körü körüne güvenilir navigasyon girdisi olarak ele almamalıdır.)*
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+### Stage 2D Boundary — English
+
+All three ordinary-condition sessions were free of `STOPPED` frames and terminal errors. Deliberate low-texture, reduced-lighting, obstruction, and excessive-motion degradation tests were not performed, so degradation detection and recovery remain unverified.
+
+**Actual Status:** TBD — DEGRADATION PROCEDURE NOT EXECUTED
+
+### Stage 2D Sınırı — Türkçe
+
+Üç normal-koşul oturumunun tamamında `STOPPED` kare ve terminal hatası yoktu. Kasıtlı düşük doku, azaltılmış aydınlatma, engelleme ve aşırı hareket bozulma testleri yapılmadığından bozulma tespiti ve recovery doğrulanmamıştır.
+
+**Gerçek Durum:** TBD — BOZULMA PROSEDÜRÜ ÇALIŞTIRILMADI
 
 ---
 
@@ -886,7 +975,17 @@ The rear camera must be available to ARCore without resource conflicts during th
 - **No persistent camera conflict** *(Kalıcı kamera çatışması yok)*
 - **Navigation UI remains responsive while camera tracking is active** *(Kamera takibi aktifken navigasyon kullanıcı arayüzü tepki verebilir kalıyor)*
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+### Stage 2D Evidence — English
+
+Camera permission was granted, dedicated GL/EGL initialization and camera-texture setup passed in 3/3 sessions, the ARCore session resumed successfully in 3/3 sessions, and live tracking completed without a persistent camera conflict, visible crash, freeze, or terminal error. This evidence applies only to the Stage 2D diagnostic workflow, not a future combined navigation workload.
+
+**Actual Status:** VERIFIED — STAGE 2D DIAGNOSTIC SCOPE
+
+### Stage 2D Kanıtı — Türkçe
+
+Kamera izni verildi; özel GL/EGL başlatma ve kamera texture kurulumu 3/3 oturumda geçti, ARCore oturumu 3/3 oturumda başarıyla resume edildi ve canlı takip kalıcı kamera çatışması, görünür çökme, donma veya terminal hatası olmadan tamamlandı. Bu kanıt yalnızca Stage 2D tanı iş akışına uygulanır; gelecekteki birleşik navigasyon iş yüküne uygulanmaz.
+
+**Gerçek Durum:** DOĞRULANDI — STAGE 2D TANI KAPSAMI
 
 ---
 
@@ -1072,17 +1171,19 @@ NAVGUARD must identify and test every runtime permission required by the selecte
 | Permission Area | Required Use | Result |
 | --- | --- | --- |
 | Precise Location | GNSS initialization and ground truth | VERIFIED — STAGE 2C DIAGNOSTIC SCOPE |
-| Camera | ARCore tracking | TBD |
+| Camera | ARCore tracking | VERIFIED — STAGE 2D DIAGNOSTIC SCOPE |
 | Local File / Media Access if Required | Session export | TBD |
 | High Sampling Rate Sensors | Not expected to be required | TBD |
 
 Stage 2C added exactly `ACCESS_COARSE_LOCATION` and `ACCESS_FINE_LOCATION`. Both permissions were requested together through the native foreground permission flow. The pre-permission state was not granted and not formal-ready; after the user selected precise location, coarse and fine states were granted and the preflight became formal-ready. Approximate-only access is not treated as sufficient for the formal GNSS diagnostic. No `ACCESS_BACKGROUND_LOCATION` permission or location foreground service was added.
 
+Stage 2D added `android.permission.CAMERA` for the ARCore diagnostic. The camera-permission path was physically verified, preflight reported permission granted, and all three formal ARCore sessions ran without a permission-related terminal error. No microphone, storage, background-location, or unrelated runtime permission was added.
+
 #### Acceptance Criterion
 
 The application must handle granted and denied permission states without crashing. The user must receive a clear explanation when a required permission prevents a selected navigation configuration from running.
 
-**Actual Status:** PARTIAL — Foreground location permission and precise-versus-approximate readiness are verified for the Stage 2C GNSS diagnostic. Camera and any later configuration-specific permission audits remain pending.
+**Actual Status:** PARTIAL — Foreground location permission and precise-versus-approximate readiness are verified for the Stage 2C GNSS diagnostic, and camera permission is verified for the Stage 2D ARCore diagnostic. Later configuration-specific permission audits remain pending.
 
 ### Türkçe
 
@@ -1093,17 +1194,19 @@ NAVGUARD, seçilen Android yapılandırması tarafından gerekli her çalışma 
 | İzin Alanı | Gerekli Kullanım | Sonuç |
 | --- | --- | --- |
 | Hassas Konum | GNSS başlatma ve gerçek referans | DOĞRULANDI — STAGE 2C TANI KAPSAMI |
-| Kamera | ARCore takibi | TBD |
+| Kamera | ARCore takibi | DOĞRULANDI — STAGE 2D TANI KAPSAMI |
 | Gerekirse Yerel Dosya / Medya Erişimi | Oturum dışa aktarma | TBD |
 | Yüksek Örnekleme Hızlı Sensörler | Gerekmesi beklenmiyor | TBD |
 
 Stage 2C tam olarak `ACCESS_COARSE_LOCATION` ve `ACCESS_FINE_LOCATION` izinlerini ekledi. Her iki izin native ön plan izin akışında birlikte talep edildi. İzin öncesi durum not-granted ve resmî tanı için hazır değilken kullanıcı hassas konumu seçtikten sonra coarse ve fine durumları granted oldu ve preflight resmî tanı için hazır duruma geçti. Yalnızca yaklaşık konum erişimi resmî GNSS tanısı için yeterli kabul edilmez. `ACCESS_BACKGROUND_LOCATION` izni veya konum foreground service'i eklenmedi.
 
+Stage 2D, ARCore tanısı için `android.permission.CAMERA` ekledi. Kamera izin yolu fiziksel olarak doğrulandı, preflight iznin verildiğini bildirdi ve üç resmî ARCore oturumunun tamamı izinle ilişkili terminal hatası olmadan çalıştı. Mikrofon, depolama, arka plan konum veya ilgisiz çalışma zamanı izni eklenmedi.
+
 #### Kabul Kriteri
 
 Uygulama izin verilmiş ve reddedilmiş durumları çökmeden yönetmelidir. Zorunlu bir izin seçilen navigasyon yapılandırmasının çalışmasını engellediğinde kullanıcı açık bir açıklama almalıdır.
 
-**Gerçek Durum:** KISMİ — Ön plan konum izni ve hassas-yaklaşık konum hazır olma ayrımı Stage 2C GNSS tanısı için doğrulandı. Kamera ve daha sonraki yapılandırmalara özgü izin denetimleri beklemektedir.
+**Gerçek Durum:** KISMİ — Ön plan konum izni ve hassas-yaklaşık konum hazır olma ayrımı Stage 2C GNSS tanısı için, kamera izni ise Stage 2D ARCore tanısı için doğrulandı. Daha sonraki yapılandırmalara özgü izin denetimleri beklemektedir.
 
 ---
 
@@ -1160,7 +1263,7 @@ The resulting session must be suitable for offline analysis without manual repai
 
 NAVGUARD must define how sensor timestamps, GNSS timestamps, ARCore timestamps, and application event timestamps are represented and aligned. The audit must identify whether each source uses a monotonic elapsed-time reference, wall-clock time, or another timestamp basis. A documented conversion or synchronization strategy must exist before multi-source fusion begins.
 
-Stage 2B established `SensorEvent.timestamp` as the sensor timing authority for its tested scope. Stage 2C established `Location.elapsedRealtimeNanos` in the `elapsed_realtime_nanoseconds` domain as the GNSS diagnostic timing authority and physically characterized monotonic sequences in 3/3 sessions. Stage 2C did not use `Location.time`, wall-clock time, or callback arrival time for interval or rate calculations.
+Stage 2B established `SensorEvent.timestamp` as the sensor timing authority for its tested scope. Stage 2C established `Location.elapsedRealtimeNanos` in the `elapsed_realtime_nanoseconds` domain as the GNSS diagnostic timing authority and physically characterized monotonic sequences in 3/3 sessions. Stage 2C did not use `Location.time`, wall-clock time, or callback arrival time for interval or rate calculations. Stage 2D used ARCore `Frame.timestamp` as its frame-timing authority and observed monotonic sequences in 3/3 sessions, but the Stage 2D diagnostic does not define its time base or a conversion to the sensor/GNSS domains.
 
 #### Acceptance Criterion
 
@@ -1168,13 +1271,13 @@ Measurements from different sources must be alignable onto a common experiment t
 
 **Criticality:** CRITICAL
 
-**Actual Status:** PARTIAL — Sensor and GNSS monotonic timestamp domains are identified and physically observed for their tested scopes. ARCore and application-event domains plus the documented multi-source conversion/alignment strategy remain pending; fusion is not implemented.
+**Actual Status:** PARTIAL — Sensor, GNSS, and ARCore monotonic timestamp sources are physically observed for their tested scopes. The ARCore time base, application-event domain, and documented multi-source conversion/alignment strategy remain pending; fusion is not implemented.
 
 ### Türkçe
 
 NAVGUARD; sensör zaman damgalarının, GNSS zaman damgalarının, ARCore zaman damgalarının ve uygulama olay zaman damgalarının nasıl temsil edilip hizalanacağını tanımlamalıdır. Denetim her kaynağın monotonik geçen zaman referansı, duvar saati zamanı veya başka bir zaman damgası temeli kullanıp kullanmadığını belirlemelidir. Çok kaynaklı füzyon başlamadan önce dokümante edilmiş bir dönüşüm veya senkronizasyon stratejisi mevcut olmalıdır.
 
-Stage 2B, test edilen kapsamı için `SensorEvent.timestamp` değerini sensör zamanlama otoritesi olarak belirledi. Stage 2C, `elapsed_realtime_nanoseconds` alanındaki `Location.elapsedRealtimeNanos` değerini GNSS tanı zamanlama otoritesi olarak belirledi ve 3/3 oturumda monotonik dizileri fiziksel olarak karakterize etti. Stage 2C aralık veya hız hesaplamalarında `Location.time`, duvar saati ya da callback varış zamanını kullanmadı.
+Stage 2B, test edilen kapsamı için `SensorEvent.timestamp` değerini sensör zamanlama otoritesi olarak belirledi. Stage 2C, `elapsed_realtime_nanoseconds` alanındaki `Location.elapsedRealtimeNanos` değerini GNSS tanı zamanlama otoritesi olarak belirledi ve 3/3 oturumda monotonik dizileri fiziksel olarak karakterize etti. Stage 2C aralık veya hız hesaplamalarında `Location.time`, duvar saati ya da callback varış zamanını kullanmadı. Stage 2D, kare zamanlama otoritesi olarak ARCore `Frame.timestamp` kullandı ve 3/3 oturumda monotonik diziler gözledi; ancak Stage 2D tanısı bu zaman damgasının zaman tabanını veya sensör/GNSS alanlarına dönüşümünü tanımlamaz.
 
 #### Kabul Kriteri
 
@@ -1182,7 +1285,7 @@ Farklı kaynaklardan gelen ölçümler ortak bir deney zaman çizelgesine hizala
 
 **Kritiklik:** KRİTİK
 
-**Gerçek Durum:** KISMİ — Sensör ve GNSS monotonik zaman damgası alanları tanımlı kapsamlarında belirlenmiş ve fiziksel olarak gözlenmiştir. ARCore ve uygulama olayı zaman alanları ile dokümante edilmiş çok-kaynaklı dönüşüm/hizalama stratejisi beklemektedir; füzyon uygulanmamıştır.
+**Gerçek Durum:** KISMİ — Sensör, GNSS ve ARCore monotonik zaman damgası kaynakları tanımlı kapsamlarında fiziksel olarak gözlenmiştir. ARCore zaman tabanı, uygulama olayı alanı ve dokümante edilmiş çok-kaynaklı dönüşüm/hizalama stratejisi beklemektedir; füzyon uygulanmamıştır.
 
 ---
 
@@ -1209,17 +1312,17 @@ The screen is intended for engineering validation rather than normal end-user na
 
 This screen may later become part of a permanent Research or Developer Mode. *(Bu ekran daha sonra kalıcı bir Araştırma veya Geliştirici Modunun parçası olabilir.)*
 
-### Stage 2C Evidence — English
+### Stage 2D Evidence — English
 
-The Flutter runtime-diagnostics screen preserves the Stage 2A sensor inventory and Stage 2B sensor timing controls and adds GNSS preflight, precise foreground permission, and GNSS timing controls. It displays only sanitized JSON summaries and uses dedicated console markers; it does not display coordinates. The timing action is enabled only when the most recently known preflight reports formal readiness, and the shared busy state prevents simultaneous UI-triggered diagnostics.
+The Flutter runtime-diagnostics screen preserves the Stage 2A sensor inventory, Stage 2B sensor timing, and Stage 2C GNSS controls and adds ARCore preflight, camera permission, and ARCore tracking controls. It displays sanitized aggregate summaries and uses dedicated console markers. The formal action depends on the most recently known preflight readiness, and the shared busy state prevents simultaneous UI-triggered diagnostics. Stage 2D reports `rawCameraFramesPersisted = false` and `rawPoseTrajectoryPersisted = false`.
 
-**Actual Status:** PARTIAL — Sensor inventory, sensor timing, and GNSS timing diagnostic UI scopes are implemented. ARCore, TFLite, storage, and other recommended diagnostic areas remain pending.
+**Actual Status:** PARTIAL — Sensor inventory, sensor timing, GNSS timing, and ARCore tracking diagnostic UI scopes are implemented. TFLite, storage, and other recommended diagnostic areas remain pending.
 
-### Stage 2C Kanıtı — Türkçe
+### Stage 2D Kanıtı — Türkçe
 
-Flutter çalışma zamanı tanı ekranı Stage 2A sensör envanteri ile Stage 2B sensör zamanlama kontrollerini korur ve GNSS preflight, hassas ön plan konum izni ve GNSS zamanlama kontrollerini ekler. Yalnızca sanitize edilmiş JSON özetleri gösterir ve özel konsol işaretleyicileri kullanır; koordinat göstermez. Zamanlama eylemi yalnızca en son bilinen preflight resmî hazır olma durumu bildirdiğinde etkinleşir ve ortak busy durumu aynı anda birden fazla UI tetiklemeli tanıyı engeller.
+Flutter çalışma zamanı tanı ekranı Stage 2A sensör envanteri, Stage 2B sensör zamanlaması ve Stage 2C GNSS kontrollerini korur; ARCore preflight, kamera izni ve ARCore takip kontrollerini ekler. Sanitize edilmiş birleşik özetleri gösterir ve özel konsol işaretleyicileri kullanır. Resmî eylem en son bilinen preflight hazır olma durumuna bağlıdır ve ortak busy durumu aynı anda birden fazla UI tetiklemeli tanıyı engeller. Stage 2D `rawCameraFramesPersisted = false` ve `rawPoseTrajectoryPersisted = false` bildirir.
 
-**Gerçek Durum:** KISMİ — Sensör envanteri, sensör zamanlaması ve GNSS zamanlama tanı kullanıcı arayüzü kapsamları uygulanmıştır. ARCore, TFLite, depolama ve önerilen diğer tanı alanları beklemektedir.
+**Gerçek Durum:** KISMİ — Sensör envanteri, sensör zamanlaması, GNSS zamanlaması ve ARCore takip tanı kullanıcı arayüzü kapsamları uygulanmıştır. TFLite, depolama ve önerilen diğer tanı alanları beklemektedir.
 
 ---
 
@@ -1275,11 +1378,13 @@ The evidence filename or location should be linked to the corresponding audit it
 | AUD-MAG-002 | Magnetometer Usability *(Manyetometre Kullanılabilirliği)* | HIGH *(YÜKSEK)* | TBD |
 | AUD-GNSS-001 | GNSS Availability *(GNSS Kullanılabilirliği)* | CRITICAL *(KRİTİK)* | PARTIAL — STAGE 2C TIMING SCOPE |
 | AUD-GNSS-003 | Ground Truth Isolation *(Gerçek Referans İzolasyonu)* | CRITICAL *(KRİTİK)* | TBD |
-| AUD-AR-001 | ARCore Startup *(ARCore Başlatma)* | HIGH *(YÜKSEK)* | TBD |
-| AUD-AR-002 | ARCore Relative Pose *(ARCore Göreli Poz)* | HIGH *(YÜKSEK)* | TBD |
+| AUD-AR-001 | ARCore Startup *(ARCore Başlatma)* | HIGH *(YÜKSEK)* | VERIFIED — STAGE 2D DIAGNOSTIC SCOPE |
+| AUD-AR-002 | ARCore Relative Pose *(ARCore Göreli Poz)* | HIGH *(YÜKSEK)* | VERIFIED — STAGE 2D DIAGNOSTIC SCOPE; ACCURACY NOT VALIDATED |
+| AUD-AR-003 | ARCore Stationary Drift *(ARCore Sabit Durum Sürüklenmesi)* | HIGH *(YÜKSEK)* | PARTIAL — OBSERVATION ONLY; FORMAL BENCHMARK PENDING |
+| AUD-AR-004 | ARCore Tracking Degradation *(ARCore Takip Bozulması)* | HIGH *(YÜKSEK)* | TBD — DEGRADATION PROCEDURE NOT EXECUTED |
 | AUD-AI-001 | Local TFLite Runtime *(Yerel TFLite Çalışma Zamanı)* | HIGH *(YÜKSEK)* | TBD |
 | AUD-STO-001 | Continuous Logging *(Sürekli Kayıt)* | CRITICAL *(KRİTİK)* | TBD |
-| AUD-TIME-002 | Multi-Source Clock Alignment *(Çok Kaynaklı Saat Hizalama)* | CRITICAL *(KRİTİK)* | PARTIAL — SENSOR/GNSS DOMAINS IDENTIFIED |
+| AUD-TIME-002 | Multi-Source Clock Alignment *(Çok Kaynaklı Saat Hizalama)* | CRITICAL *(KRİTİK)* | PARTIAL — SENSOR/GNSS/ARCORE SOURCES OBSERVED; ALIGNMENT PENDING |
 | AUD-OFF-001 | Offline Core Runtime *(Çevrimdışı Temel Çalışma)* | HIGH *(YÜKSEK)* | TBD |
 
 ---
@@ -1404,8 +1509,8 @@ File names may change during implementation, but the information represented by 
 - [ ]  **Short walking sensor test completed.** *(Kısa yürüyüş sensör testi tamamlandı.)*
 - [ ]  **GNSS outdoor test completed.** *(GNSS dış mekân testi tamamlandı.)*
 - [ ]  **GNSS ground-truth isolation verified.** *(GNSS gerçek referans izolasyonu doğrulandı.)*
-- [ ]  **ARCore installation verified.** *(ARCore kurulumu doğrulandı.)*
-- [ ]  **ARCore pose tracking verified.** *(ARCore poz takibi doğrulandı.)*
+- [x]  **ARCore installation verified for the Stage 2D diagnostic scope.** *(ARCore kurulumu Stage 2D tanı kapsamı için doğrulandı.)*
+- [x]  **ARCore local-session pose tracking verified for the Stage 2D diagnostic scope.** *(ARCore yerel-oturum poz takibi Stage 2D tanı kapsamı için doğrulandı.)*
 - [ ]  **ARCore stationary drift recorded.** *(ARCore sabit durum sürüklenmesi kaydedildi.)*
 - [ ]  **ARCore degradation handling verified.** *(ARCore bozulma yönetimi doğrulandı.)*
 - [ ]  **TensorFlow Lite test inference completed.** *(TensorFlow Lite test çıkarımı tamamlandı.)*
@@ -1416,9 +1521,9 @@ File names may change during implementation, but the information represented by 
 - [ ]  **Target architecture gate evaluated.** *(Hedef mimari kapısı değerlendirildi.)*
 - [ ]  **Final device baseline frozen.** *(Nihai cihaz temel referansı sabitlendi.)*
 
-**Stage 2C boundary:** Stage 2A sensor inventory, Stage 2B four-sensor timing, and Stage 2C GNSS runtime timing are verified for their defined scopes, but they do not complete this checklist. The coordinate-based GNSS availability audit, GNSS ground-truth isolation, ARCore runtime tracking, full sensor-audit procedures, clock-alignment strategy, and other required device/runtime checks remain pending.
+**Stage 2D boundary:** Stage 2A sensor inventory, Stage 2B four-sensor timing, Stage 2C GNSS runtime timing, and Stage 2D ARCore runtime tracking are verified for their defined scopes, but they do not complete this checklist. Coordinate-based GNSS availability, GNSS ground-truth isolation, formal ARCore stationary-drift and degradation procedures, ARCore accuracy and coordinate alignment, full sensor-audit procedures, the multi-source clock-alignment strategy, and other required device/runtime checks remain pending.
 
-**Stage 2C sınırı:** Stage 2A sensör envanteri, Stage 2B dört sensörlü zamanlama ve Stage 2C GNSS çalışma zamanı zamanlaması tanımlı kapsamlarında doğrulanmıştır ancak bu kontrol listesini tamamlamaz. Koordinat tabanlı GNSS kullanılabilirlik denetimi, GNSS gerçek referans izolasyonu, ARCore çalışma zamanı takibi, tam sensör denetimi prosedürleri, saat hizalama stratejisi ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir.
+**Stage 2D sınırı:** Stage 2A sensör envanteri, Stage 2B dört sensörlü zamanlama, Stage 2C GNSS çalışma zamanı zamanlaması ve Stage 2D ARCore çalışma zamanı takibi tanımlı kapsamlarında doğrulanmıştır ancak bu kontrol listesini tamamlamaz. Koordinat tabanlı GNSS kullanılabilirliği, GNSS gerçek referans izolasyonu, resmî ARCore sabit-durum sürüklenme ve bozulma prosedürleri, ARCore doğruluk ve koordinat hizalaması, tam sensör denetimi prosedürleri, çok-kaynaklı saat hizalama stratejisi ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir.
 
 ---
 
@@ -1428,7 +1533,7 @@ File names may change during implementation, but the information represented by 
 
 | Area | Result | Notes |
 | --- | --- | --- |
-| Device Environment | PARTIAL | Stage 2B and Stage 2C tested on Xiaomi Redmi Note 9 Pro, Android 12 / API 31; full environment audit pending. |
+| Device Environment | PARTIAL | Stage 2B, Stage 2C, and Stage 2D tested on Xiaomi Redmi Note 9 Pro, Android 12 / API 31; full environment audit pending. |
 | Static Sensor Availability | VERIFIED — STAGE 2A SCOPE | Runtime default-sensor availability and metadata verified; this is not sensor-performance evidence. |
 | Accelerometer | PARTIAL | Stage 2B live delivery/timing verified; signal quality, noise, bias, and calibration pending. |
 | Gyroscope | PARTIAL | Stage 2B live delivery/timing verified; signal quality, noise, bias, and calibration pending. |
@@ -1445,8 +1550,10 @@ File names may change during implementation, but the information represented by 
 | GNSS Denial Controller / Ground Truth Firewall | NOT IMPLEMENTED | No denial, isolation-enforcement, or recovery path was implemented by Stage 2C. |
 | Ground Truth Isolation | NOT IMPLEMENTED | Coordinate logging and estimator-isolation behavior were not tested. |
 | Raw GNSS | NOT VERIFIED | Stage 2C used sanitized `GnssStatus` counts only; NMEA and raw GNSS measurements were not used or verified. |
-| ARCore Runtime Tracking | PENDING / NOT VERIFIED | Required before the device baseline can be frozen. |
-| Camera | TBD | TBD |
+| ARCore Runtime Tracking | VERIFIED — STAGE 2D SCOPE | 3/3 sessions valid with real `TRACKING`, local-session pose, monotonic `Frame.timestamp`, no terminal errors, and no `STOPPED` frames; observed unique-frame rate ~30.0295–30.0304 Hz and tracking fraction ~98.15%–98.36%. |
+| ARCore Pose Accuracy / Coordinates | NOT VALIDATED | Local-session pose response observed; distance, scale, rotation, drift, and absolute accuracy plus ARCore-to-ENU remain unverified or unimplemented. |
+| ARCore Degradation Handling | NOT VERIFIED | Deliberate degradation procedure was not executed. |
+| Camera | VERIFIED — STAGE 2D SCOPE | Permission, GL/EGL initialization, camera-texture setup, and ARCore camera runtime passed in 3/3 diagnostic sessions. |
 | TensorFlow Lite | TBD | TBD |
 | Local Storage | TBD | TBD |
 | Offline Runtime | TBD | TBD |
@@ -1457,17 +1564,17 @@ File names may change during implementation, but the information represented by 
 | Heading | NOT IMPLEMENTED | Heading correctness was not evaluated by Stage 2B or Stage 2C. |
 | Motion AI | NOT IMPLEMENTED | No motion-classification runtime is connected to navigation. |
 | Quality Engine | NOT IMPLEMENTED | Reported GNSS accuracy metadata was not converted into a quality score. |
-| EKF / Sensor Fusion | NOT IMPLEMENTED | No Stage 2C GNSS diagnostic value enters an estimator or fusion update. |
+| EKF / Sensor Fusion | NOT IMPLEMENTED | No Stage 2C GNSS or Stage 2D ARCore diagnostic value enters an estimator or fusion update. |
 | Minimum Architecture Gate | TBD | TBD |
 | Target Architecture Gate | TBD | TBD |
 | Device Baseline | NOT FROZEN | Critical runtime audit items remain pending. |
-| Overall Physical Verification | PARTIAL | Stage 2A, Stage 2B, and Stage 2C diagnostic scopes verified; full device audit incomplete. |
+| Overall Physical Verification | PARTIAL | Stage 2A, Stage 2B, Stage 2C, and Stage 2D diagnostic scopes verified; full device audit incomplete. |
 
 ### Türkçe
 
 | Alan | Sonuç | Notlar |
 | --- | --- | --- |
-| Cihaz Ortamı | KISMİ | Stage 2B ve Stage 2C, Xiaomi Redmi Note 9 Pro ve Android 12 / API 31 üzerinde test edildi; tam ortam denetimi bekliyor. |
+| Cihaz Ortamı | KISMİ | Stage 2B, Stage 2C ve Stage 2D, Xiaomi Redmi Note 9 Pro ve Android 12 / API 31 üzerinde test edildi; tam ortam denetimi bekliyor. |
 | Statik Sensör Kullanılabilirliği | DOĞRULANDI — STAGE 2A KAPSAMI | Çalışma zamanı varsayılan sensör kullanılabilirliği ve metadata doğrulandı; bu sensör performansı kanıtı değildir. |
 | İvmeölçer | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; sinyal kalitesi, gürültü, bias ve kalibrasyon bekliyor. |
 | Jiroskop | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; sinyal kalitesi, gürültü, bias ve kalibrasyon bekliyor. |
@@ -1484,8 +1591,10 @@ File names may change during implementation, but the information represented by 
 | GNSS Kesinti Denetleyicisi / Ground Truth Firewall | UYGULANMADI | Stage 2C tarafından kesinti, izolasyon uygulaması veya recovery yolu uygulanmadı. |
 | Gerçek Referans İzolasyonu | UYGULANMADI | Koordinat kaydı ve tahmin motoru izolasyon davranışı test edilmedi. |
 | Ham GNSS | DOĞRULANMADI | Stage 2C yalnızca sanitize edilmiş `GnssStatus` sayılarını kullandı; NMEA ve ham GNSS ölçümleri kullanılmadı veya doğrulanmadı. |
-| ARCore Çalışma Zamanı Takibi | BEKLİYOR / DOĞRULANMADI | Cihaz baseline'ı sabitlenmeden önce gereklidir. |
-| Kamera | TBD | TBD |
+| ARCore Çalışma Zamanı Takibi | DOĞRULANDI — STAGE 2D KAPSAMI | 3/3 oturum gerçek `TRACKING`, yerel-oturum pozu, monotonik `Frame.timestamp`, sıfır terminal hatası ve sıfır `STOPPED` kare ile geçerliydi; gözlenen benzersiz-kare hızı ~30,0295–30,0304 Hz ve tracking fraction ~%98,15–%98,36 idi. |
+| ARCore Poz Doğruluğu / Koordinatları | DOĞRULANMADI | Yerel-oturum poz tepkisi gözlendi; mesafe, ölçek, dönüş, sürüklenme ve mutlak doğruluk ile ARCore-to-ENU doğrulanmamış veya uygulanmamış durumda. |
+| ARCore Bozulma Yönetimi | DOĞRULANMADI | Kasıtlı bozulma prosedürü çalıştırılmadı. |
+| Kamera | DOĞRULANDI — STAGE 2D KAPSAMI | İzin, GL/EGL başlatma, kamera texture kurulumu ve ARCore kamera çalışma zamanı 3/3 tanı oturumunda geçti. |
 | TensorFlow Lite | TBD | TBD |
 | Yerel Depolama | TBD | TBD |
 | Çevrimdışı Çalışma | TBD | TBD |
@@ -1496,11 +1605,11 @@ File names may change during implementation, but the information represented by 
 | Heading | UYGULANMADI | Heading doğruluğu Stage 2B veya Stage 2C tarafından değerlendirilmedi. |
 | Motion AI | UYGULANMADI | Navigasyona bağlı bir hareket sınıflandırma çalışma zamanı yoktur. |
 | Quality Engine | UYGULANMADI | Bildirilen GNSS doğruluk metadata'sı bir kalite skoruna dönüştürülmedi. |
-| EKF / Sensör Füzyonu | UYGULANMADI | Hiçbir Stage 2C GNSS tanı değeri tahmin motoru veya füzyon güncellemesine girmez. |
+| EKF / Sensör Füzyonu | UYGULANMADI | Hiçbir Stage 2C GNSS veya Stage 2D ARCore tanı değeri tahmin motoru ya da füzyon güncellemesine girmez. |
 | Minimum Mimari Kapısı | TBD | TBD |
 | Hedef Mimari Kapısı | TBD | TBD |
 | Cihaz Baseline'ı | SABİTLENMEDİ | Kritik çalışma zamanı denetim öğeleri bekliyor. |
-| Genel Fiziksel Doğrulama | KISMİ | Stage 2A, Stage 2B ve Stage 2C tanı kapsamları doğrulandı; tam cihaz denetimi tamamlanmadı. |
+| Genel Fiziksel Doğrulama | KISMİ | Stage 2A, Stage 2B, Stage 2C ve Stage 2D tanı kapsamları doğrulandı; tam cihaz denetimi tamamlanmadı. |
 
 ---
 
@@ -1514,9 +1623,9 @@ File names may change during implementation, but the information represented by 
 
 **Device Model:** Xiaomi Redmi Note 9 Pro *(Cihaz Modeli: Xiaomi Redmi Note 9 Pro)*
 
-**Android Version:** Android 12 / API 31 — Stage 2B and Stage 2C tested environment; final baseline pending
+**Android Version:** Android 12 / API 31 — Stage 2B, Stage 2C, and Stage 2D tested environment; final baseline pending
 
-**Android Sürümü:** Android 12 / API 31 — Stage 2B ve Stage 2C test ortamı; nihai baseline bekliyor
+**Android Sürümü:** Android 12 / API 31 — Stage 2B, Stage 2C ve Stage 2D test ortamı; nihai baseline bekliyor
 
 **Minimum Architecture Gate:** TBD *(Minimum Mimari Kapısı: TBD)*
 
@@ -1554,7 +1663,7 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 **Document Status:** Protocol Completed — Partial Execution
 
-**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A runtime SensorManager capability inventory, Stage 2B four-sensor live timing characterization, and Stage 2C GNSS runtime timing characterization are complete for their defined scopes. The full device capability audit is not complete.
+**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A runtime SensorManager capability inventory, Stage 2B four-sensor live timing characterization, Stage 2C GNSS runtime timing characterization, and Stage 2D ARCore runtime tracking characterization are complete for their defined scopes. The full device capability audit is not complete.
 
 **Stage 2A Runtime Sensor Inventory Evidence:** VERIFIED on the tested Xiaomi Redmi Note 9 Pro. SensorManager runtime access, the Flutter–Kotlin diagnostic bridge, and runtime sensor metadata retrieval were verified. The inventory returned 14 requested records: 13 default sensors available and `TYPE_PRESSURE` unavailable. This is capability metadata evidence, not sensor-performance evidence.
 
@@ -1562,7 +1671,11 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 **Stage 2C GNSS Runtime Timing Evidence:** VERIFIED for the tested diagnostic scope on the Xiaomi Redmi Note 9 Pro running Android 12 / API 31. The native implementation, static validation, debug build, final source audit, foreground precise-location permission flow, and GNSS preflight passed. Three of three formal `GPS_PROVIDER` sessions completed with valid, monotonic, and mock-free `Location.elapsedRealtimeNanos` summaries. Median and p95 callback intervals were 1.000 s in every session; the observed mean timestamp-derived rate range was approximately 0.983–1.000 Hz, and Session 3 contained one 2.000 s consecutive interval. The requested 1,000 ms minimum interval is not a guaranteed fixed 1 Hz delivery rate, and no GNSS gap threshold is defined. `GnssStatus.onFirstFix`, sanitized satellite counts, and Android-reported horizontal-accuracy metadata were observed; coordinate accuracy was not validated.
 
-**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, complete sensor timing/multi-rate procedures, GNSS coordinate accuracy and anchor behavior, GNSS ground-truth isolation, ARCore runtime tracking, multi-source clock alignment, and other required device/runtime checks remain pending. The GNSS denial controller, Ground Truth Firewall runtime, production PDR acquisition, PDR, heading, Motion AI, Quality Engine, relocalization, and EKF / Sensor Fusion are not implemented. No navigation benchmark or improvement target has been evaluated.
+**Stage 2D ARCore Runtime Tracking Evidence:** VERIFIED for the tested diagnostic scope on the Xiaomi Redmi Note 9 Pro running Android 12 / API 31. AR Optional configuration, camera permission, preflight readiness, ARCore session creation/configuration/resume, dedicated GL/EGL initialization, and camera-texture setup passed. Three of three formal sessions were valid, reached real `TrackingState.TRACKING`, exposed local-session pose, produced monotonic `Frame.timestamp` sequences, completed without terminal errors, and contained no `STOPPED` frames. The observed unique-frame rate was approximately 30.0295–30.0304 Hz and the tracking fraction was approximately 98.15%–98.36%. Stationary, rotational, and rightward walking scenarios demonstrated local-session pose response. No ARCore frame-gap threshold was applied or frozen.
+
+**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, complete sensor timing/multi-rate procedures, GNSS coordinate accuracy and anchor behavior, GNSS ground-truth isolation, ARCore distance/scale/rotation/drift/absolute accuracy, deliberate ARCore degradation handling, ARCore-to-ENU, multi-source clock alignment, and other required device/runtime checks remain pending. The GNSS denial controller, Ground Truth Firewall runtime, production PDR acquisition, PDR, heading, Motion AI, Quality Engine, relocalization, and EKF / Sensor Fusion are not implemented. No navigation benchmark or improvement target has been evaluated.
+
+**Documentation Synchronization:** Stage 2D status synchronized on 2026-09-07. Source, configuration, test, and documentation changes remain unstaged; the final combined commit-readiness audit is pending.
 
 **Device Baseline Status:** NOT FROZEN
 
@@ -1576,7 +1689,7 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 **Doküman Durumu:** Protokol Tamamlandı — Kısmi Uygulama
 
-**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A çalışma zamanı SensorManager yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama karakterizasyonu ve Stage 2C GNSS çalışma zamanı zamanlama karakterizasyonu tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
+**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A çalışma zamanı SensorManager yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama karakterizasyonu, Stage 2C GNSS çalışma zamanı zamanlama karakterizasyonu ve Stage 2D ARCore çalışma zamanı takip karakterizasyonu tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
 
 **Stage 2A Çalışma Zamanı Sensör Envanteri Kanıtı:** Test edilen Xiaomi Redmi Note 9 Pro üzerinde DOĞRULANDI. SensorManager çalışma zamanı erişimi, Flutter–Kotlin tanı köprüsü ve çalışma zamanı sensör metadata alımı doğrulandı. Envanter 14 istenen kayıt döndürdü: 13 varsayılan sensör kullanılabilirdi ve `TYPE_PRESSURE` kullanılamıyordu. Bu yetenek metadata kanıtıdır; sensör performansı kanıtı değildir.
 
@@ -1584,7 +1697,11 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 **Stage 2C GNSS Çalışma Zamanı Zamanlama Kanıtı:** Android 12 / API 31 çalıştıran test cihazı Xiaomi Redmi Note 9 Pro üzerindeki tanı kapsamı için DOĞRULANDI. Native uygulama, statik doğrulama, debug build, nihai kaynak denetimi, hassas ön plan konum izni akışı ve GNSS preflight geçti. Üç resmî `GPS_PROVIDER` oturumunun 3/3'ü geçerli, monotonik ve mock içermeyen `Location.elapsedRealtimeNanos` özetleriyle tamamlandı. Medyan ve p95 callback aralıkları her oturumda 1,000 s idi; gözlenen timestamp-türevli ortalama hız aralığı yaklaşık 0,983–1,000 Hz oldu ve Oturum 3 ardışık bir 2,000 s aralık içerdi. Talep edilen 1.000 ms minimum aralık garanti edilen sabit 1 Hz teslim hızı değildir ve tanımlı bir GNSS boşluk eşiği yoktur. `GnssStatus.onFirstFix`, sanitize edilmiş uydu sayıları ve Android tarafından bildirilen yatay doğruluk metadata'sı gözlendi; koordinat doğruluğu doğrulanmadı.
 
-**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam sensör zamanlama/çoklu hız prosedürleri, GNSS koordinat doğruluğu ve anchor davranışı, GNSS gerçek referans izolasyonu, ARCore çalışma zamanı takibi, çok-kaynaklı saat hizalama ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. GNSS kesinti denetleyicisi, Ground Truth Firewall runtime, üretim PDR veri alımı, PDR, heading, Motion AI, Quality Engine, relocalization ve EKF / Sensör Füzyonu uygulanmamıştır. Hiçbir navigasyon benchmark'ı veya iyileştirme hedefi değerlendirilmemiştir.
+**Stage 2D ARCore Çalışma Zamanı Takip Kanıtı:** Android 12 / API 31 çalıştıran test cihazı Xiaomi Redmi Note 9 Pro üzerindeki tanı kapsamı için DOĞRULANDI. AR Optional yapılandırması, kamera izni, preflight hazır olma durumu, ARCore oturum oluşturma/yapılandırma/resume, özel GL/EGL başlatma ve kamera texture kurulumu geçti. Üç resmî oturumun 3/3'ü geçerliydi; gerçek `TrackingState.TRACKING` durumuna ulaştı, yerel-oturum pozu sağladı, monotonik `Frame.timestamp` dizileri üretti, terminal hatası olmadan tamamlandı ve hiçbirinde `STOPPED` kare bulunmadı. Gözlenen benzersiz-kare hızı yaklaşık 30,0295–30,0304 Hz, tracking fraction yaklaşık %98,15–%98,36 idi. Sabit durma, dönüş ve sağa yürüme senaryoları yerel-oturum poz tepkisini gösterdi. ARCore kare-boşluk eşiği uygulanmadı veya sabitlenmedi.
+
+**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam sensör zamanlama/çoklu hız prosedürleri, GNSS koordinat doğruluğu ve anchor davranışı, GNSS gerçek referans izolasyonu, ARCore mesafe/ölçek/dönüş/sürüklenme/mutlak doğruluğu, kasıtlı ARCore bozulma yönetimi, ARCore-to-ENU, çok-kaynaklı saat hizalama ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. GNSS kesinti denetleyicisi, Ground Truth Firewall runtime, üretim PDR veri alımı, PDR, heading, Motion AI, Quality Engine, relocalization ve EKF / Sensör Füzyonu uygulanmamıştır. Hiçbir navigasyon benchmark'ı veya iyileştirme hedefi değerlendirilmemiştir.
+
+**Dokümantasyon Senkronizasyonu:** Stage 2D durumu 2026-09-07 tarihinde senkronize edildi. Kaynak, yapılandırma, test ve dokümantasyon değişiklikleri unstaged durumdadır; nihai birleşik commit-readiness denetimi beklemektedir.
 
 **Cihaz Baseline Durumu:** SABİTLENMEDİ
 

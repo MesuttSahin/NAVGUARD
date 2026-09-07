@@ -283,11 +283,11 @@ Every major implementation decision will be documented before or during implemen
 
 ### English
 
-**Current Phase:** Stage 2C GNSS Runtime Timing Diagnostics Implemented, Statically Verified, Physically Verified, and Final-Audited; Documentation Synchronized; Final Combined Commit-Readiness Audit Pending
+**Current Phase:** Stage 2D ARCore Runtime Tracking Diagnostics Implemented, Statically Verified, Physically Verified, and Final-Audited; Documentation Synchronized; Final Combined Commit-Readiness Audit Pending
 
-**Development Status:** Flutter Android Bootstrap, Stage 2A SensorManager Capability Inventory, Stage 2B Live Sensor Timing Diagnostics, and Stage 2C GNSS Runtime Timing Diagnostics Implemented, Tested, and Physically Verified for Their Defined Scopes; Production Sensor Acquisition and Navigation Subsystems Not Implemented
+**Development Status:** Flutter Android Bootstrap, Stage 2A SensorManager Capability Inventory, Stage 2B Live Sensor Timing Diagnostics, Stage 2C GNSS Runtime Timing Diagnostics, and Stage 2D ARCore Runtime Tracking Diagnostics Implemented, Tested, and Physically Verified for Their Defined Scopes; Production Sensor Acquisition and Navigation Subsystems Not Implemented
 
-**Documentation Status:** Technical Documentation Baseline Completed; Current Status Synchronized Through Stage 2C; Combined Commit-Readiness Audit Pending
+**Documentation Status:** Technical Documentation Baseline Completed; Current Status Synchronized Through Stage 2D; Combined Commit-Readiness Audit Pending
 
 **Primary Test Device:** Xiaomi Redmi Note 9 Pro
 
@@ -297,11 +297,11 @@ Every major implementation decision will be documented before or during implemen
 
 ### Türkçe
 
-**Mevcut Aşama:** Stage 2C GNSS Çalışma Zamanı Zamanlama Tanıları Uygulandı, Statik ve Fiziksel Olarak Doğrulandı ve Nihai Denetimden Geçti; Dokümantasyon Senkronize Edildi; Nihai Birleşik Commit-Readiness Denetimi Bekliyor
+**Mevcut Aşama:** Stage 2D ARCore Çalışma Zamanı Takip Tanıları Uygulandı, Statik ve Fiziksel Olarak Doğrulandı ve Nihai Denetimden Geçti; Dokümantasyon Senkronize Edildi; Nihai Birleşik Commit-Readiness Denetimi Bekliyor
 
-**Geliştirme Durumu:** Flutter Android Bootstrap, Stage 2A SensorManager Yetenek Envanteri, Stage 2B Canlı Sensör Zamanlama Tanıları ve Stage 2C GNSS Çalışma Zamanı Zamanlama Tanıları Tanımlı Kapsamlarında Uygulandı, Test Edildi ve Fiziksel Olarak Doğrulandı; Üretim Sensör Veri Alımı ve Navigasyon Alt Sistemleri Uygulanmadı
+**Geliştirme Durumu:** Flutter Android Bootstrap, Stage 2A SensorManager Yetenek Envanteri, Stage 2B Canlı Sensör Zamanlama Tanıları, Stage 2C GNSS Çalışma Zamanı Zamanlama Tanıları ve Stage 2D ARCore Çalışma Zamanı Takip Tanıları Tanımlı Kapsamlarında Uygulandı, Test Edildi ve Fiziksel Olarak Doğrulandı; Üretim Sensör Veri Alımı ve Navigasyon Alt Sistemleri Uygulanmadı
 
-**Dokümantasyon Durumu:** Teknik Dokümantasyon Baseline'ı Tamamlandı; Mevcut Durum Stage 2C'ye Kadar Senkronize Edildi; Birleşik Commit-Readiness Denetimi Bekliyor
+**Dokümantasyon Durumu:** Teknik Dokümantasyon Baseline'ı Tamamlandı; Mevcut Durum Stage 2D'ye Kadar Senkronize Edildi; Birleşik Commit-Readiness Denetimi Bekliyor
 
 **Birincil Test Cihazı:** Xiaomi Redmi Note 9 Pro
 
@@ -321,7 +321,9 @@ Stage 2B live timing diagnostics were implemented and physically verified for th
 
 Stage 2C GNSS runtime timing diagnostics were implemented, statically verified, final-audited, and physically verified for the tested Xiaomi Redmi Note 9 Pro running Android 12 / API 31. All three formal `GPS_PROVIDER` sessions produced valid, mock-free summaries with monotonic `Location.elapsedRealtimeNanos` sequences. With a requested minimum interval of 1,000 ms, all three sessions had 1.000 s median and p95 callback intervals, while observed mean timestamp-derived rates ranged from approximately 0.983 to 1.000 Hz and one 2.000 s consecutive interval occurred. This demonstrates that requested timing does not guarantee fixed delivered timing; no GNSS gap threshold is defined.
 
-Physical verification remains **PARTIAL** and the device baseline is **NOT FROZEN**. GNSS coordinate accuracy was not validated, and the GNSS anchor, denial controller, Ground Truth Firewall runtime, production sensor acquisition, PDR, heading, Motion AI, Quality Engine, and EKF / Sensor Fusion are not implemented. ARCore runtime tracking and other device checks remain pending. The synchronized Stage 2C scope remains unstaged, and a final combined source, test, configuration, and documentation commit-readiness audit is pending.
+Stage 2D ARCore runtime tracking diagnostics were implemented, statically verified, final-audited, and physically verified on the same tested device. Three of three formal sessions were valid, reached real `TrackingState.TRACKING`, exposed local-session pose, and produced monotonic `Frame.timestamp` sequences without terminal errors or `STOPPED` frames. The observed unique-frame rate was approximately 30.0295–30.0304 Hz and the tested-session tracking fraction was approximately 98.15%–98.36%. Stationary, rotational, and rightward walking scenarios physically demonstrated local-session relative pose response. These observations do not validate distance, rotation, drift, scale, or absolute accuracy, and no ARCore frame-gap threshold is defined.
+
+Physical verification remains **PARTIAL** and the device baseline is **NOT FROZEN**. GNSS coordinate accuracy was not validated; ARCore-to-ENU is not implemented; and the GNSS anchor, denial controller, Ground Truth Firewall runtime, production sensor acquisition, PDR, heading, Motion AI, Quality Engine, and EKF / Sensor Fusion are not implemented. Other device checks remain pending. The synchronized Stage 2D scope remains unstaged, and a final combined source, test, configuration, and documentation commit-readiness audit is pending.
 
 ### Türkçe
 
@@ -331,7 +333,9 @@ Stage 2B canlı zamanlama tanıları, test edilen Xiaomi Redmi Note 9 Pro yapıl
 
 Stage 2C GNSS çalışma zamanı zamanlama tanıları, Android 12 / API 31 çalıştıran test cihazı Xiaomi Redmi Note 9 Pro üzerinde uygulandı, statik olarak doğrulandı, nihai denetimden geçti ve fiziksel olarak doğrulandı. Üç resmî `GPS_PROVIDER` oturumunun tamamı monotonik `Location.elapsedRealtimeNanos` dizileri içeren geçerli ve mock içermeyen özetler üretti. Talep edilen minimum aralık 1.000 ms iken üç oturumun tümünde medyan ve p95 callback aralığı 1,000 s oldu; gözlenen timestamp-türevli ortalama hızlar yaklaşık 0,983–1,000 Hz aralığındaydı ve ardışık bir 2,000 s aralık gözlendi. Bu sonuç, talep edilen zamanlamanın sabit teslim zamanlamasını garanti etmediğini gösterir; tanımlı bir GNSS boşluk eşiği yoktur.
 
-Fiziksel doğrulama **KISMİ** durumdadır ve cihaz baseline'ı **SABİTLENMEMİŞTİR**. GNSS koordinat doğruluğu doğrulanmadı; GNSS anchor, kesinti denetleyicisi, Ground Truth Firewall runtime, üretim sensör veri alımı, PDR, heading, Motion AI, Quality Engine ve EKF / Sensör Füzyonu uygulanmadı. ARCore çalışma zamanı takibi ve diğer cihaz kontrolleri beklemektedir. Senkronize Stage 2C kapsamı unstaged durumdadır ve nihai birleşik kaynak, test, yapılandırma ve dokümantasyon commit-readiness denetimi beklemektedir.
+Stage 2D ARCore çalışma zamanı takip tanıları aynı test cihazında uygulandı, statik olarak doğrulandı, nihai denetimden geçti ve fiziksel olarak doğrulandı. Üç resmî oturumun 3/3'ü geçerliydi; gerçek `TrackingState.TRACKING` durumuna ulaştı, yerel-oturum pozu sağladı ve terminal hatası veya `STOPPED` kare olmadan monotonik `Frame.timestamp` dizileri üretti. Gözlenen benzersiz-kare hızı yaklaşık 30,0295–30,0304 Hz, test edilen oturumlardaki tracking fraction yaklaşık %98,15–%98,36 idi. Sabit durma, dönüş ve sağa yürüyüş senaryoları yerel-oturum göreli poz tepkisini fiziksel olarak gösterdi. Bu gözlemler mesafe, dönüş, sürüklenme, ölçek veya mutlak doğruluğu doğrulamaz ve tanımlı bir ARCore kare-boşluk eşiği yoktur.
+
+Fiziksel doğrulama **KISMİ** durumdadır ve cihaz baseline'ı **SABİTLENMEMİŞTİR**. GNSS koordinat doğruluğu doğrulanmadı; ARCore-to-ENU uygulanmadı; GNSS anchor, kesinti denetleyicisi, Ground Truth Firewall runtime, üretim sensör veri alımı, PDR, heading, Motion AI, Quality Engine ve EKF / Sensör Füzyonu uygulanmadı. Diğer cihaz kontrolleri beklemektedir. Senkronize Stage 2D kapsamı unstaged durumdadır ve nihai birleşik kaynak, test, yapılandırma ve dokümantasyon commit-readiness denetimi beklemektedir.
 
 ---
 

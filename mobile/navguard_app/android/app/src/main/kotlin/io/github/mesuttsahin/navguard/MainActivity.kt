@@ -13,10 +13,12 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private var sensorTimingDiagnostic: SensorTimingDiagnostic? = null
     private var gnssTimingDiagnostic: GnssTimingDiagnostic? = null
+    private var arCoreTrackingDiagnostic: ArCoreTrackingDiagnostic? = null
     private var locationManager: LocationManager? = null
 
     private val permissionResultLock = Any()
     private var pendingGnssPermissionResult: MethodChannel.Result? = null
+    private var pendingArCoreCameraPermissionResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -38,8 +40,11 @@ class MainActivity : FlutterActivity() {
                 GnssTimingDiagnostic(manager)
             }
 
+        arCoreTrackingDiagnostic = ArCoreTrackingDiagnostic(applicationContext)
+
         configureSensorChannel(flutterEngine, sensorManager)
         configureGnssChannel(flutterEngine)
+        configureArCoreChannel(flutterEngine)
     }
 
     private fun configureSensorChannel(
@@ -152,6 +157,136 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    private fun configureArCoreChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            ARCORE_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                METHOD_GET_ARCORE_DIAGNOSTIC_PREFLIGHT -> {
+                    val diagnostic = arCoreTrackingDiagnostic
+
+                    if (diagnostic == null) {
+                        result.error(
+                            ERROR_ARCORE_DIAGNOSTIC_UNAVAILABLE,
+                            "ARCore diagnostics are unavailable.",
+                            null,
+                        )
+                    } else {
+                        result.success(diagnostic.createPreflightSnapshot())
+                    }
+                }
+
+                METHOD_REQUEST_ARCORE_CAMERA_PERMISSION -> {
+                    requestArCoreCameraPermission(result)
+                }
+
+                METHOD_RUN_ARCORE_TRACKING_DIAGNOSTIC -> {
+                    runArCoreTrackingDiagnostic(result)
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun requestArCoreCameraPermission(result: MethodChannel.Result) {
+        val diagnostic = arCoreTrackingDiagnostic
+
+        if (diagnostic == null) {
+            result.error(
+                ERROR_ARCORE_DIAGNOSTIC_UNAVAILABLE,
+                "ARCore diagnostics are unavailable.",
+                null,
+            )
+            return
+        }
+
+        val hasPendingRequest =
+            synchronized(permissionResultLock) {
+                pendingArCoreCameraPermissionResult != null
+            }
+
+        if (hasPendingRequest) {
+            result.error(
+                ERROR_ARCORE_CAMERA_PERMISSION_ALREADY_RUNNING,
+                "An ARCore camera permission request is already running.",
+                null,
+            )
+            return
+        }
+
+        if (hasCameraPermission()) {
+            result.success(
+                diagnostic.createCameraPermissionResultSnapshot(
+                    ARCORE_PERMISSION_OUTCOME_ALREADY_GRANTED,
+                ),
+            )
+            return
+        }
+
+        val reserved =
+            synchronized(permissionResultLock) {
+                if (pendingArCoreCameraPermissionResult != null) {
+                    false
+                } else {
+                    pendingArCoreCameraPermissionResult = result
+                    true
+                }
+            }
+
+        if (!reserved) {
+            result.error(
+                ERROR_ARCORE_CAMERA_PERMISSION_ALREADY_RUNNING,
+                "An ARCore camera permission request is already running.",
+                null,
+            )
+            return
+        }
+
+        try {
+            requestPermissions(
+                arrayOf(Manifest.permission.CAMERA),
+                ARCORE_CAMERA_PERMISSION_REQUEST_CODE,
+            )
+        } catch (_: Exception) {
+            val pendingResult = clearPendingArCoreCameraPermissionResult(result)
+
+            pendingResult?.error(
+                ERROR_ARCORE_CAMERA_PERMISSION_REQUEST_FAILED,
+                "Unable to start the ARCore camera permission request.",
+                null,
+            )
+        }
+    }
+
+    private fun runArCoreTrackingDiagnostic(result: MethodChannel.Result) {
+        val diagnostic = arCoreTrackingDiagnostic
+
+        if (diagnostic == null) {
+            result.error(
+                ERROR_ARCORE_DIAGNOSTIC_UNAVAILABLE,
+                "ARCore diagnostics are unavailable.",
+                null,
+            )
+            return
+        }
+
+        diagnostic.start(
+            activity = this,
+            callback =
+                object : ArCoreTrackingDiagnostic.Callback {
+                    override fun onSuccess(summary: Map<String, Any?>) {
+                        result.success(summary)
+                    }
+
+                    override fun onError(code: String, message: String) {
+                        result.error(code, message, null)
+                    }
+                },
+        )
     }
 
     private fun requestGnssForegroundPermission(result: MethodChannel.Result) {
@@ -304,37 +439,65 @@ class MainActivity : FlutterActivity() {
             grantResults,
         )
 
-        if (requestCode != GNSS_PERMISSION_REQUEST_CODE) {
-            return
-        }
+        when (requestCode) {
+            GNSS_PERMISSION_REQUEST_CODE -> {
+                val pendingResult = takePendingPermissionResult() ?: return
+                val manager = locationManager
 
-        val pendingResult = takePendingPermissionResult() ?: return
-        val manager = locationManager
+                if (manager == null) {
+                    pendingResult.error(
+                        ERROR_LOCATION_MANAGER_UNAVAILABLE,
+                        "Android LocationManager service is unavailable.",
+                        null,
+                    )
+                    return
+                }
 
-        if (manager == null) {
-            pendingResult.error(
-                ERROR_LOCATION_MANAGER_UNAVAILABLE,
-                "Android LocationManager service is unavailable.",
-                null,
-            )
-            return
-        }
+                val requestOutcome =
+                    when {
+                        hasFineLocationPermission() ->
+                            PERMISSION_OUTCOME_PRECISE_GRANTED
+                        hasCoarseLocationPermission() ->
+                            PERMISSION_OUTCOME_APPROXIMATE_ONLY
+                        else -> PERMISSION_OUTCOME_DENIED
+                    }
 
-        val requestOutcome =
-            when {
-                hasFineLocationPermission() ->
-                    PERMISSION_OUTCOME_PRECISE_GRANTED
-                hasCoarseLocationPermission() ->
-                    PERMISSION_OUTCOME_APPROXIMATE_ONLY
-                else -> PERMISSION_OUTCOME_DENIED
+                pendingResult.success(
+                    createGnssPermissionResultSnapshot(
+                        manager,
+                        requestOutcome,
+                    ),
+                )
             }
 
-        pendingResult.success(
-            createGnssPermissionResultSnapshot(
-                manager,
-                requestOutcome,
-            ),
-        )
+            ARCORE_CAMERA_PERMISSION_REQUEST_CODE -> {
+                val pendingResult =
+                    takePendingArCoreCameraPermissionResult() ?: return
+                val diagnostic = arCoreTrackingDiagnostic
+
+                if (diagnostic == null) {
+                    pendingResult.error(
+                        ERROR_ARCORE_DIAGNOSTIC_UNAVAILABLE,
+                        "ARCore diagnostics are unavailable.",
+                        null,
+                    )
+                    return
+                }
+
+                val requestOutcome =
+                    if (hasCameraPermission()) {
+                        ARCORE_PERMISSION_OUTCOME_GRANTED
+                    } else {
+                        ARCORE_PERMISSION_OUTCOME_DENIED
+                    }
+
+                pendingResult.success(
+                    diagnostic.createCameraPermissionResultSnapshot(
+                        requestOutcome,
+                    ),
+                )
+            }
+        }
     }
 
     override fun onPause() {
@@ -343,6 +506,9 @@ class MainActivity : FlutterActivity() {
         )
         gnssTimingDiagnostic?.cancelActiveSession(
             "GNSS timing diagnostic cancelled because the activity paused.",
+        )
+        arCoreTrackingDiagnostic?.cancelActiveSession(
+            "ARCore tracking diagnostic cancelled because the activity paused.",
         )
 
         super.onPause()
@@ -355,14 +521,23 @@ class MainActivity : FlutterActivity() {
         gnssTimingDiagnostic?.cancelActiveSession(
             "GNSS timing diagnostic cancelled because the activity was destroyed.",
         )
+        arCoreTrackingDiagnostic?.cancelActiveSession(
+            "ARCore tracking diagnostic cancelled because the activity was destroyed.",
+        )
 
         sensorTimingDiagnostic = null
         gnssTimingDiagnostic = null
+        arCoreTrackingDiagnostic = null
         locationManager = null
 
         takePendingPermissionResult()?.error(
             ERROR_PERMISSION_REQUEST_CANCELLED,
             "GNSS foreground permission request cancelled because the activity was destroyed.",
+            null,
+        )
+        takePendingArCoreCameraPermissionResult()?.error(
+            ERROR_ARCORE_CAMERA_PERMISSION_REQUEST_CANCELLED,
+            "ARCore camera permission request cancelled because the activity was destroyed.",
             null,
         )
 
@@ -479,6 +654,10 @@ class MainActivity : FlutterActivity() {
         checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
 
+    private fun hasCameraPermission(): Boolean =
+        checkSelfPermission(Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+
     private fun takePendingPermissionResult(): MethodChannel.Result? =
         synchronized(permissionResultLock) {
             val result = pendingGnssPermissionResult
@@ -492,6 +671,25 @@ class MainActivity : FlutterActivity() {
         synchronized(permissionResultLock) {
             if (pendingGnssPermissionResult === expectedResult) {
                 pendingGnssPermissionResult = null
+                expectedResult
+            } else {
+                null
+            }
+        }
+
+    private fun takePendingArCoreCameraPermissionResult(): MethodChannel.Result? =
+        synchronized(permissionResultLock) {
+            val result = pendingArCoreCameraPermissionResult
+            pendingArCoreCameraPermissionResult = null
+            result
+        }
+
+    private fun clearPendingArCoreCameraPermissionResult(
+        expectedResult: MethodChannel.Result,
+    ): MethodChannel.Result? =
+        synchronized(permissionResultLock) {
+            if (pendingArCoreCameraPermissionResult === expectedResult) {
+                pendingArCoreCameraPermissionResult = null
                 expectedResult
             } else {
                 null
@@ -516,6 +714,8 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/sensor_diagnostics"
         const val GNSS_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/gnss_diagnostics"
+        const val ARCORE_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/arcore_diagnostics"
 
         const val METHOD_GET_SENSOR_CAPABILITY_INVENTORY =
             "getSensorCapabilityInventory"
@@ -528,6 +728,13 @@ class MainActivity : FlutterActivity() {
             "requestGnssForegroundPermission"
         const val METHOD_RUN_GNSS_TIMING_DIAGNOSTIC =
             "runGnssTimingDiagnostic"
+
+        const val METHOD_GET_ARCORE_DIAGNOSTIC_PREFLIGHT =
+            "getArCoreDiagnosticPreflight"
+        const val METHOD_REQUEST_ARCORE_CAMERA_PERMISSION =
+            "requestArCoreCameraPermission"
+        const val METHOD_RUN_ARCORE_TRACKING_DIAGNOSTIC =
+            "runArCoreTrackingDiagnostic"
 
         const val SNAPSHOT_KIND_GNSS_PREFLIGHT =
             "gnss_diagnostic_preflight"
@@ -545,6 +752,12 @@ class MainActivity : FlutterActivity() {
         const val PERMISSION_OUTCOME_DENIED = "denied"
 
         const val GNSS_PERMISSION_REQUEST_CODE = 42_021
+        const val ARCORE_CAMERA_PERMISSION_REQUEST_CODE = 42_022
+
+        const val ARCORE_PERMISSION_OUTCOME_ALREADY_GRANTED =
+            "already_granted"
+        const val ARCORE_PERMISSION_OUTCOME_GRANTED = "granted"
+        const val ARCORE_PERMISSION_OUTCOME_DENIED = "denied"
 
         const val ERROR_SENSOR_MANAGER_UNAVAILABLE =
             "sensor_manager_unavailable"
@@ -563,5 +776,13 @@ class MainActivity : FlutterActivity() {
         const val ERROR_GNSS_PROVIDER_UNAVAILABLE =
             "gnss_provider_unavailable"
         const val ERROR_GNSS_PROVIDER_DISABLED = "gnss_provider_disabled"
+        const val ERROR_ARCORE_DIAGNOSTIC_UNAVAILABLE =
+            "arcore_diagnostic_unavailable"
+        const val ERROR_ARCORE_CAMERA_PERMISSION_ALREADY_RUNNING =
+            "arcore_camera_permission_request_already_running"
+        const val ERROR_ARCORE_CAMERA_PERMISSION_REQUEST_FAILED =
+            "arcore_camera_permission_request_failed"
+        const val ERROR_ARCORE_CAMERA_PERMISSION_REQUEST_CANCELLED =
+            "arcore_camera_permission_request_cancelled"
     }
 }
