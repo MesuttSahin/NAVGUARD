@@ -4,7 +4,9 @@ AI-Assisted GNSS-Denied Mobile Navigation & Sensor Fusion System.
 
 NAVGUARD is an Android-based research and development project focused on pedestrian navigation continuity using smartphone sensors and on-device processing.
 
-## Status
+## English
+
+### Status
 
 The technical documentation baseline and Stage 1 Flutter Android bootstrap are complete. Stage 2A SensorManager runtime capability inventory is implemented and physically verified on the Xiaomi Redmi Note 9 Pro. Stage 2B live SensorEvent timing diagnostics are implemented and physically verified for the tested accelerometer, gyroscope, magnetometer, and rotation-vector scope: all 12 sessions produced valid, monotonic timing summaries, with 0/12 sessions containing a gap above the provisional 60 ms sensor threshold.
 
@@ -12,9 +14,11 @@ Stage 2C GNSS runtime timing diagnostics are implemented, statically verified, f
 
 Stage 2D ARCore runtime tracking diagnostics are implemented, statically verified, final-audited, and physically verified for the tested scope. Three of three physical sessions were valid, reached real `TrackingState.TRACKING`, exposed local-session pose, and had monotonic `Frame.timestamp` sequences. The observed unique-frame rate was approximately 30.0295–30.0304 Hz and the tested-session tracking fraction was approximately 98.15%–98.36% across stationary, rotational, and rightward walking scenarios.
 
-Overall physical verification remains **PARTIAL** and the device baseline is **NOT FROZEN**. Stage 2C did not validate GNSS coordinate accuracy or implement a GNSS anchor, denial controller, or Ground Truth Firewall. Stage 2D did not validate ARCore distance or absolute accuracy and did not implement ARCore-to-ENU conversion. Production sensor acquisition, PDR, heading, Motion AI, Quality Engine, EKF / Sensor Fusion, relocalization, and navigation benchmarking are not implemented or not verified as applicable.
+Stage 3A — GNSS Anchor + Local ENU Reference Foundation is implemented and statically validated. All 32 tests passed and the debug APK build and diff-integrity check passed. Three of three physical `GPS_PROVIDER` anchor acquisitions succeeded on the tested device; explicit clear/reacquire and acquisition cancellation also passed. The WGS84 → ECEF → local ENU foundation is implemented, including horizontal ENU without a fabricated Up component when altitude is unavailable.
 
-## Platform
+GNSS absolute coordinate accuracy and physical ENU distance accuracy remain **NOT VALIDATED**. Overall physical verification remains **PARTIAL** and the device baseline is **NOT FROZEN**. Stage 3A does not implement GNSS denial/recovery, a Ground Truth Firewall, heading, PDR, ARCore-to-ENU alignment, the Quality Engine, EKF / Sensor Fusion, or navigation benchmarking.
+
+### Platform
 
 * Android
 * Xiaomi Redmi Note 9 Pro
@@ -22,6 +26,32 @@ Overall physical verification remains **PARTIAL** and the device baseline is **N
 * Kotlin
 * Python
 
-## Documentation
+### Documentation
 
-Project documentation is maintained under the docs/ directory.
+Project documentation is maintained under the `docs/` directory.
+
+## Türkçe
+
+### Durum
+
+Teknik dokümantasyon baseline'ı ve Stage 1 Flutter Android bootstrap tamamlandı. Stage 2A SensorManager çalışma zamanı yetenek envanteri Xiaomi Redmi Note 9 Pro üzerinde uygulandı ve fiziksel olarak doğrulandı. Stage 2B canlı `SensorEvent` zamanlama tanıları, test edilen ivmeölçer, jiroskop, manyetometre ve dönüş vektörü kapsamında uygulandı ve fiziksel olarak doğrulandı: 12 oturumun tamamı geçerli ve monotonik zamanlama özetleri üretti; 0/12 oturumda geçici 60 ms sensör eşiğinin üzerinde boşluk vardı.
+
+Stage 2C GNSS çalışma zamanı zamanlama tanıları uygulandı, statik olarak doğrulandı, nihai denetimden geçti ve test edilen tanı kapsamında fiziksel olarak doğrulandı. Üç resmî `GPS_PROVIDER` oturumunun 3/3'ü geçerli, monotonik ve mock içermeyen `Location.elapsedRealtimeNanos` özetleri üretti. Talep edilen minimum aralık 1.000 ms iken üç oturumun tümünde medyan ve p95 aralık 1,000 s; gözlenen ortalama timestamp-türevli hız yaklaşık 0,983–1,000 Hz idi ve ardışık bir 2,000 s callback aralığı gözlendi. Talep edilen zamanlama, sabit 1 Hz teslim garantisi değildir.
+
+Stage 2D ARCore çalışma zamanı takip tanıları uygulandı, statik olarak doğrulandı, nihai denetimden geçti ve test edilen kapsamda fiziksel olarak doğrulandı. Üç fiziksel oturumun 3/3'ü geçerliydi; gerçek `TrackingState.TRACKING` durumuna ulaştı, yerel-oturum pozu sağladı ve monotonik `Frame.timestamp` dizileri üretti. Sabit, dönüş ve sağa yürüme senaryolarında gözlenen benzersiz-kare hızı yaklaşık 30,0295–30,0304 Hz, tracking fraction ise yaklaşık %98,15–%98,36 idi.
+
+Aşama 3A — GNSS Anchor + Yerel ENU Referans Temeli uygulandı ve statik olarak doğrulandı. 32 testin tamamı, debug APK build'i ve diff bütünlüğü kontrolü geçti. Test cihazındaki üç fiziksel `GPS_PROVIDER` anchor ediniminin 3/3'ü başarılı oldu; açık clear/reacquire ve edinim iptali de geçti. WGS84 → ECEF → yerel ENU temeli, yükseklik yokken uydurma bir Up bileşeni üretmeden yatay ENU sağlayacak şekilde uygulandı.
+
+GNSS mutlak koordinat doğruluğu ve fiziksel ENU mesafe doğruluğu **DOĞRULANMAMIŞTIR**. Genel fiziksel doğrulama **KISMİ** durumdadır ve cihaz baseline'ı **SABİTLENMEMİŞTİR**. Stage 3A; GNSS kesinti/recovery, Ground Truth Firewall, heading, PDR, ARCore-to-ENU hizalama, Quality Engine, EKF / Sensör Füzyonu veya navigasyon benchmark'ı uygulamaz.
+
+### Platform
+
+* Android
+* Xiaomi Redmi Note 9 Pro
+* Flutter / Dart
+* Kotlin
+* Python
+
+### Dokümantasyon
+
+Proje dokümantasyonu `docs/` dizini altında tutulur.

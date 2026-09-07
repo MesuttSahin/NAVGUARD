@@ -26,8 +26,8 @@ void main() {
 
     expect(find.text('GNSS Runtime Timing Diagnostic'), findsOneWidget);
     expect(find.text('Precise location permission: Unknown'), findsOneWidget);
-    expect(find.text('GPS provider: Unknown'), findsOneWidget);
-    expect(find.text('Location services: Unknown'), findsOneWidget);
+    expect(find.text('GPS provider: Unknown'), findsNWidgets(2));
+    expect(find.text('Location services: Unknown'), findsNWidgets(2));
     expect(find.text('Refresh GNSS Preflight'), findsOneWidget);
     expect(find.text('Request Precise Location Permission'), findsOneWidget);
     expect(find.text('Provider: GPS_PROVIDER'), findsOneWidget);
@@ -39,6 +39,19 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Run GNSS Timing Diagnostic'), findsOneWidget);
+
+    expect(find.text('GNSS Anchor / Local Reference'), findsOneWidget);
+    expect(find.text('Fine location permission: Unknown'), findsOneWidget);
+    expect(find.text('Anchor state: No Anchor'), findsOneWidget);
+    expect(find.text('Candidate count: Not available'), findsOneWidget);
+    expect(
+      find.text('Reported horizontal accuracy: Not available'),
+      findsOneWidget,
+    );
+    expect(find.text('Altitude available: Unknown'), findsOneWidget);
+    expect(find.text('Horizontal ENU origin ready: No'), findsOneWidget);
+    expect(find.text('Refresh Anchor Preflight'), findsOneWidget);
+    expect(find.text('Acquire GNSS Anchor'), findsOneWidget);
 
     expect(find.text('ARCore Runtime Diagnostics'), findsOneWidget);
     expect(find.text('Camera Permission: Unknown'), findsOneWidget);

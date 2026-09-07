@@ -4,21 +4,21 @@
 
 ### Current State
 
-**Project Phase:** Stage 2D ARCore Runtime Tracking Diagnostics Implemented, Statically Verified, Physically Verified, and Final-Audited — Documentation Synchronized; Commit Pending
+**Project Phase:** Stage 3A — GNSS Anchor + Local ENU Reference Foundation Implemented, Statically Validated, and Physically Verified — Documentation Synchronization Complete; Commit-Readiness Audit Pending
 
-**Repository Status:** Stage 2D Source, Test, Configuration, and Documentation Changes Unstaged — Final Combined Commit-Readiness Audit Pending
+**Repository Status:** Eight Stage 3A Source/Test Paths and Four Documentation Paths Unstaged — Final Combined Commit-Readiness Audit Pending
 
 **Technical Documentation:** Baseline Completed
 
-**Application Development:** Started — Bootstrap + SensorManager Capability Inventory + Four-Sensor Live Timing Diagnostics + GNSS Runtime Timing Diagnostics + ARCore Runtime Tracking Diagnostics
+**Application Development:** Started — Bootstrap + SensorManager Capability Inventory + Four-Sensor Live Timing Diagnostics + GNSS Runtime Timing Diagnostics + ARCore Runtime Tracking Diagnostics + GNSS Anchor / WGS84 Local ENU Foundation
 
-**Experimental Evaluation:** Partial — Device/runtime diagnostic characterization only; navigation evaluation not started
+**Experimental Evaluation:** Partial — Device/runtime diagnostic characterization and Stage 3A anchor-flow verification only; navigation accuracy evaluation not started
 
 ---
 
 ### Current Milestone
 
-Stage 2D documentation synchronization is complete; preparation for the final combined source, test, configuration, and documentation commit-readiness audit is in progress.
+Stage 3A implementation, static validation, physical GNSS-anchor verification, and documentation synchronization are complete. Preparation for the final combined 12-path commit-readiness audit is in progress.
 ---
 
 ### Completed
@@ -52,20 +52,29 @@ Stage 2D documentation synchronization is complete; preparation for the final co
 * Three formal physical ARCore sessions completed with 3/3 valid summaries, 3/3 real `TrackingState.TRACKING` observations, 3/3 local-session pose availability, 3/3 monotonic `Frame.timestamp` sequences, 3/3 terminal-error-free results, and no `STOPPED` frames.
 * ARCore session creation, configuration, resume, dedicated GL/EGL initialization, and camera-texture setup passed in 3/3 sessions. The observed unique-frame rate was approximately 30.0295–30.0304 Hz and the tracking fraction was approximately 98.15%–98.36% in the tested sessions.
 * The three exercised scenarios were approximately stationary, approximately 120-degree handheld/camera rotation with pauses, and approximately 2–3 steps of rightward walking. They verified live local-session pose response, not rotation accuracy, distance accuracy, absolute accuracy, or a formal drift benchmark.
+* Stage 3A implemented real foreground, pre-denial GNSS-anchor acquisition from Android `LocationManager.GPS_PROVIDER` only, with no background location, fused provider, or network provider.
+* Formal candidate validation requires a non-mock GPS location, finite valid latitude/longitude, positive `Location.elapsedRealtimeNanos`, and finite positive reported horizontal accuracy. Altitude and vertical accuracy are optional.
+* The first structurally valid fix has a 120-second timeout and establishes a 10-second monotonic GNSS measurement-time window. At least three valid candidates are required; selection uses the lowest reported horizontal accuracy with newer `Location.elapsedRealtimeNanos` as the tie-break. Handler timing controls operation termination only and does not define physical GNSS measurement time.
+* Stage 3A added the WGS84 geodetic → ECEF → anchor-relative local ENU foundation. Full 3D ENU requires anchor and target ellipsoid altitudes; otherwise the same deterministic `h = 0` reference is used for both points and only horizontal E/N is returned, without a fabricated Up component.
+* Stage 3A changed eight source/test paths. `flutter analyze`, all 32/32 tests, `flutter build apk --debug`, and `git diff --check` passed.
+* Three independent physical anchor sessions completed successfully with candidate counts 10 / 11 / 10. The selected Android-reported horizontal-accuracy metadata was approximately 17.98 / 15.32 / 34.79 m. These values are not independently measured position errors and do not validate GNSS absolute coordinate accuracy.
+* Explicit runtime clear/reacquire was verified through the sanitized `anchor_locked` → `no_anchor` state transition, and explicit cancellation returned `success = false` with `errorCategory = acquisition_cancelled` on the tested device.
+* Raw anchor coordinates were not printed in the shared formal sanitized diagnostic logs and are not persisted by Stage 3A. A successful anchor remains immutable for its runtime reference session; replacement requires Clear Anchor followed by Acquire GNSS Anchor.
 
 ---
 
 ### In Progress
 
-* The Stage 2D source, test, configuration, and synchronized documentation changes remain unstaged while the final combined commit-readiness audit is prepared.
+* The eight Stage 3A source/test paths and four synchronized documentation paths remain unstaged while the final combined commit-readiness audit is prepared.
 
 ---
 
 ### Next
 
-* Run the final combined Stage 2D source, test, configuration, and documentation commit-readiness audit.
-* If that gate passes, perform controlled staging of the approved Stage 2D scope.
-* Continue the remaining device/runtime checks defined by the authoritative documentation before freezing the device baseline.
+* Run the final combined Stage 3A source, test, and documentation commit-readiness audit.
+* If that gate passes, perform controlled staging of the approved 12-path Stage 3A scope.
+* Continue at a high level with the heading / true-north foundation, PDR, ARCore-to-ENU alignment, Ground Truth Firewall, Quality Engine, EKF, GNSS denial/recovery, and benchmark sequence.
+* Complete the remaining device/runtime checks before freezing the device baseline.
 
 ---
 
@@ -75,14 +84,15 @@ Stage 2D documentation synchronization is complete; preparation for the final co
 | ------------------------------------------- | ----------------------------------------------------------------- |
 | Development Environment                     | Completed                                                         |
 | Android / Flutter Project                   | Implemented — Bootstrap                                           |
-| Device Capability Verification              | Partial — Stage 2A Metadata + Stage 2B Sensor Timing + Stage 2C GNSS Timing + Stage 2D ARCore Tracking |
+| Device Capability Verification              | Partial — Stage 2A Metadata + Stage 2B Sensor Timing + Stage 2C GNSS Timing + Stage 2D ARCore Tracking + Stage 3A GNSS Anchor Flow |
 | SensorManager Capability Inventory          | Implemented and Physically Verified                               |
 | Continuous Sensor Acquisition               | Implemented — Stage 2B Diagnostic Timing Scope Only               |
 | Sensor Rate / Timestamp Characterization    | Physically Verified — Tested Stage 2B Scope                       |
 | GNSS Runtime Timing Diagnostics             | Implemented and Physically Verified — Tested Stage 2C Scope       |
 | GNSS Runtime Timing Characterization        | Physically Verified — Three Formal Stage 2C Sessions              |
 | GNSS Coordinate Accuracy                    | Not Validated                                                     |
-| GNSS Anchor                                 | Not Implemented                                                   |
+| GNSS Anchor                                 | Implemented and Physically Verified — Stage 3A Runtime Scope      |
+| WGS84 / Local ENU Foundation                | Implemented and Unit-Tested — Physical Distance Accuracy Not Validated |
 | GNSS Denial Controller / Ground Truth Firewall | Not Implemented                                                |
 | ARCore Runtime Tracking Diagnostics         | Implemented and Physically Verified — Tested Stage 2D Scope       |
 | ARCore Distance / Absolute Accuracy         | Not Validated                                                     |
@@ -92,7 +102,7 @@ Stage 2D documentation synchronization is complete; preparation for the final co
 | Motion AI                                   | Not Implemented                                                   |
 | Quality Engine                              | Not Implemented                                                   |
 | EKF / Sensor Fusion                         | Not Implemented                                                   |
-| Testing                                     | Stage 1 + Stage 2A + Stage 2B + Stage 2C + Stage 2D Defined Scopes Passed |
+| Testing                                     | Stage 1 + Stage 2A + Stage 2B + Stage 2C + Stage 2D + Stage 3A Defined Scopes Passed |
 | Field Experiments                           | Not Started                                                       |
 | Final Benchmark / Evaluation                | Not Run                                                           |
 
@@ -126,7 +136,7 @@ Raw experimental data, precise location logs, credentials, secrets, and other se
 
 ### Current Development Rule
 
-Flutter Android bootstrap, Stage 2A SensorManager runtime capability inventory, Stage 2B four-sensor live timing diagnostics, Stage 2C GNSS runtime timing diagnostics, and Stage 2D ARCore runtime tracking diagnostics are implemented and verified for their defined scopes.
+Flutter Android bootstrap, Stage 2A SensorManager runtime capability inventory, Stage 2B four-sensor live timing diagnostics, Stage 2C GNSS runtime timing diagnostics, Stage 2D ARCore runtime tracking diagnostics, and Stage 3A — GNSS Anchor + Local ENU Reference Foundation are implemented and verified for their defined scopes.
 
 Stage 2B physically verified live event delivery and timestamp-derived timing behavior for the accelerometer, gyroscope, magnetometer, and rotation vector in 12 tested sessions under a 20,000 µs request. Requested and observed rates remain distinct, the 60 ms gap threshold remains provisional, and these results do not verify sensor noise, bias, calibration, heading, or navigation performance.
 
@@ -134,7 +144,9 @@ Stage 2C physically characterized `GPS_PROVIDER` callback timing in three formal
 
 Stage 2D physically verified ARCore readiness and live tracking in three formal sessions. All three sessions were valid, observed real `TrackingState.TRACKING`, exposed local-session pose, used monotonic `Frame.timestamp` sequences, completed without terminal errors or `STOPPED` frames, and successfully exercised session creation/configuration/resume plus dedicated GL/EGL and camera-texture setup. The observed unique-frame rate was approximately 30.0295–30.0304 Hz and the tested-session tracking fraction was approximately 98.15%–98.36%. No ARCore frame-gap threshold is defined, and these values are not universal guarantees or navigation-quality scores.
 
-Physical verification remains partial and the device baseline is not frozen. ARCore distance, scale, rotation, drift, and absolute accuracy were not validated, and ARCore-to-ENU is not implemented. The GNSS anchor, denial controller, Ground Truth Firewall runtime, production PDR acquisition pipeline, PDR, heading, Motion AI, Quality Engine, EKF / Sensor Fusion, and relocalization are not implemented. Other required device checks remain pending, and no navigation benchmark or improvement target has been evaluated.
+Stage 3A physically verified `GPS_PROVIDER` preflight/readiness, three of three independent pre-denial anchor acquisitions, explicit clear/reacquire, and explicit cancellation on the tested device. Formal acquisition uses `Location.elapsedRealtimeNanos` as physical measurement-time authority: the first valid candidate starts a 10-second window, at least three candidates are required, and selection uses lowest reported horizontal accuracy with a newer measurement timestamp tie-break. The 10 / 11 / 10 candidate sessions selected reported-accuracy metadata of approximately 17.98 / 15.32 / 34.79 m. These Android-reported values are not measured ground-truth error. The runtime anchor is immutable until explicitly cleared and is not persisted. WGS84 → ECEF → local ENU math is implemented and unit-tested; horizontal ENU is available without fabricating Up when altitude is absent. Formal shared logs were sanitized and did not print raw anchor coordinates.
+
+Physical verification remains partial and the device baseline is not frozen. GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, and same-location anchor repeatability were not validated. ARCore distance, scale, rotation, drift, and absolute accuracy remain unvalidated, and ARCore-to-ENU is not implemented. The denial controller, Ground Truth Firewall runtime, production PDR acquisition pipeline, PDR, true heading, Motion AI, Quality Engine, EKF / Sensor Fusion, and relocalization are not implemented. Other required device checks remain pending; the 20% improvement target is unmeasured and no navigation benchmark has been evaluated.
 
 ---
 
@@ -150,21 +162,21 @@ Physical verification remains partial and the device baseline is not frozen. ARC
 
 ### Mevcut Durum
 
-**Proje Aşaması:** Stage 2D ARCore Çalışma Zamanı Takip Tanıları Uygulandı, Statik ve Fiziksel Olarak Doğrulandı ve Nihai Denetimden Geçti — Dokümantasyon Senkronize Edildi; Commit Bekliyor
+**Proje Aşaması:** Aşama 3A — GNSS Anchor + Yerel ENU Referans Temeli Uygulandı, Statik Olarak Doğrulandı ve Fiziksel Olarak Doğrulandı — Dokümantasyon Senkronizasyonu Tamamlandı; Commit-Readiness Denetimi Bekliyor
 
-**Repository Durumu:** Stage 2D Kaynak, Test, Yapılandırma ve Dokümantasyon Değişiklikleri Unstaged — Nihai Birleşik Commit-Readiness Denetimi Bekliyor
+**Repository Durumu:** Sekiz Stage 3A Kaynak/Test Yolu ve Dört Dokümantasyon Yolu Unstaged — Nihai Birleşik Commit-Readiness Denetimi Bekliyor
 
 **Teknik Dokümantasyon:** Baseline Tamamlandı
 
-**Uygulama Geliştirme:** Başladı — Bootstrap + SensorManager Yetenek Envanteri + Dört Sensörlü Canlı Zamanlama Tanıları + GNSS Çalışma Zamanı Zamanlama Tanıları + ARCore Çalışma Zamanı Takip Tanıları
+**Uygulama Geliştirme:** Başladı — Bootstrap + SensorManager Yetenek Envanteri + Dört Sensörlü Canlı Zamanlama Tanıları + GNSS Çalışma Zamanı Zamanlama Tanıları + ARCore Çalışma Zamanı Takip Tanıları + GNSS Anchor / WGS84 Yerel ENU Temeli
 
-**Deneysel Değerlendirme:** Kısmi — Yalnızca cihaz/çalışma zamanı tanı karakterizasyonu; navigasyon değerlendirmesi başlamadı
+**Deneysel Değerlendirme:** Kısmi — Cihaz/çalışma zamanı tanı karakterizasyonu ve Stage 3A anchor akışı doğrulaması; navigasyon doğruluğu değerlendirmesi başlamadı
 
 ---
 
 ### Mevcut Kilometre Taşı
 
-Stage 2D dokümantasyon senkronizasyonu tamamlandı; nihai birleşik kaynak, test, yapılandırma ve dokümantasyon commit-readiness denetimi için hazırlık devam ediyor.
+Stage 3A uygulaması, statik doğrulaması, fiziksel GNSS anchor doğrulaması ve dokümantasyon senkronizasyonu tamamlandı. Nihai birleşik 12-yolluk commit-readiness denetimi için hazırlık devam ediyor.
 
 ---
 
@@ -199,20 +211,29 @@ Stage 2D dokümantasyon senkronizasyonu tamamlandı; nihai birleşik kaynak, tes
 * Üç resmî fiziksel ARCore oturumu; 3/3 geçerli özet, 3/3 gerçek `TrackingState.TRACKING` gözlemi, 3/3 yerel-oturum pozu kullanılabilirliği, 3/3 monotonik `Frame.timestamp` dizisi, 3/3 terminal-error-free sonuç ve sıfır `STOPPED` kare ile tamamlandı.
 * ARCore oturum oluşturma, yapılandırma, resume, özel GL/EGL başlatma ve kamera texture kurulumu 3/3 oturumda geçti. Test edilen oturumlarda gözlenen benzersiz-kare hızı yaklaşık 30,0295–30,0304 Hz, tracking fraction yaklaşık %98,15–%98,36 idi.
 * Üç senaryo yaklaşık sabit durma, duraklamalarla yaklaşık 120 derecelik elde telefon/kamera dönüşü ve sağa doğru yaklaşık 2–3 adım yürüyüş idi. Bunlar canlı yerel-oturum poz tepkisini doğruladı; dönüş doğruluğunu, mesafe doğruluğunu, mutlak doğruluğu veya resmî bir sürüklenme benchmark'ını doğrulamadı.
+* Stage 3A, Android `LocationManager.GPS_PROVIDER` kaynağından gerçek, yalnızca ön planda ve gelecekteki yazılım tanımlı GNSS kesintisinden önce çalışan GNSS anchor edinimini uyguladı; arka plan konumu, fused provider veya network provider kullanılmadı.
+* Resmî aday doğrulaması mock olmayan GPS konumu, sonlu ve geçerli enlem/boylam, pozitif `Location.elapsedRealtimeNanos` ve sonlu pozitif bildirilen yatay doğruluk gerektirir. Yükseklik ve dikey doğruluk isteğe bağlıdır.
+* İlk yapısal olarak geçerli fix için timeout 120 saniyedir ve bu fix 10 saniyelik monotonik GNSS ölçüm-zamanı penceresini başlatır. En az üç geçerli aday gerekir; seçim en düşük bildirilen yatay doğruluğu, eşitlik bozucu olarak daha yeni `Location.elapsedRealtimeNanos` değerini kullanır. Handler zamanlaması yalnızca operasyonun sonlandırılmasını yönetir ve fiziksel GNSS ölçüm zamanını tanımlamaz.
+* Stage 3A, WGS84 jeodezik → ECEF → anchor-göreli yerel ENU temelini ekledi. Tam 3B ENU için anchor ve hedef elipsoit yükseklikleri gerekir; aksi halde iki nokta için aynı deterministik `h = 0` referansı kullanılır ve uydurma Up bileşeni olmadan yalnızca yatay E/N döndürülür.
+* Stage 3A sekiz kaynak/test yolunu değiştirdi. `flutter analyze`, 32/32 testin tamamı, `flutter build apk --debug` ve `git diff --check` geçti.
+* Üç bağımsız fiziksel anchor oturumu 10 / 11 / 10 aday sayılarıyla başarılı tamamlandı. Seçilen Android-bildirilen yatay doğruluk metadata değerleri yaklaşık 17,98 / 15,32 / 34,79 m idi. Bunlar bağımsız ölçülmüş konum hataları değildir ve GNSS mutlak koordinat doğruluğunu doğrulamaz.
+* Açık çalışma zamanı clear/reacquire davranışı sanitize edilmiş `anchor_locked` → `no_anchor` durum geçişiyle doğrulandı; açık iptal işlemi test cihazında `success = false` ve `errorCategory = acquisition_cancelled` döndürdü.
+* Ham anchor koordinatları paylaşılan resmî sanitize edilmiş tanı loglarında yazdırılmadı ve Stage 3A tarafından kalıcılaştırılmadı. Başarılı anchor kendi çalışma zamanı referans oturumunda değişmez kalır; değiştirmek için Clear Anchor ve ardından Acquire GNSS Anchor gerekir.
 
 ---
 
 ### Devam Edenler
 
-* Stage 2D kaynak, test, yapılandırma ve senkronize dokümantasyon değişiklikleri unstaged durumdadır; nihai birleşik commit-readiness denetimi hazırlanmaktadır.
+* Sekiz Stage 3A kaynak/test yolu ve dört senkronize dokümantasyon yolu unstaged durumdadır; nihai birleşik commit-readiness denetimi hazırlanmaktadır.
 
 ---
 
 ### Sonraki Adımlar
 
-* Nihai birleşik Stage 2D kaynak, test, yapılandırma ve dokümantasyon commit-readiness denetimini çalıştır.
-* Bu kapı geçerse onaylanan Stage 2D kapsamını kontrollü biçimde stage et.
-* Cihaz baseline'ını sabitlemeden önce yetkili dokümantasyonda tanımlanan kalan cihaz/çalışma zamanı kontrollerine devam et.
+* Nihai birleşik Stage 3A kaynak, test ve dokümantasyon commit-readiness denetimini çalıştır.
+* Bu kapı geçerse onaylanan 12-yolluk Stage 3A kapsamını kontrollü biçimde stage et.
+* Yüksek seviyede heading / gerçek-kuzey temeli, PDR, ARCore-to-ENU hizalama, Ground Truth Firewall, Quality Engine, EKF, GNSS kesinti/recovery ve benchmark sırasına devam et.
+* Cihaz baseline'ını sabitlemeden önce kalan cihaz/çalışma zamanı kontrollerini tamamla.
 
 ---
 
@@ -222,14 +243,15 @@ Stage 2D dokümantasyon senkronizasyonu tamamlandı; nihai birleşik kaynak, tes
 | ------------------------------------------- | ----------------------------------------------------------------- |
 | Geliştirme Ortamı                           | Tamamlandı                                                        |
 | Android / Flutter Projesi                   | Uygulandı — Bootstrap                                             |
-| Cihaz Yetenek Doğrulaması                   | Kısmi — Stage 2A Metadata + Stage 2B Sensör Zamanlaması + Stage 2C GNSS Zamanlaması + Stage 2D ARCore Takibi |
+| Cihaz Yetenek Doğrulaması                   | Kısmi — Stage 2A Metadata + Stage 2B Sensör Zamanlaması + Stage 2C GNSS Zamanlaması + Stage 2D ARCore Takibi + Stage 3A GNSS Anchor Akışı |
 | SensorManager Yetenek Envanteri             | Uygulandı ve Fiziksel Olarak Doğrulandı                           |
 | Sürekli Sensör Verisi Alımı                 | Uygulandı — Yalnızca Stage 2B Tanı Zamanlaması Kapsamı             |
 | Sensör Hızı / Zaman Damgası Karakterizasyonu | Fiziksel Olarak Doğrulandı — Test Edilen Stage 2B Kapsamı       |
 | GNSS Çalışma Zamanı Zamanlama Tanıları      | Uygulandı ve Fiziksel Olarak Doğrulandı — Test Edilen Stage 2C Kapsamı |
 | GNSS Çalışma Zamanı Zamanlama Karakterizasyonu | Fiziksel Olarak Doğrulandı — Üç Resmî Stage 2C Oturumu          |
 | GNSS Koordinat Doğruluğu                    | Doğrulanmadı                                                      |
-| GNSS Anchor                                 | Uygulanmadı                                                       |
+| GNSS Anchor                                 | Uygulandı ve Fiziksel Olarak Doğrulandı — Stage 3A Çalışma Zamanı Kapsamı |
+| WGS84 / Yerel ENU Temeli                    | Uygulandı ve Birim Testlerinden Geçti — Fiziksel Mesafe Doğruluğu Doğrulanmadı |
 | GNSS Kesinti Denetleyicisi / Ground Truth Firewall | Uygulanmadı                                                |
 | ARCore Çalışma Zamanı Takip Tanıları        | Uygulandı ve Fiziksel Olarak Doğrulandı — Test Edilen Stage 2D Kapsamı |
 | ARCore Mesafe / Mutlak Doğruluğu            | Doğrulanmadı                                                      |
@@ -239,7 +261,7 @@ Stage 2D dokümantasyon senkronizasyonu tamamlandı; nihai birleşik kaynak, tes
 | Motion AI                                   | Uygulanmadı                                                       |
 | Quality Engine                              | Uygulanmadı                                                       |
 | EKF / Sensör Füzyonu                        | Uygulanmadı                                                       |
-| Test                                        | Stage 1 + Stage 2A + Stage 2B + Stage 2C + Stage 2D Tanımlı Kapsamları Geçti |
+| Test                                        | Stage 1 + Stage 2A + Stage 2B + Stage 2C + Stage 2D + Stage 3A Tanımlı Kapsamları Geçti |
 | Saha Deneyleri                              | Başlamadı                                                         |
 | Nihai Benchmark / Değerlendirme             | Çalıştırılmadı                                                    |
 
@@ -273,7 +295,7 @@ Ham deneysel veriler, hassas konum logları, kimlik bilgileri, gizli bilgiler ve
 
 ### Mevcut Geliştirme Kuralı
 
-Flutter Android bootstrap, Stage 2A SensorManager çalışma zamanı yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama tanıları, Stage 2C GNSS çalışma zamanı zamanlama tanıları ve Stage 2D ARCore çalışma zamanı takip tanıları tanımlı kapsamlarında uygulandı ve doğrulandı.
+Flutter Android bootstrap, Stage 2A SensorManager çalışma zamanı yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama tanıları, Stage 2C GNSS çalışma zamanı zamanlama tanıları, Stage 2D ARCore çalışma zamanı takip tanıları ve Aşama 3A — GNSS Anchor + Yerel ENU Referans Temeli tanımlı kapsamlarında uygulandı ve doğrulandı.
 
 Stage 2B, 20.000 µs talep altında 12 test oturumunda ivmeölçer, jiroskop, manyetometre ve dönüş vektörü için canlı olay iletimini ve timestamp-türevli zamanlama davranışını fiziksel olarak doğruladı. Talep edilen ve gözlenen hızlar ayrı kalır, 60 ms boşluk eşiği geçicidir ve bu sonuçlar sensör gürültüsünü, bias'ı, kalibrasyonu, heading'i veya navigasyon performansını doğrulamaz.
 
@@ -281,7 +303,9 @@ Stage 2C, üç resmî oturumda `Location.elapsedRealtimeNanos` kullanarak `GPS_P
 
 Stage 2D, üç resmî oturumda ARCore hazır olma durumunu ve canlı takibi fiziksel olarak doğruladı. Üç oturumun tamamı geçerliydi; gerçek `TrackingState.TRACKING` gözlendi, yerel-oturum pozu sağlandı, monotonik `Frame.timestamp` dizileri kullanıldı, terminal hatası veya `STOPPED` kare olmadan tamamlandı ve oturum oluşturma/yapılandırma/resume ile özel GL/EGL ve kamera texture kurulumu başarıyla çalıştırıldı. Gözlenen benzersiz-kare hızı yaklaşık 30,0295–30,0304 Hz, test edilen oturumlardaki tracking fraction yaklaşık %98,15–%98,36 idi. Tanımlı bir ARCore kare-boşluk eşiği yoktur ve bu değerler evrensel garanti veya navigasyon kalite skoru değildir.
 
-Fiziksel doğrulama kısmi durumdadır ve cihaz baseline'ı sabitlenmemiştir. ARCore mesafe, ölçek, dönüş, sürüklenme ve mutlak doğruluğu doğrulanmadı; ARCore-to-ENU uygulanmadı. GNSS anchor, kesinti denetleyicisi, Ground Truth Firewall runtime, üretim PDR veri alım hattı, PDR, heading, Motion AI, Quality Engine, EKF / Sensör Füzyonu ve relocalization uygulanmamıştır. Diğer gerekli cihaz kontrolleri beklemektedir; hiçbir navigasyon benchmark'ı veya iyileştirme hedefi değerlendirilmemiştir.
+Stage 3A, test edilen cihazda `GPS_PROVIDER` preflight/hazır olma durumunu, üç bağımsız kesinti-öncesi anchor ediniminin 3/3'ünü, açık clear/reacquire ve açık iptal akışını fiziksel olarak doğruladı. Resmî edinim fiziksel ölçüm-zamanı otoritesi olarak `Location.elapsedRealtimeNanos` kullanır: ilk geçerli aday 10 saniyelik pencereyi başlatır, en az üç aday gerekir ve seçim en düşük bildirilen yatay doğruluğu daha yeni ölçüm zaman damgası eşitlik bozucusuyla kullanır. 10 / 11 / 10 adaylı oturumlarda yaklaşık 17,98 / 15,32 / 34,79 m bildirilen doğruluk metadata'sı seçildi. Android tarafından bildirilen bu değerler ölçülmüş ground-truth hatası değildir. Çalışma zamanı anchor'ı açıkça temizlenene kadar değişmezdir ve kalıcılaştırılmaz. WGS84 → ECEF → yerel ENU matematiği uygulandı ve birim testlerinden geçti; yükseklik yokken Up uydurulmadan yatay ENU sağlanır. Paylaşılan resmî loglar sanitize edilmişti ve ham anchor koordinatlarını yazdırmadı.
+
+Fiziksel doğrulama kısmi durumdadır ve cihaz baseline'ı sabitlenmemiştir. GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu ve aynı-konum anchor tekrarlanabilirliği doğrulanmadı. ARCore mesafe, ölçek, dönüş, sürüklenme ve mutlak doğruluğu doğrulanmamış durumda; ARCore-to-ENU uygulanmadı. Kesinti denetleyicisi, Ground Truth Firewall runtime, üretim PDR veri alım hattı, PDR, gerçek heading, Motion AI, Quality Engine, EKF / Sensör Füzyonu ve relocalization uygulanmamıştır. Diğer gerekli cihaz kontrolleri beklemektedir; %20 iyileştirme hedefi ölçülmemiştir ve hiçbir navigasyon benchmark'ı değerlendirilmemiştir.
 
 ---
 

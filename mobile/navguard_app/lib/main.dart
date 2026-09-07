@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'navigation/gnss_anchor.dart';
+
 void main() {
   runApp(const NavguardApp());
 }
@@ -13,6 +15,8 @@ enum _DiagnosticOperation {
   gnssPreflight,
   gnssPermission,
   gnssTiming,
+  gnssAnchorPreflight,
+  gnssAnchorAcquisition,
   arCorePreflight,
   arCorePermission,
   arCoreTracking,
@@ -145,6 +149,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     'io.github.mesuttsahin.navguard/gnss_diagnostics',
   );
 
+  static const MethodChannel _gnssAnchorChannel = MethodChannel(
+    'io.github.mesuttsahin.navguard/gnss_anchor',
+  );
+
   static const MethodChannel _arCoreChannel = MethodChannel(
     'io.github.mesuttsahin.navguard/arcore_diagnostics',
   );
@@ -157,6 +165,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   String _gpsProvider = 'Unknown';
   String _locationServices = 'Unknown';
   bool? _canRunFormalGnssDiagnostic;
+  GnssAnchorPreflight? _gnssAnchorPreflight;
+  GnssAnchorRuntimeState _gnssAnchorState = GnssAnchorRuntimeState.noAnchor;
+  GnssAnchor? _gnssAnchor;
+  bool _anchorCancellationRequestInFlight = false;
   String _cameraPermission = 'Unknown';
   String _arCoreAvailability = 'Unknown';
   String _arCoreReady = 'Unknown';
@@ -181,6 +193,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _isGnssTimingLoading =>
       _activeOperation == _DiagnosticOperation.gnssTiming;
 
+  bool get _isGnssAnchorPreflightLoading =>
+      _activeOperation == _DiagnosticOperation.gnssAnchorPreflight;
+
+  bool get _isGnssAnchorAcquisitionLoading =>
+      _activeOperation == _DiagnosticOperation.gnssAnchorAcquisition;
+
   bool get _isArCorePreflightLoading =>
       _activeOperation == _DiagnosticOperation.arCorePreflight;
 
@@ -189,6 +207,64 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
 
   bool get _isArCoreTrackingLoading =>
       _activeOperation == _DiagnosticOperation.arCoreTracking;
+
+  String get _anchorFinePermissionLabel {
+    final GnssAnchorPreflight? preflight = _gnssAnchorPreflight;
+
+    if (preflight == null) {
+      return 'Unknown';
+    }
+
+    return preflight.fineLocationPermissionGranted ? 'Granted' : 'Not granted';
+  }
+
+  String get _anchorLocationServicesLabel {
+    return _booleanAvailabilityLabel(
+      _gnssAnchorPreflight?.locationServicesEnabled,
+    );
+  }
+
+  String get _anchorGpsProviderLabel {
+    return _booleanAvailabilityLabel(_gnssAnchorPreflight?.gpsProviderEnabled);
+  }
+
+  String get _anchorCandidateCountLabel {
+    return _gnssAnchor?.candidateCount.toString() ?? 'Not available';
+  }
+
+  String get _anchorReportedHorizontalAccuracyLabel {
+    final double? value = _gnssAnchor?.horizontalAccuracyReportedM;
+
+    if (value == null) {
+      return 'Not available';
+    }
+
+    return '${value.toStringAsFixed(1)} m';
+  }
+
+  String get _anchorAltitudeAvailableLabel {
+    final GnssAnchor? anchor = _gnssAnchor;
+
+    if (anchor == null) {
+      return 'Unknown';
+    }
+
+    return anchor.altitudeAvailable ? 'Yes' : 'No';
+  }
+
+  String get _horizontalEnuOriginReadyLabel {
+    return _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked
+        ? 'Yes'
+        : 'No';
+  }
+
+  String _booleanAvailabilityLabel(bool? value) {
+    if (value == null) {
+      return 'Unknown';
+    }
+
+    return value ? 'Enabled' : 'Disabled';
+  }
 
   Future<void> _readSensorInventory() {
     return _runDiagnosticRequest(
@@ -256,6 +332,173 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     );
   }
 
+  Future<void> _refreshGnssAnchorPreflight() {
+    return _runDiagnosticRequest(
+      channel: _gnssAnchorChannel,
+      operation: _DiagnosticOperation.gnssAnchorPreflight,
+      methodName: 'getGnssAnchorPreflight',
+      operationLabel: 'GNSS anchor preflight',
+      invalidResponseMessage:
+          'Native GNSS anchor preflight did not return a map.',
+      beginMarker: 'NAVGUARD_GNSS_ANCHOR_PREFLIGHT_BEGIN',
+      endMarker: 'NAVGUARD_GNSS_ANCHOR_PREFLIGHT_END',
+      updateGnssAnchorPreflight: true,
+    );
+  }
+
+  Future<void> _acquireGnssAnchor() async {
+    if (_isBusy || _gnssAnchor != null) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = _DiagnosticOperation.gnssAnchorAcquisition;
+      _gnssAnchorState = GnssAnchorRuntimeState.acquiring;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+
+    GnssAnchor? nextAnchor;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+
+    try {
+      final Object? rawResult = await _gnssAnchorChannel.invokeMethod<Object?>(
+        'acquireGnssAnchor',
+      );
+
+      if (rawResult is! Map) {
+        throw const FormatException(
+          'Native GNSS anchor acquisition did not return a map.',
+        );
+      }
+
+      // This runtime payload contains the selected coordinates. Parse it
+      // directly and never pass it to the generic diagnostic JSON logger.
+      final GnssAnchor anchor = GnssAnchor.fromPlatform(rawResult);
+      nextAnchor = anchor;
+      sanitizedLog = anchor.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(anchor.sanitizedMetadata);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextError = 'GNSS anchor acquisition failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'GNSS anchor channel is unavailable on this platform.';
+    } on FormatException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'invalid_anchor_response',
+      };
+      nextError = 'Native GNSS anchor response was invalid.';
+    } catch (_) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'unknown_error',
+      };
+      nextError = 'Unexpected error while acquiring the GNSS anchor.';
+    }
+
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_GNSS_ANCHOR_ACQUISITION_BEGIN',
+      endMarker: 'NAVGUARD_GNSS_ANCHOR_ACQUISITION_END',
+      value: sanitizedLog,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = null;
+      _gnssAnchor = nextAnchor;
+      _gnssAnchorState = nextAnchor == null
+          ? GnssAnchorRuntimeState.failed
+          : GnssAnchorRuntimeState.anchorLocked;
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _cancelGnssAnchorAcquisition() async {
+    if (!_isGnssAnchorAcquisitionLoading ||
+        _anchorCancellationRequestInFlight) {
+      return;
+    }
+
+    setState(() {
+      _anchorCancellationRequestInFlight = true;
+    });
+
+    try {
+      await _gnssAnchorChannel.invokeMethod<Object?>(
+        'cancelGnssAnchorAcquisition',
+      );
+    } on PlatformException catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'GNSS anchor cancellation failed (${error.code}).';
+        });
+      }
+    } on MissingPluginException {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'GNSS anchor channel is unavailable on this platform.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'Unexpected error while cancelling anchor acquisition.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _anchorCancellationRequestInFlight = false;
+        });
+      }
+    }
+  }
+
+  void _clearGnssAnchor() {
+    if (_isBusy || _gnssAnchor == null) {
+      return;
+    }
+
+    final Map<String, Object?> sanitizedResult = <String, Object?>{
+      'success': true,
+      'anchorCleared': true,
+      'previousState': GnssAnchorRuntimeState.anchorLocked.sanitizedName,
+      'nextState': GnssAnchorRuntimeState.noAnchor.sanitizedName,
+    };
+
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_GNSS_ANCHOR_CLEAR_BEGIN',
+      endMarker: 'NAVGUARD_GNSS_ANCHOR_CLEAR_END',
+      value: sanitizedResult,
+    );
+
+    setState(() {
+      _gnssAnchor = null;
+      _gnssAnchorState = GnssAnchorRuntimeState.noAnchor;
+      _formattedOutput = _jsonEncoder.convert(sanitizedResult);
+      _errorMessage = null;
+    });
+  }
+
   Future<void> _refreshArCorePreflight() {
     return _runDiagnosticRequest(
       channel: _arCoreChannel,
@@ -306,6 +549,7 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     required String endMarker,
     Map<String, Object?>? arguments,
     bool updateGnssState = false,
+    bool updateGnssAnchorPreflight = false,
     bool updateArCoreState = false,
   }) async {
     if (_isBusy) {
@@ -321,6 +565,7 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     String? nextOutput;
     String? nextError;
     _GnssDisplayState? nextGnssState;
+    GnssAnchorPreflight? nextGnssAnchorPreflight;
     _ArCoreDisplayState? nextArCoreState;
 
     try {
@@ -335,6 +580,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
 
       if (updateGnssState) {
         nextGnssState = _GnssDisplayState.fromSnapshot(rawSnapshot);
+      }
+
+      if (updateGnssAnchorPreflight) {
+        nextGnssAnchorPreflight = GnssAnchorPreflight.fromPlatform(rawSnapshot);
       }
 
       if (updateArCoreState) {
@@ -383,6 +632,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         _canRunFormalGnssDiagnostic = nextGnssState.canRunFormalDiagnostic;
       }
 
+      if (nextGnssAnchorPreflight != null) {
+        _gnssAnchorPreflight = nextGnssAnchorPreflight;
+      }
+
       if (nextArCoreState != null) {
         _cameraPermission = nextArCoreState.cameraPermission;
         _arCoreAvailability = nextArCoreState.availability;
@@ -405,6 +658,20 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     }
 
     return value;
+  }
+
+  void _printSanitizedJsonBlock({
+    required String beginMarker,
+    required String endMarker,
+    required Map<String, Object?> value,
+  }) {
+    final String formattedJson = _jsonEncoder.convert(_normalizeForJson(value));
+
+    debugPrint(beginMarker);
+    for (final String line in formattedJson.split('\n')) {
+      debugPrint(line);
+    }
+    debugPrint(endMarker);
   }
 
   @override
@@ -574,6 +841,104 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
               ),
               const Divider(height: 32),
               Text(
+                'GNSS Anchor / Local Reference',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text('Fine location permission: $_anchorFinePermissionLabel'),
+              const SizedBox(height: 4),
+              Text('Location services: $_anchorLocationServicesLabel'),
+              const SizedBox(height: 4),
+              Text('GPS provider: $_anchorGpsProviderLabel'),
+              const SizedBox(height: 4),
+              Text('Anchor state: ${_gnssAnchorState.displayLabel}'),
+              const SizedBox(height: 4),
+              Text('Candidate count: $_anchorCandidateCountLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Reported horizontal accuracy: '
+                '$_anchorReportedHorizontalAccuracyLabel',
+              ),
+              const SizedBox(height: 4),
+              Text('Altitude available: $_anchorAltitudeAvailableLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Horizontal ENU origin ready: '
+                '$_horizontalEnuOriginReadyLabel',
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Anchor source: pre-denial GPS_PROVIDER fixes only.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Selection: lowest reported horizontal accuracy; '
+                'newer elapsed-realtime fix breaks ties.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isBusy ? null : _refreshGnssAnchorPreflight,
+                icon: _isGnssAnchorPreflightLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(
+                  _isGnssAnchorPreflightLoading
+                      ? 'Refreshing Anchor Preflight...'
+                      : 'Refresh Anchor Preflight',
+                ),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed:
+                    !_isBusy &&
+                        _gnssAnchor == null &&
+                        _gnssAnchorPreflight?.canAcquireAnchor == true
+                    ? _acquireGnssAnchor
+                    : null,
+                icon: _isGnssAnchorAcquisitionLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add_location_alt_outlined),
+                label: Text(
+                  _isGnssAnchorAcquisitionLoading
+                      ? 'Acquiring GNSS Anchor...'
+                      : 'Acquire GNSS Anchor',
+                ),
+              ),
+              if (_isGnssAnchorAcquisitionLoading) ...<Widget>[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _anchorCancellationRequestInFlight
+                      ? null
+                      : _cancelGnssAnchorAcquisition,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: Text(
+                    _anchorCancellationRequestInFlight
+                        ? 'Cancelling Acquisition...'
+                        : 'Cancel Acquisition',
+                  ),
+                ),
+              ],
+              if (_gnssAnchor != null) ...<Widget>[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _isBusy ? null : _clearGnssAnchor,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Clear Anchor'),
+                ),
+              ],
+              const Divider(height: 32),
+              Text(
                 'ARCore Runtime Diagnostics',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
@@ -683,6 +1048,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         return 'Requesting GNSS foreground permission...';
       case _DiagnosticOperation.gnssTiming:
         return 'Running GNSS diagnostic...';
+      case _DiagnosticOperation.gnssAnchorPreflight:
+        return 'Refreshing GNSS anchor preflight...';
+      case _DiagnosticOperation.gnssAnchorAcquisition:
+        return 'Acquiring GNSS anchor...';
       case _DiagnosticOperation.arCorePreflight:
         return 'Refreshing ARCore preflight...';
       case _DiagnosticOperation.arCorePermission:

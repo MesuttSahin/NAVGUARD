@@ -13,6 +13,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private var sensorTimingDiagnostic: SensorTimingDiagnostic? = null
     private var gnssTimingDiagnostic: GnssTimingDiagnostic? = null
+    private var gnssAnchorAcquisition: GnssAnchorAcquisition? = null
     private var arCoreTrackingDiagnostic: ArCoreTrackingDiagnostic? = null
     private var locationManager: LocationManager? = null
 
@@ -40,10 +41,16 @@ class MainActivity : FlutterActivity() {
                 GnssTimingDiagnostic(manager)
             }
 
+        gnssAnchorAcquisition =
+            availableLocationManager?.let { manager ->
+                GnssAnchorAcquisition(manager)
+            }
+
         arCoreTrackingDiagnostic = ArCoreTrackingDiagnostic(applicationContext)
 
         configureSensorChannel(flutterEngine, sensorManager)
         configureGnssChannel(flutterEngine)
+        configureGnssAnchorChannel(flutterEngine)
         configureArCoreChannel(flutterEngine)
     }
 
@@ -152,6 +159,64 @@ class MainActivity : FlutterActivity() {
 
                 METHOD_RUN_GNSS_TIMING_DIAGNOSTIC -> {
                     runGnssTimingDiagnostic(result)
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun configureGnssAnchorChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            GNSS_ANCHOR_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                METHOD_GET_GNSS_ANCHOR_PREFLIGHT -> {
+                    val manager = locationManager
+
+                    if (manager == null) {
+                        result.error(
+                            ERROR_LOCATION_MANAGER_UNAVAILABLE,
+                            "Android LocationManager service is unavailable.",
+                            null,
+                        )
+                    } else {
+                        result.success(
+                            createGnssAnchorPreflightSnapshot(manager),
+                        )
+                    }
+                }
+
+                METHOD_ACQUIRE_GNSS_ANCHOR -> {
+                    acquireGnssAnchor(result)
+                }
+
+                METHOD_CANCEL_GNSS_ANCHOR_ACQUISITION -> {
+                    val acquisition = gnssAnchorAcquisition
+
+                    if (acquisition == null) {
+                        result.error(
+                            ERROR_LOCATION_MANAGER_UNAVAILABLE,
+                            "GNSS anchor acquisition is unavailable.",
+                            null,
+                        )
+                    } else {
+                        val cancellationRequested =
+                            acquisition.cancelActiveAcquisition()
+
+                        result.success(
+                            linkedMapOf(
+                                "schemaVersion" to SCHEMA_VERSION,
+                                "snapshotKind" to
+                                    SNAPSHOT_KIND_GNSS_ANCHOR_CANCELLATION,
+                                "cancellationRequested" to
+                                    cancellationRequested,
+                                "acquisitionRunning" to
+                                    acquisition.isAcquisitionRunning(),
+                            ),
+                        )
+                    }
                 }
 
                 else -> result.notImplemented()
@@ -428,6 +493,82 @@ class MainActivity : FlutterActivity() {
         )
     }
 
+    private fun acquireGnssAnchor(result: MethodChannel.Result) {
+        val manager = locationManager
+        val acquisition = gnssAnchorAcquisition
+
+        if (manager == null || acquisition == null) {
+            result.error(
+                ERROR_LOCATION_MANAGER_UNAVAILABLE,
+                "GNSS anchor acquisition is unavailable.",
+                null,
+            )
+            return
+        }
+
+        val readiness = readGnssAnchorReadiness(manager)
+
+        if (!readiness.fineLocationPermissionGranted) {
+            result.error(
+                ERROR_ANCHOR_FINE_LOCATION_PERMISSION_MISSING,
+                "Precise foreground location permission is required.",
+                null,
+            )
+            return
+        }
+
+        if (readiness.locationServicesEnabled == false) {
+            result.error(
+                ERROR_ANCHOR_LOCATION_SERVICES_DISABLED,
+                "Android location services are disabled.",
+                null,
+            )
+            return
+        }
+
+        if (readiness.gpsProviderAvailable == false) {
+            result.error(
+                ERROR_GNSS_PROVIDER_UNAVAILABLE,
+                "GPS_PROVIDER is unavailable on this device.",
+                null,
+            )
+            return
+        }
+
+        if (
+            readiness.gpsProviderAvailable == null ||
+                readiness.gpsProviderEnabled == null
+        ) {
+            result.error(
+                ERROR_ANCHOR_LOCATION_MANAGER,
+                "Unable to determine GPS provider readiness.",
+                null,
+            )
+            return
+        }
+
+        if (!readiness.gpsProviderEnabled) {
+            result.error(
+                ERROR_ANCHOR_GPS_PROVIDER_DISABLED,
+                "GPS_PROVIDER is disabled.",
+                null,
+            )
+            return
+        }
+
+        acquisition.start(
+            object : GnssAnchorAcquisition.Callback {
+                override fun onSuccess(anchor: Map<String, Any?>) {
+                    result.success(anchor)
+                }
+
+                override fun onError(code: String, message: String) {
+                    result.error(code, message, null)
+                }
+            },
+        )
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -507,6 +648,7 @@ class MainActivity : FlutterActivity() {
         gnssTimingDiagnostic?.cancelActiveSession(
             "GNSS timing diagnostic cancelled because the activity paused.",
         )
+        gnssAnchorAcquisition?.cancelForActivityPause()
         arCoreTrackingDiagnostic?.cancelActiveSession(
             "ARCore tracking diagnostic cancelled because the activity paused.",
         )
@@ -521,12 +663,14 @@ class MainActivity : FlutterActivity() {
         gnssTimingDiagnostic?.cancelActiveSession(
             "GNSS timing diagnostic cancelled because the activity was destroyed.",
         )
+        gnssAnchorAcquisition?.cancelForActivityDestroy()
         arCoreTrackingDiagnostic?.cancelActiveSession(
             "ARCore tracking diagnostic cancelled because the activity was destroyed.",
         )
 
         sensorTimingDiagnostic = null
         gnssTimingDiagnostic = null
+        gnssAnchorAcquisition = null
         arCoreTrackingDiagnostic = null
         locationManager = null
 
@@ -590,6 +734,77 @@ class MainActivity : FlutterActivity() {
                 readiness.locationServicesEnabled,
             "canRunFormalDiagnostic" to
                 readiness.canRunFormalDiagnostic,
+        )
+    }
+
+    private fun createGnssAnchorPreflightSnapshot(
+        manager: LocationManager,
+    ): Map<String, Any?> {
+        val readiness = readGnssAnchorReadiness(manager)
+        val acquisitionRunning =
+            gnssAnchorAcquisition?.isAcquisitionRunning() == true
+
+        return linkedMapOf(
+            "schemaVersion" to SCHEMA_VERSION,
+            "snapshotKind" to SNAPSHOT_KIND_GNSS_ANCHOR_PREFLIGHT,
+            "foregroundOnly" to true,
+            "provider" to "gps",
+            "fineLocationPermissionGranted" to
+                readiness.fineLocationPermissionGranted,
+            "locationServicesEnabled" to
+                readiness.locationServicesEnabled,
+            "gpsProviderAvailable" to readiness.gpsProviderAvailable,
+            "gpsProviderEnabled" to readiness.gpsProviderEnabled,
+            "acquisitionRunning" to acquisitionRunning,
+            "canAcquireAnchor" to
+                (
+                    readiness.fineLocationPermissionGranted &&
+                        readiness.gpsProviderAvailable == true &&
+                        readiness.gpsProviderEnabled == true &&
+                        readiness.locationServicesEnabled != false &&
+                        !acquisitionRunning
+                ),
+        )
+    }
+
+    private fun readGnssAnchorReadiness(
+        manager: LocationManager,
+    ): GnssAnchorReadiness {
+        val gpsProviderAvailable: Boolean? =
+            try {
+                manager.allProviders.contains(LocationManager.GPS_PROVIDER)
+            } catch (_: Exception) {
+                null
+            }
+
+        val gpsProviderEnabled: Boolean? =
+            when (gpsProviderAvailable) {
+                true ->
+                    try {
+                        manager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                    } catch (_: Exception) {
+                        null
+                    }
+                false -> false
+                null -> null
+            }
+
+        val locationServicesEnabled: Boolean? =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                try {
+                    manager.isLocationEnabled
+                } catch (_: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
+
+        return GnssAnchorReadiness(
+            fineLocationPermissionGranted = hasFineLocationPermission(),
+            locationServicesEnabled = locationServicesEnabled,
+            gpsProviderAvailable = gpsProviderAvailable,
+            gpsProviderEnabled = gpsProviderEnabled,
         )
     }
 
@@ -696,6 +911,13 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+    private data class GnssAnchorReadiness(
+        val fineLocationPermissionGranted: Boolean,
+        val locationServicesEnabled: Boolean?,
+        val gpsProviderAvailable: Boolean?,
+        val gpsProviderEnabled: Boolean?,
+    )
+
     private data class GnssReadiness(
         val coarseLocationGranted: Boolean,
         val fineLocationGranted: Boolean,
@@ -714,6 +936,8 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/sensor_diagnostics"
         const val GNSS_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/gnss_diagnostics"
+        const val GNSS_ANCHOR_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/gnss_anchor"
         const val ARCORE_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/arcore_diagnostics"
 
@@ -729,6 +953,13 @@ class MainActivity : FlutterActivity() {
         const val METHOD_RUN_GNSS_TIMING_DIAGNOSTIC =
             "runGnssTimingDiagnostic"
 
+        const val METHOD_GET_GNSS_ANCHOR_PREFLIGHT =
+            "getGnssAnchorPreflight"
+        const val METHOD_ACQUIRE_GNSS_ANCHOR =
+            "acquireGnssAnchor"
+        const val METHOD_CANCEL_GNSS_ANCHOR_ACQUISITION =
+            "cancelGnssAnchorAcquisition"
+
         const val METHOD_GET_ARCORE_DIAGNOSTIC_PREFLIGHT =
             "getArCoreDiagnosticPreflight"
         const val METHOD_REQUEST_ARCORE_CAMERA_PERMISSION =
@@ -740,6 +971,10 @@ class MainActivity : FlutterActivity() {
             "gnss_diagnostic_preflight"
         const val SNAPSHOT_KIND_GNSS_PERMISSION_RESULT =
             "gnss_foreground_permission_result"
+        const val SNAPSHOT_KIND_GNSS_ANCHOR_PREFLIGHT =
+            "gnss_anchor_preflight"
+        const val SNAPSHOT_KIND_GNSS_ANCHOR_CANCELLATION =
+            "gnss_anchor_cancellation"
 
         const val PERMISSION_STATE_PRECISE_GRANTED = "precise_granted"
         const val PERMISSION_STATE_APPROXIMATE_ONLY = "approximate_only"
@@ -776,6 +1011,14 @@ class MainActivity : FlutterActivity() {
         const val ERROR_GNSS_PROVIDER_UNAVAILABLE =
             "gnss_provider_unavailable"
         const val ERROR_GNSS_PROVIDER_DISABLED = "gnss_provider_disabled"
+        const val ERROR_ANCHOR_FINE_LOCATION_PERMISSION_MISSING =
+            "fine_location_permission_missing"
+        const val ERROR_ANCHOR_LOCATION_SERVICES_DISABLED =
+            "location_services_disabled"
+        const val ERROR_ANCHOR_GPS_PROVIDER_DISABLED =
+            "gps_provider_disabled"
+        const val ERROR_ANCHOR_LOCATION_MANAGER =
+            "location_manager_error"
         const val ERROR_ARCORE_DIAGNOSTIC_UNAVAILABLE =
             "arcore_diagnostic_unavailable"
         const val ERROR_ARCORE_CAMERA_PERMISSION_ALREADY_RUNNING =
