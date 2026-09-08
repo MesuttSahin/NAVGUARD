@@ -204,7 +204,7 @@ The following sensor sources must be checked individually. *(Aşağıdaki sensö
 | Accelerometer *(İvmeölçer)* | TYPE_ACCELEROMETER | CRITICAL *(KRİTİK)* | TBD |
 | Gyroscope *(Jiroskop)* | TYPE_GYROSCOPE | CRITICAL *(KRİTİK)* | TBD |
 | Magnetic Field Sensor *(Manyetik Alan Sensörü)* | TYPE_MAGNETIC_FIELD | CRITICAL *(KRİTİK)* | TBD |
-| Rotation Vector *(Dönüş Vektörü)* | TYPE_ROTATION_VECTOR | HIGH *(YÜKSEK)* | TBD |
+| Rotation Vector *(Dönüş Vektörü)* | TYPE_ROTATION_VECTOR | HIGH *(YÜKSEK)* | AVAILABLE AND FORMALLY EXERCISED — STAGE 3B *(MEVCUT VE RESMÎ OLARAK ÇALIŞTIRILDI — STAGE 3B)* |
 | Game Rotation Vector *(Oyun Dönüş Vektörü)* | TYPE_GAME_ROTATION_VECTOR | MEDIUM *(ORTA)* | TBD |
 | Linear Acceleration *(Doğrusal İvme)* | TYPE_LINEAR_ACCELERATION | MEDIUM *(ORTA)* | TBD |
 | Gravity *(Yerçekimi)* | TYPE_GRAVITY | MEDIUM *(ORTA)* | TBD |
@@ -302,7 +302,7 @@ The preferred orientation-related source is the rotation vector rather than the 
 
 | Capability (Yetenek) | Available (Mevcut) | Runtime Stable (Çalışma Zamanında Kararlı) |
 | --- | --- | --- |
-| Rotation Vector *(Dönüş Vektörü)* | TBD | TBD |
+| Rotation Vector *(Dönüş Vektörü)* | YES — `Rotation Vector Non-wakeup` | YES — 3/3 FORMAL STAGE 3B SESSIONS |
 | Game Rotation Vector *(Oyun Dönüş Vektörü)* | TBD | TBD |
 | Gravity *(Yerçekimi)* | TBD | TBD |
 | Linear Acceleration *(Doğrusal İvme)* | TBD | TBD |
@@ -311,7 +311,7 @@ The preferred orientation-related source is the rotation vector rather than the 
 
 At least one reliable orientation strategy must be available from physical sensors or a suitable Android fused sensor combination. *(Fiziksel sensörlerden veya uygun bir Android füzyonlu sensör kombinasyonundan en az bir güvenilir yönelim stratejisi mevcut olmalıdır.)*
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+**Actual Status:** PARTIAL — `TYPE_ROTATION_VECTOR` availability, real heading delivery, timestamp monotonicity, clockwise-positive response, and circular continuity were physically exercised in Stage 3B; heading absolute accuracy and true-north absolute accuracy remain not validated. *(Gerçek Durum: KISMİ — `TYPE_ROTATION_VECTOR` kullanılabilirliği, gerçek heading teslimi, zaman damgası monotonluğu, saat yönünde pozitif tepki ve dairesel süreklilik Stage 3B'de fiziksel olarak çalıştırıldı; heading mutlak doğruluğu ve gerçek-kuzey mutlak doğruluğu doğrulanmamış durumda.)*
 
 ---
 
@@ -663,7 +663,7 @@ A successful anchor remains immutable for its runtime reference session. Replace
 
 The coordinate foundation uses WGS84 with semi-major axis 6378137.0 m, flattening `1 / 298.257223563`, and eccentricity squared `f * (2 - f)`. External latitude/longitude degrees are converted internally to radians through WGS84 geodetic → ECEF → anchor-relative ENU, where +E is East, +N is North, +U is Up, and units are meters. Full 3D ENU requires both anchor and target ellipsoid altitudes. When altitude is unavailable, the same deterministic `h = 0` reference is used for both points and only horizontal E/N is returned; no measured or fabricated Up component is claimed. A GNSS anchor may therefore lock without altitude and expose `Horizontal ENU origin ready`.
 
-Stage 3A static validation passed: `flutter analyze`, 32/32 tests, `flutter build apk --debug`, and `git diff --check`. The implementation changed eight source/test paths, which remain uncommitted. Physical anchor flow is verified for the tested scope, but GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, and same-location anchor repeatability are not validated. GNSS-denied navigation, true heading, PDR, ARCore-to-ENU, Ground Truth Firewall, Quality Engine, EKF, and the 20% improvement target remain unimplemented or unmeasured as applicable.
+Stage 3A static validation passed: `flutter analyze`, 32/32 tests, `flutter build apk --debug`, and `git diff --check`. That implementation changed eight source/test paths. Physical anchor flow is verified for the tested scope, but GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, and same-location anchor repeatability are not validated. At the Stage 3A boundary, GNSS-denied navigation, true heading, PDR, ARCore-to-ENU, Ground Truth Firewall, Quality Engine, EKF, and the 20% improvement target were unimplemented or unmeasured as applicable; the later Stage 3B handset-heading foundation is recorded in Section 59.
 
 **Criticality:** CRITICAL
 
@@ -741,7 +741,7 @@ Başarılı anchor kendi çalışma zamanı referans oturumunda değişmez kalı
 
 Koordinat temeli; 6378137,0 m yarı-büyük eksen, `1 / 298.257223563` basıklık ve `f * (2 - f)` eksantriklik karesiyle WGS84 kullanır. Dış enlem/boylam dereceleri içeride radyana dönüştürülür ve WGS84 jeodezik → ECEF → anchor-göreli ENU hattı izlenir; +E Doğu, +N Kuzey, +U Yukarı ve birimler metredir. Tam 3B ENU için anchor ve hedef elipsoit yüksekliklerinin ikisi de gerekir. Yükseklik yoksa iki nokta için aynı deterministik `h = 0` referansı kullanılır ve yalnızca yatay E/N döndürülür; ölçülmüş veya uydurma Up bileşeni iddia edilmez. Bu nedenle GNSS anchor yükseklik olmadan kilitlenebilir ve `Horizontal ENU origin ready` gösterebilir.
 
-Stage 3A statik doğrulaması geçti: `flutter analyze`, 32/32 test, `flutter build apk --debug` ve `git diff --check`. Uygulama, henüz commit edilmemiş sekiz kaynak/test yolunu değiştirdi. Fiziksel anchor akışı test edilen kapsamda doğrulandı ancak GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu ve aynı-konum anchor tekrarlanabilirliği doğrulanmadı. GNSS-kesintili navigasyon, gerçek heading, PDR, ARCore-to-ENU, Ground Truth Firewall, Quality Engine, EKF ve %20 iyileştirme hedefi duruma göre uygulanmamış veya ölçülmemiştir.
+Stage 3A statik doğrulaması geçti: `flutter analyze`, 32/32 test, `flutter build apk --debug` ve `git diff --check`. Bu uygulama sekiz kaynak/test yolunu değiştirdi. Fiziksel anchor akışı test edilen kapsamda doğrulandı ancak GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu ve aynı-konum anchor tekrarlanabilirliği doğrulanmadı. Stage 3A sınırında GNSS-kesintili navigasyon, gerçek heading, PDR, ARCore-to-ENU, Ground Truth Firewall, Quality Engine, EKF ve %20 iyileştirme hedefi duruma göre uygulanmamış veya ölçülmemişti; sonraki Stage 3B handset-heading temeli Bölüm 59'da kaydedilmiştir.
 
 **Kritiklik:** KRİTİK
 
@@ -1031,7 +1031,7 @@ The rear camera must be available to ARCore without resource conflicts during th
 - **No persistent camera conflict** *(Kalıcı kamera çatışması yok)*
 - **Navigation UI remains responsive while camera tracking is active** *(Kamera takibi aktifken navigasyon kullanıcı arayüzü tepki verebilir kalıyor)*
 
-### Stage 2D Evidence — English
+### Stage 3B Evidence — English
 
 Camera permission was granted, dedicated GL/EGL initialization and camera-texture setup passed in 3/3 sessions, the ARCore session resumed successfully in 3/3 sessions, and live tracking completed without a persistent camera conflict, visible crash, freeze, or terminal error. This evidence applies only to the Stage 2D diagnostic workflow, not a future combined navigation workload.
 
@@ -1370,15 +1370,15 @@ This screen may later become part of a permanent Research or Developer Mode. *(B
 
 ### Stage 2D Evidence — English
 
-The Flutter runtime-diagnostics screen preserves the Stage 2A sensor inventory, Stage 2B sensor timing, and Stage 2C GNSS controls and adds ARCore preflight, camera permission, and ARCore tracking controls. It displays sanitized aggregate summaries and uses dedicated console markers. The formal action depends on the most recently known preflight readiness, and the shared busy state prevents simultaneous UI-triggered diagnostics. Stage 2D reports `rawCameraFramesPersisted = false` and `rawPoseTrajectoryPersisted = false`.
+The Flutter runtime-diagnostics screen preserves the Stage 2A sensor inventory, Stage 2B sensor timing, Stage 2C GNSS, Stage 2D ARCore, and Stage 3A anchor controls. Stage 3B adds heading preflight, a formal 30-second heading diagnostic, explicit cancellation, and sanitized heading/timing/declination aggregates. The heading action requires both rotation-vector availability and a locked anchor; the shared busy state prevents simultaneous UI-triggered diagnostics. Raw anchor coordinates and raw rotation-vector streams are not displayed or included in sanitized formal logs.
 
-**Actual Status:** PARTIAL — Sensor inventory, sensor timing, GNSS timing, and ARCore tracking diagnostic UI scopes are implemented. TFLite, storage, and other recommended diagnostic areas remain pending.
+**Actual Status:** PARTIAL — Sensor inventory, sensor timing, GNSS timing, ARCore tracking, GNSS anchor, and handset-heading diagnostic UI scopes are implemented. TFLite, storage, and other recommended diagnostic areas remain pending.
 
-### Stage 2D Kanıtı — Türkçe
+### Stage 3B Kanıtı — Türkçe
 
-Flutter çalışma zamanı tanı ekranı Stage 2A sensör envanteri, Stage 2B sensör zamanlaması ve Stage 2C GNSS kontrollerini korur; ARCore preflight, kamera izni ve ARCore takip kontrollerini ekler. Sanitize edilmiş birleşik özetleri gösterir ve özel konsol işaretleyicileri kullanır. Resmî eylem en son bilinen preflight hazır olma durumuna bağlıdır ve ortak busy durumu aynı anda birden fazla UI tetiklemeli tanıyı engeller. Stage 2D `rawCameraFramesPersisted = false` ve `rawPoseTrajectoryPersisted = false` bildirir.
+Flutter çalışma zamanı tanı ekranı Stage 2A sensör envanteri, Stage 2B sensör zamanlaması, Stage 2C GNSS, Stage 2D ARCore ve Stage 3A anchor kontrollerini korur. Stage 3B heading preflight, resmî 30 saniyelik heading tanısı, açık iptal ve sanitize edilmiş heading/zamanlama/declination birleşik değerlerini ekler. Heading eylemi hem rotation-vector kullanılabilirliğini hem kilitli anchor'ı gerektirir; ortak busy durumu aynı anda birden fazla UI tetiklemeli tanıyı engeller. Ham anchor koordinatları ve ham rotation-vector akışları görüntülenmez veya sanitize edilmiş resmî loglara dahil edilmez.
 
-**Gerçek Durum:** KISMİ — Sensör envanteri, sensör zamanlaması, GNSS zamanlaması ve ARCore takip tanı kullanıcı arayüzü kapsamları uygulanmıştır. TFLite, depolama ve önerilen diğer tanı alanları beklemektedir.
+**Gerçek Durum:** KISMİ — Sensör envanteri, sensör zamanlaması, GNSS zamanlaması, ARCore takip, GNSS anchor ve handset-heading tanı kullanıcı arayüzü kapsamları uygulanmıştır. TFLite, depolama ve önerilen diğer tanı alanları beklemektedir.
 
 ---
 
@@ -1577,9 +1577,9 @@ File names may change during implementation, but the information represented by 
 - [ ]  **Target architecture gate evaluated.** *(Hedef mimari kapısı değerlendirildi.)*
 - [ ]  **Final device baseline frozen.** *(Nihai cihaz temel referansı sabitlendi.)*
 
-**Stage 3A boundary:** Stage 2A sensor inventory, Stage 2B four-sensor timing, Stage 2C GNSS runtime timing, Stage 2D ARCore runtime tracking, and Stage 3A pre-denial GNSS-anchor flow are verified for their defined scopes, but they do not complete this checklist. GNSS absolute coordinate and physical ENU accuracy, reference-trajectory recording, GNSS ground-truth isolation, formal ARCore stationary-drift and degradation procedures, ARCore accuracy and coordinate alignment, full sensor-audit procedures, the multi-source clock-alignment strategy, and other required device/runtime checks remain pending.
+**Stage 3B boundary:** Stage 2A sensor inventory, Stage 2B four-sensor timing, Stage 2C GNSS runtime timing, Stage 2D ARCore runtime tracking, Stage 3A pre-denial GNSS-anchor flow, and Stage 3B handset-heading / true-north-correction foundation are verified for their defined scopes, but they do not complete this checklist. Heading and true-north absolute accuracy, GNSS absolute coordinate and physical ENU accuracy, reference-trajectory recording, GNSS ground-truth isolation, formal ARCore stationary-drift and degradation procedures, ARCore accuracy and coordinate alignment, full sensor-audit procedures, the multi-source clock-alignment strategy, and other required device/runtime checks remain pending.
 
-**Stage 3A sınırı:** Stage 2A sensör envanteri, Stage 2B dört sensörlü zamanlama, Stage 2C GNSS çalışma zamanı zamanlaması, Stage 2D ARCore çalışma zamanı takibi ve Stage 3A kesinti-öncesi GNSS anchor akışı tanımlı kapsamlarında doğrulanmıştır ancak bu kontrol listesini tamamlamaz. GNSS mutlak koordinat ve fiziksel ENU doğruluğu, referans rota kaydı, GNSS gerçek referans izolasyonu, resmî ARCore sabit-durum sürüklenme ve bozulma prosedürleri, ARCore doğruluk ve koordinat hizalaması, tam sensör denetimi prosedürleri, çok-kaynaklı saat hizalama stratejisi ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir.
+**Stage 3B sınırı:** Stage 2A sensör envanteri, Stage 2B dört sensörlü zamanlama, Stage 2C GNSS çalışma zamanı zamanlaması, Stage 2D ARCore çalışma zamanı takibi, Stage 3A kesinti-öncesi GNSS anchor akışı ve Stage 3B handset-heading / gerçek-kuzey-düzeltme temeli tanımlı kapsamlarında doğrulanmıştır ancak bu kontrol listesini tamamlamaz. Heading ve gerçek-kuzey mutlak doğruluğu, GNSS mutlak koordinat ve fiziksel ENU doğruluğu, referans rota kaydı, GNSS gerçek referans izolasyonu, resmî ARCore sabit-durum sürüklenme ve bozulma prosedürleri, ARCore doğruluk ve koordinat hizalaması, tam sensör denetimi prosedürleri, çok-kaynaklı saat hizalama stratejisi ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir.
 
 ---
 
@@ -1589,12 +1589,12 @@ File names may change during implementation, but the information represented by 
 
 | Area | Result | Notes |
 | --- | --- | --- |
-| Device Environment | PARTIAL | Stages 2B–2D and Stage 3A tested on Xiaomi Redmi Note 9 Pro, Android 12 / API 31; full environment audit pending. |
+| Device Environment | PARTIAL | Stages 2B–2D, Stage 3A, and Stage 3B tested on Xiaomi Redmi Note 9 Pro, Android 12 / API 31; full environment audit pending. |
 | Static Sensor Availability | VERIFIED — STAGE 2A SCOPE | Runtime default-sensor availability and metadata verified; this is not sensor-performance evidence. |
 | Accelerometer | PARTIAL | Stage 2B live delivery/timing verified; signal quality, noise, bias, and calibration pending. |
 | Gyroscope | PARTIAL | Stage 2B live delivery/timing verified; signal quality, noise, bias, and calibration pending. |
 | Magnetometer | PARTIAL | Stage 2B live delivery/timing verified; signal quality, noise, bias, and calibration pending. |
-| Rotation Vector | PARTIAL | Stage 2B live delivery/timing verified; orientation/heading accuracy not verified. |
+| Rotation Vector | VERIFIED — STAGE 3B RUNTIME SCOPE | Available and formally exercised in 3/3 heading sessions at approximately 51.14 Hz observed delivery; absolute heading accuracy not validated. |
 | Live Sensor Event Delivery | VERIFIED — STAGE 2B SCOPE | Four selected sensors; 12/12 timing sessions completed with valid summaries. |
 | Sensor Timing | PARTIAL | 12/12 tested timestamp sequences were monotonic; 0/12 sessions had a gap above the provisional 60 ms threshold. Full AUD-TIME-001 pending. |
 | Sensor Sampling | PARTIAL | Requested 20,000 µs (~50 Hz nominal) versus timestamp-derived observed rates characterized for the tested configuration; full multi-rate audit pending. |
@@ -1618,25 +1618,26 @@ File names may change during implementation, but the information represented by 
 | Battery | TBD | TBD |
 | Thermal Behavior | TBD | TBD |
 | PDR | NOT IMPLEMENTED | Production PDR acquisition and navigation pipeline not implemented. |
-| Heading | NOT IMPLEMENTED | True-heading correctness was not evaluated by Stages 2B–3A. |
+| Handset Heading / True-North Foundation | VERIFIED — STAGE 3B RUNTIME SCOPE | Device +Y/top-edge, clockwise-positive, circular continuity, locked-anchor `GeomagneticField` correction, and cancellation physically exercised; heading and true-north absolute accuracy not validated. |
+| Body Heading / Handset-to-Body Calibration | NOT IMPLEMENTED | Stage 3B represents handset heading only; pocket inference and body alignment are not implemented. |
 | Motion AI | NOT IMPLEMENTED | No motion-classification runtime is connected to navigation. |
 | Quality Engine | NOT IMPLEMENTED | Reported GNSS accuracy metadata was not converted into a quality score. |
 | EKF / Sensor Fusion | NOT IMPLEMENTED | No Stage 2C GNSS or Stage 2D ARCore diagnostic value enters an estimator or fusion update. |
 | Minimum Architecture Gate | TBD | TBD |
 | Target Architecture Gate | TBD | TBD |
 | Device Baseline | NOT FROZEN | Critical runtime audit items remain pending. |
-| Overall Physical Verification | PARTIAL | Stages 2A–2D diagnostic scopes and the Stage 3A GNSS-anchor flow verified; full device audit incomplete. |
+| Overall Physical Verification | PARTIAL | Stages 2A–2D diagnostic scopes, Stage 3A GNSS-anchor flow, and Stage 3B heading foundation verified; full device audit incomplete. |
 
 ### Türkçe
 
 | Alan | Sonuç | Notlar |
 | --- | --- | --- |
-| Cihaz Ortamı | KISMİ | Stage 2B–2D ve Stage 3A, Xiaomi Redmi Note 9 Pro ve Android 12 / API 31 üzerinde test edildi; tam ortam denetimi bekliyor. |
+| Cihaz Ortamı | KISMİ | Stage 2B–2D, Stage 3A ve Stage 3B, Xiaomi Redmi Note 9 Pro ve Android 12 / API 31 üzerinde test edildi; tam ortam denetimi bekliyor. |
 | Statik Sensör Kullanılabilirliği | DOĞRULANDI — STAGE 2A KAPSAMI | Çalışma zamanı varsayılan sensör kullanılabilirliği ve metadata doğrulandı; bu sensör performansı kanıtı değildir. |
 | İvmeölçer | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; sinyal kalitesi, gürültü, bias ve kalibrasyon bekliyor. |
 | Jiroskop | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; sinyal kalitesi, gürültü, bias ve kalibrasyon bekliyor. |
 | Manyetometre | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; sinyal kalitesi, gürültü, bias ve kalibrasyon bekliyor. |
-| Dönüş Vektörü | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; yönelim/heading doğruluğu doğrulanmadı. |
+| Dönüş Vektörü | DOĞRULANDI — STAGE 3B ÇALIŞMA ZAMANI KAPSAMI | 3/3 heading oturumunda kullanılabilir ve resmî olarak çalıştırıldı; yaklaşık 51,14 Hz teslim gözlendi, mutlak heading doğruluğu doğrulanmadı. |
 | Canlı Sensör Olay İletimi | DOĞRULANDI — STAGE 2B KAPSAMI | Seçilen dört sensörde 12/12 zamanlama oturumu geçerli özetlerle tamamlandı. |
 | Sensör Zamanlaması | KISMİ | Test edilen 12/12 zaman damgası dizisi monotonikti; 0/12 oturumda geçici 60 ms eşiğinin üzerinde boşluk vardı. Tam AUD-TIME-001 bekliyor. |
 | Sensör Örnekleme | KISMİ | Talep edilen 20.000 µs (~50 Hz nominal) ile timestamp-türevli gözlenen hızlar test edilen yapılandırma için karakterize edildi; tam çoklu hız denetimi bekliyor. |
@@ -1660,14 +1661,15 @@ File names may change during implementation, but the information represented by 
 | Batarya | TBD | TBD |
 | Termal Davranış | TBD | TBD |
 | PDR | UYGULANMADI | Üretim PDR veri alımı ve navigasyon hattı uygulanmadı. |
-| Heading | UYGULANMADI | Gerçek heading doğruluğu Stage 2B–3A tarafından değerlendirilmedi. |
+| Handset Heading / Gerçek Kuzey Temeli | DOĞRULANDI — STAGE 3B ÇALIŞMA ZAMANI KAPSAMI | Cihaz +Y/üst-kenar, saat yönünde pozitif convention, dairesel süreklilik, kilitli-anchor `GeomagneticField` düzeltmesi ve iptal fiziksel olarak çalıştırıldı; heading ve gerçek-kuzey mutlak doğruluğu doğrulanmadı. |
+| Body Heading / Telefon-Vücut Kalibrasyonu | UYGULANMADI | Stage 3B yalnızca handset heading'i temsil eder; cep yönelimi çıkarımı ve vücut hizalaması uygulanmadı. |
 | Motion AI | UYGULANMADI | Navigasyona bağlı bir hareket sınıflandırma çalışma zamanı yoktur. |
 | Quality Engine | UYGULANMADI | Bildirilen GNSS doğruluk metadata'sı bir kalite skoruna dönüştürülmedi. |
 | EKF / Sensör Füzyonu | UYGULANMADI | Hiçbir Stage 2C GNSS veya Stage 2D ARCore tanı değeri tahmin motoru ya da füzyon güncellemesine girmez. |
 | Minimum Mimari Kapısı | TBD | TBD |
 | Hedef Mimari Kapısı | TBD | TBD |
 | Cihaz Baseline'ı | SABİTLENMEDİ | Kritik çalışma zamanı denetim öğeleri bekliyor. |
-| Genel Fiziksel Doğrulama | KISMİ | Stage 2A–2D tanı kapsamları ve Stage 3A GNSS anchor akışı doğrulandı; tam cihaz denetimi tamamlanmadı. |
+| Genel Fiziksel Doğrulama | KISMİ | Stage 2A–2D tanı kapsamları, Stage 3A GNSS anchor akışı ve Stage 3B heading temeli doğrulandı; tam cihaz denetimi tamamlanmadı. |
 
 ---
 
@@ -1681,9 +1683,9 @@ File names may change during implementation, but the information represented by 
 
 **Device Model:** Xiaomi Redmi Note 9 Pro *(Cihaz Modeli: Xiaomi Redmi Note 9 Pro)*
 
-**Android Version:** Android 12 / API 31 — Stage 2B, Stage 2C, Stage 2D, and Stage 3A tested environment; final baseline pending
+**Android Version:** Android 12 / API 31 — Stage 2B, Stage 2C, Stage 2D, Stage 3A, and Stage 3B tested environment; final baseline pending
 
-**Android Sürümü:** Android 12 / API 31 — Stage 2B, Stage 2C, Stage 2D ve Stage 3A test ortamı; nihai baseline bekliyor
+**Android Sürümü:** Android 12 / API 31 — Stage 2B, Stage 2C, Stage 2D, Stage 3A ve Stage 3B test ortamı; nihai baseline bekliyor
 
 **Minimum Architecture Gate:** TBD *(Minimum Mimari Kapısı: TBD)*
 
@@ -1715,13 +1717,77 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 ---
 
-# 59. Current Document Status (Mevcut Doküman Durumu)
+# 59. Stage 3B Heading / True-North Evidence (Stage 3B Heading / Gerçek Kuzey Kanıtı)
+
+### English
+
+Stage 3B — Heading / True-North Reference Foundation establishes a deterministic handset-heading and true-north-correction foundation for later PDR, ARCore, and EKF work. It is not a navigation estimator. `Sensor.TYPE_ROTATION_VECTOR` is the primary and only Stage 3B heading source; neither `TYPE_GAME_ROTATION_VECTOR` nor an accelerometer-plus-magnetometer fallback estimator is used.
+
+The canonical forward direction is the device +Y axis, meaning the physical top edge of the phone. This is **HANDSET HEADING**, not body heading. Rotation-vector samples are converted with `SensorManager.getRotationMatrixFromVector(...)`; device +Y is projected into horizontal East/North components, magnetic heading is calculated as `atan2(East, North)`, and angles are normalized into `[0, 2π)`. The frozen convention is 0 rad = North, π/2 rad = East, π rad = South, 3π/2 rad = West, with positive rotation clockwise. Circular signed-delta math maintains wrap continuity.
+
+True-north correction uses `android.hardware.GeomagneticField` and the current locked Stage 3A GNSS anchor as the only declination position source. The correction is `normalize(magnetic heading + declination)`. When anchor altitude exists, `declinationAltitudeSource = anchor_ellipsoid_altitude`; otherwise a deterministic 0 m fallback is identified as `deterministic_zero_fallback`, not as measured altitude. In the physical sessions below the source was `anchor_ellipsoid_altitude`. The declination model is `platform_managed`, `declinationModelFreshnessValidated = false`, and no WMM2025 or independently verified model-freshness claim is made.
+
+Sensor physical measurement-time authority is `SensorEvent.timestamp`. `System.currentTimeMillis` is used only as the geomagnetic-model time input; `wallClockUsedForSensorTiming = false`. The formal diagnostic requests 20,000 µs (nominal 50 Hz), has a 10-second first structurally valid sample timeout, and uses a 30-second sensor-timestamp measurement window. The requested rate is not a delivered-rate guarantee.
+
+Static validation passed across six implementation paths (three new and three modified): `flutter analyze` PASS, 61/61 tests PASS, `flutter build apk --debug` PASS, and `git diff --check` PASS. No dependency or manifest change was required.
+
+The tested device was the Xiaomi Redmi Note 9 Pro running Android 12 / API 31. A fresh Stage 3A anchor acquired before the heading sessions returned sanitized metadata with `success = true`, 11 candidates, approximately 43.7262 m selected Android-reported horizontal-accuracy metadata, and altitude available. The reported value is not measured GNSS position error. Raw coordinates are intentionally not recorded here.
+
+Formal preflight returned `rotationVectorAvailable = true`, sensor name `Rotation Vector Non-wakeup`, `requestedSamplingPeriodUs = 20000`, and `diagnosticRunning = false`. Thus the real `TYPE_ROTATION_VECTOR` heading source was available and formally exercised on the tested device.
+
+| Session | Scenario | Valid / Unique Samples | Duration | Observed Rate | Non-Monotonic / Duplicate | Circular Observation |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| 1 | Approximately stationary | 1535 / 1535 | ~29.997 s | ~51.1383 Hz | 0 / 0 | Cumulative ~-0.05827 rad; max consecutive ~0.00676 rad |
+| 2 | Approximate manual clockwise rotation | 1535 / 1535 | ~29.998 s | ~51.1374 Hz | 0 / 0 | Cumulative ~+1.14196 rad (~+65.4°) |
+| 3 | Circular / wrap continuity | 1535 / 1535 | ~29.998 s | ~51.1372 Hz | 0 / 0 | Cumulative ~+10.56496 rad (>2π); max consecutive ~0.07181 rad |
+
+All three formal sessions succeeded. Across them, timestamp monotonicity passed 3/3, duplicate-free timestamps passed 3/3, observed delivery was approximately 51.137–51.138 Hz, and median delta was approximately 19.555 ms. Session 1 is observational stationary stability evidence only. Session 2 physically supports clockwise-positive response, but the manual rotation angle was not independently measured and heading scale accuracy is not validated. Session 3 physically supports continuous circular accumulation across one or more 0 / 2π boundaries without a consecutive ±2π discontinuity; it does not validate an exact physical rotation angle.
+
+Observed declination was approximately 0.112255 rad (6.43°), remained effectively consistent across the sessions, used `android.hardware.GeomagneticField`, and used `anchor_ellipsoid_altitude`. This verifies execution of the locked-anchor correction path, not true-north absolute accuracy. Android did not supply usable rotation-vector reported heading-accuracy metadata in any formal session: `reportedHeadingAccuracyAvailable = false` and `lastReportedHeadingAccuracyRad = null`. This optional metadata absence is not a Stage 3B failure and is not an actual measured heading error. `headingAccuracyValidated = false` remains explicit.
+
+Explicit cancellation was physically verified and returned the sanitized category `heading_diagnostic_cancelled`; cancellation is PASS. Anchor coordinates are used internally only for geomagnetic declination calculation and are not included in sanitized formal logs. Formal logs may contain heading, timing, declination, and sensor aggregates, but do not contain raw latitude, longitude, anchor altitude value, GNSS candidate coordinates, raw rotation-vector streams, raw GNSS trajectories, or device serials. No claim is made that coordinates never exist in process memory.
+
+Research limits remain explicit: heading absolute accuracy **NOT VALIDATED**; true-north absolute accuracy **NOT VALIDATED**; geomagnetic model freshness **NOT VALIDATED**; reported heading accuracy **UNAVAILABLE** in tested sessions; body heading and handset-to-body calibration **NOT IMPLEMENTED**; PDR, step detection, step length, ARCore-to-ENU, Ground Truth Firewall, Evaluation Mode, Quality Engine, EKF, and GNSS-denied navigation **NOT IMPLEMENTED**; the 20% benchmark improvement is **UNMEASURED**. The device baseline is **NOT FROZEN** and overall NAVGUARD physical verification remains **PARTIAL**.
+
+### Türkçe
+
+Aşama 3B — Heading / Gerçek Kuzey Referans Temeli, sonraki PDR, ARCore ve EKF çalışmaları için deterministik handset-heading ve gerçek-kuzey-düzeltme temeli oluşturur. Bir navigasyon tahmin motoru değildir. `Sensor.TYPE_ROTATION_VECTOR`, Stage 3B'nin birincil ve tek heading kaynağıdır; `TYPE_GAME_ROTATION_VECTOR` veya ivmeölçer-artı-manyetometre fallback tahmin motoru kullanılmaz.
+
+Canonical ileri yön cihaz +Y ekseni, yani telefonun fiziksel üst kenarıdır. Bu, body heading değil **HANDSET HEADING**'dir. Rotation-vector örnekleri `SensorManager.getRotationMatrixFromVector(...)` ile dönüştürülür; cihaz +Y yönü yatay Doğu/Kuzey bileşenlerine izdüşürülür, manyetik heading `atan2(Doğu, Kuzey)` ile hesaplanır ve açılar `[0, 2π)` aralığına normalize edilir. Sabitlenen convention; 0 rad = Kuzey, π/2 rad = Doğu, π rad = Güney, 3π/2 rad = Batı ve pozitif dönüşün saat yönünde olmasıdır. Dairesel işaretli-delta matematiği wrap sürekliliğini korur.
+
+Gerçek-kuzey düzeltmesi, tek declination konum kaynağı olarak mevcut kilitli Stage 3A GNSS anchor ile `android.hardware.GeomagneticField` kullanır. Düzeltme `normalize(manyetik heading + declination)` biçimindedir. Anchor yüksekliği varsa `declinationAltitudeSource = anchor_ellipsoid_altitude`; yoksa deterministik 0 m fallback'i ölçülmüş yükseklik olarak değil, `deterministic_zero_fallback` şeklinde tanımlanır. Aşağıdaki fiziksel oturumlarda kaynak `anchor_ellipsoid_altitude` idi. Declination modeli `platform_managed`, `declinationModelFreshnessValidated = false` durumundadır; WMM2025 veya bağımsız doğrulanmış model güncelliği iddia edilmez.
+
+Sensörün fiziksel ölçüm-zamanı otoritesi `SensorEvent.timestamp` değeridir. `System.currentTimeMillis` yalnızca geomanyetik modelin zaman girdisi olarak kullanılır; `wallClockUsedForSensorTiming = false` değeridir. Resmî tanı 20.000 µs (nominal 50 Hz) talep eder, ilk yapısal olarak geçerli örnek için 10 saniye timeout ve sensör zaman damgasına dayalı 30 saniyelik ölçüm penceresi kullanır. Talep edilen hız, teslim hızı garantisi değildir.
+
+Statik doğrulama, üç yeni ve üç değiştirilmiş toplam altı uygulama yolunda geçti: `flutter analyze` PASS, 61/61 test PASS, `flutter build apk --debug` PASS ve `git diff --check` PASS. Dependency veya manifest değişikliği gerekmedi.
+
+Test cihazı Android 12 / API 31 çalıştıran Xiaomi Redmi Note 9 Pro idi. Heading oturumlarından önce edinilen yeni Stage 3A anchor; `success = true`, 11 aday, yaklaşık 43,7262 m seçilen Android-bildirilen yatay doğruluk metadata'sı ve mevcut yükseklik içeren sanitize edilmiş metadata döndürdü. Bildirilen değer ölçülmüş GNSS konum hatası değildir. Ham koordinatlar burada bilinçli olarak kaydedilmez.
+
+Resmî preflight; `rotationVectorAvailable = true`, sensör adı `Rotation Vector Non-wakeup`, `requestedSamplingPeriodUs = 20000` ve `diagnosticRunning = false` döndürdü. Böylece gerçek `TYPE_ROTATION_VECTOR` heading kaynağı test cihazında kullanılabilir bulundu ve resmî olarak çalıştırıldı.
+
+| Oturum | Senaryo | Geçerli / Benzersiz Örnek | Süre | Gözlenen Hız | Monotonik Olmayan / Duplicate | Dairesel Gözlem |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| 1 | Yaklaşık sabit | 1535 / 1535 | ~29,997 s | ~51,1383 Hz | 0 / 0 | Birleşik ~-0,05827 rad; maksimum ardışık ~0,00676 rad |
+| 2 | Yaklaşık manuel saat yönü dönüşü | 1535 / 1535 | ~29,998 s | ~51,1374 Hz | 0 / 0 | Birleşik ~+1,14196 rad (~+65,4°) |
+| 3 | Dairesel / wrap sürekliliği | 1535 / 1535 | ~29,998 s | ~51,1372 Hz | 0 / 0 | Birleşik ~+10,56496 rad (>2π); maksimum ardışık ~0,07181 rad |
+
+Üç resmî oturumun tamamı başarılı oldu. Oturumlar genelinde zaman damgası monotonluğu 3/3, duplicate içermeyen zaman damgaları 3/3 geçti; gözlenen teslim yaklaşık 51,137–51,138 Hz ve medyan delta yaklaşık 19,555 ms idi. Oturum 1 yalnızca gözlemsel sabit-kararlılık kanıtıdır. Oturum 2 saat yönünde pozitif tepkiyi fiziksel olarak destekler ancak manuel dönüş açısı bağımsız ölçülmedi ve heading ölçek doğruluğu doğrulanmadı. Oturum 3, ardışık ±2π süreksizliği olmadan bir veya daha fazla 0 / 2π sınırındaki sürekli dairesel birikimi fiziksel olarak destekler; kesin fiziksel dönüş açısını doğrulamaz.
+
+Gözlenen declination yaklaşık 0,112255 rad (6,43°) idi, oturumlar boyunca etkili biçimde tutarlı kaldı, `android.hardware.GeomagneticField` ve `anchor_ellipsoid_altitude` kullandı. Bu, kilitli-anchor düzeltme yolunun çalışmasını doğrular; gerçek-kuzey mutlak doğruluğunu değil. Android hiçbir resmî oturumda kullanılabilir rotation-vector bildirilen heading-doğruluk metadata'sı sağlamadı: `reportedHeadingAccuracyAvailable = false` ve `lastReportedHeadingAccuracyRad = null`. Bu isteğe bağlı metadata'nın yokluğu Stage 3B başarısızlığı değildir ve gerçek ölçülmüş heading hatası değildir. `headingAccuracyValidated = false` açıkça korunur.
+
+Açık iptal fiziksel olarak doğrulandı ve sanitize edilmiş `heading_diagnostic_cancelled` kategorisini döndürdü; iptal PASS durumundadır. Anchor koordinatları yalnızca geomanyetik declination hesabı için içeride kullanılır ve sanitize edilmiş resmî loglara dahil edilmez. Resmî loglar heading, zamanlama, declination ve sensör birleşik değerlerini içerebilir ancak ham enlem, boylam, anchor yükseklik değeri, GNSS aday koordinatları, ham rotation-vector akışları, ham GNSS rotaları veya cihaz seri numarası içermez. Koordinatların process memory içinde hiçbir zaman bulunmadığı iddia edilmez.
+
+Araştırma sınırları açık kalır: heading mutlak doğruluğu **DOĞRULANMADI**; gerçek-kuzey mutlak doğruluğu **DOĞRULANMADI**; geomanyetik model güncelliği **DOĞRULANMADI**; bildirilen heading doğruluğu test oturumlarında **KULLANILAMAZ**; body heading ve telefon-vücut kalibrasyonu **UYGULANMADI**; PDR, adım algılama, adım uzunluğu, ARCore-to-ENU, Ground Truth Firewall, Evaluation Mode, Quality Engine, EKF ve GNSS-kesintili navigasyon **UYGULANMADI**; %20 benchmark iyileştirmesi **ÖLÇÜLMEDİ**. Cihaz baseline'ı **SABİTLENMEDİ** ve genel NAVGUARD fiziksel doğrulaması **KISMİ** durumdadır.
+
+---
+
+# 60. Current Document Status (Mevcut Doküman Durumu)
 
 ### English
 
 **Document Status:** Protocol Completed — Partial Execution
 
-**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A runtime SensorManager capability inventory, Stage 2B four-sensor live timing characterization, Stage 2C GNSS runtime timing characterization, Stage 2D ARCore runtime tracking characterization, and Stage 3A GNSS-anchor flow verification are complete for their defined scopes. The full device capability audit is not complete.
+**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A runtime SensorManager capability inventory, Stage 2B four-sensor live timing characterization, Stage 2C GNSS runtime timing characterization, Stage 2D ARCore runtime tracking characterization, Stage 3A GNSS-anchor flow verification, and Stage 3B heading-foundation verification are complete for their defined scopes. The full device capability audit is not complete.
 
 **Stage 2A Runtime Sensor Inventory Evidence:** VERIFIED on the tested Xiaomi Redmi Note 9 Pro. SensorManager runtime access, the Flutter–Kotlin diagnostic bridge, and runtime sensor metadata retrieval were verified. The inventory returned 14 requested records: 13 default sensors available and `TYPE_PRESSURE` unavailable. This is capability metadata evidence, not sensor-performance evidence.
 
@@ -1733,9 +1799,11 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 **Stage 3A GNSS Anchor + Local ENU Evidence:** VERIFIED for the defined runtime-flow scope on the same tested device. Preflight correctly blocked acquisition while location/GPS was disabled and reported ready after it was enabled. Three of three independent foreground `GPS_PROVIDER` anchor acquisitions succeeded with candidate counts 10 / 11 / 10. Explicit clear/reacquire and explicit cancellation were verified. Selection used lowest Android-reported horizontal accuracy with newer `Location.elapsedRealtimeNanos` as the tie-break; the selected metadata was approximately 17.98 / 15.32 / 34.79 m and is not measured coordinate error. WGS84 → ECEF → local ENU is implemented and unit-tested; horizontal ENU does not fabricate Up when altitude is unavailable. Raw coordinate exposure in shared formal logs: none observed. The runtime anchor is not persisted.
 
-**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, complete sensor timing/multi-rate procedures, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, same-location anchor repeatability, GNSS ground-truth isolation, ARCore distance/scale/rotation/drift/absolute accuracy, deliberate ARCore degradation handling, ARCore-to-ENU, multi-source clock alignment, and other required device/runtime checks remain pending. The GNSS denial controller, Ground Truth Firewall runtime, production PDR acquisition, PDR, true heading, Motion AI, Quality Engine, relocalization, and EKF / Sensor Fusion are not implemented. No navigation benchmark has been evaluated and the 20% improvement target is unmeasured.
+**Stage 3B Heading / True-North Evidence:** VERIFIED for the defined handset-heading foundation scope on the same tested device. `TYPE_ROTATION_VECTOR` was available and formally exercised; three of three 30-second sessions succeeded with approximately 51.14 Hz observed delivery, monotonic and duplicate-free `SensorEvent.timestamp` sequences, clockwise-positive response, circular continuity beyond 2π, locked-anchor `android.hardware.GeomagneticField` correction, and verified cancellation. Reported heading-accuracy metadata was unavailable in all sessions. Heading and true-north absolute accuracy remain not validated.
 
-**Documentation Synchronization:** Stage 3A status synchronized on 2026-09-07. Eight source/test paths and four documentation paths remain unstaged; the final combined commit-readiness audit is pending.
+**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, complete sensor timing/multi-rate procedures, heading absolute accuracy, true-north absolute accuracy, geomagnetic-model freshness, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, same-location anchor repeatability, GNSS ground-truth isolation, ARCore distance/scale/rotation/drift/absolute accuracy, deliberate ARCore degradation handling, ARCore-to-ENU, multi-source clock alignment, and other required device/runtime checks remain pending. Body heading and handset-to-body calibration are not implemented. The GNSS denial controller, Ground Truth Firewall runtime, Evaluation Mode, production PDR acquisition, PDR, step detection, step length, Motion AI, Quality Engine, relocalization, and EKF / Sensor Fusion are not implemented. No navigation benchmark has been evaluated and the 20% improvement target is unmeasured.
+
+**Documentation Synchronization:** Stage 3B status synchronized on 2026-09-08. Six source/test paths and four documentation paths remain unstaged; the final combined 10-path commit-readiness audit is pending.
 
 **Device Baseline Status:** NOT FROZEN
 
@@ -1749,7 +1817,7 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 **Doküman Durumu:** Protokol Tamamlandı — Kısmi Uygulama
 
-**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A çalışma zamanı SensorManager yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama karakterizasyonu, Stage 2C GNSS çalışma zamanı zamanlama karakterizasyonu, Stage 2D ARCore çalışma zamanı takip karakterizasyonu ve Stage 3A GNSS anchor akışı doğrulaması tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
+**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A çalışma zamanı SensorManager yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama karakterizasyonu, Stage 2C GNSS çalışma zamanı zamanlama karakterizasyonu, Stage 2D ARCore çalışma zamanı takip karakterizasyonu, Stage 3A GNSS anchor akışı doğrulaması ve Stage 3B heading-temeli doğrulaması tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
 
 **Stage 2A Çalışma Zamanı Sensör Envanteri Kanıtı:** Test edilen Xiaomi Redmi Note 9 Pro üzerinde DOĞRULANDI. SensorManager çalışma zamanı erişimi, Flutter–Kotlin tanı köprüsü ve çalışma zamanı sensör metadata alımı doğrulandı. Envanter 14 istenen kayıt döndürdü: 13 varsayılan sensör kullanılabilirdi ve `TYPE_PRESSURE` kullanılamıyordu. Bu yetenek metadata kanıtıdır; sensör performansı kanıtı değildir.
 
@@ -1761,9 +1829,11 @@ The final device baseline must represent actual measured Redmi Note 9 Pro behavi
 
 **Stage 3A GNSS Anchor + Yerel ENU Kanıtı:** Aynı test cihazındaki tanımlı çalışma zamanı akışı kapsamında DOĞRULANDI. Preflight, konum/GPS kapalıyken edinimi doğru biçimde engelledi ve açıldıktan sonra hazır olduğunu bildirdi. Üç bağımsız yalnızca ön planda çalışan `GPS_PROVIDER` anchor ediniminin 3/3'ü 10 / 11 / 10 aday sayılarıyla başarılı oldu. Açık clear/reacquire ve açık iptal doğrulandı. Seçim, en düşük Android-bildirilen yatay doğruluğu daha yeni `Location.elapsedRealtimeNanos` eşitlik bozucusuyla kullandı; seçilen yaklaşık 17,98 / 15,32 / 34,79 m metadata değerleri ölçülmüş koordinat hatası değildir. WGS84 → ECEF → yerel ENU uygulandı ve birim testlerinden geçti; yatay ENU, yükseklik yokken Up uydurmaz. Paylaşılan resmî loglarda ham koordinat maruziyeti gözlenmedi. Çalışma zamanı anchor'ı kalıcılaştırılmaz.
 
-**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam sensör zamanlama/çoklu hız prosedürleri, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu, aynı-konum anchor tekrarlanabilirliği, GNSS gerçek referans izolasyonu, ARCore mesafe/ölçek/dönüş/sürüklenme/mutlak doğruluğu, kasıtlı ARCore bozulma yönetimi, ARCore-to-ENU, çok-kaynaklı saat hizalama ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. GNSS kesinti denetleyicisi, Ground Truth Firewall runtime, üretim PDR veri alımı, PDR, gerçek heading, Motion AI, Quality Engine, relocalization ve EKF / Sensör Füzyonu uygulanmamıştır. Hiçbir navigasyon benchmark'ı değerlendirilmemiştir ve %20 iyileştirme hedefi ölçülmemiştir.
+**Stage 3B Heading / Gerçek Kuzey Kanıtı:** Aynı test cihazındaki tanımlı handset-heading temeli kapsamında DOĞRULANDI. `TYPE_ROTATION_VECTOR` kullanılabilirdi ve resmî olarak çalıştırıldı; üç adet 30 saniyelik oturumun 3/3'ü yaklaşık 51,14 Hz gözlenen teslim, monotonik ve duplicate içermeyen `SensorEvent.timestamp` dizileri, saat yönünde pozitif tepki, 2π üzerindeki dairesel süreklilik, kilitli-anchor `android.hardware.GeomagneticField` düzeltmesi ve doğrulanmış iptal ile başarılı oldu. Bildirilen heading-doğruluk metadata'sı tüm oturumlarda kullanılamıyordu. Heading ve gerçek-kuzey mutlak doğruluğu doğrulanmamış durumda.
 
-**Dokümantasyon Senkronizasyonu:** Stage 3A durumu 2026-09-07 tarihinde senkronize edildi. Sekiz kaynak/test yolu ve dört dokümantasyon yolu unstaged durumdadır; nihai birleşik commit-readiness denetimi beklemektedir.
+**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam sensör zamanlama/çoklu hız prosedürleri, heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, geomanyetik model güncelliği, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu, aynı-konum anchor tekrarlanabilirliği, GNSS gerçek referans izolasyonu, ARCore mesafe/ölçek/dönüş/sürüklenme/mutlak doğruluğu, kasıtlı ARCore bozulma yönetimi, ARCore-to-ENU, çok-kaynaklı saat hizalama ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. Body heading ve telefon-vücut kalibrasyonu uygulanmamıştır. GNSS kesinti denetleyicisi, Ground Truth Firewall runtime, Evaluation Mode, üretim PDR veri alımı, PDR, adım algılama, adım uzunluğu, Motion AI, Quality Engine, relocalization ve EKF / Sensör Füzyonu uygulanmamıştır. Hiçbir navigasyon benchmark'ı değerlendirilmemiştir ve %20 iyileştirme hedefi ölçülmemiştir.
+
+**Dokümantasyon Senkronizasyonu:** Stage 3B durumu 2026-09-08 tarihinde senkronize edildi. Altı kaynak/test yolu ve dört dokümantasyon yolu unstaged durumdadır; nihai birleşik 10-yolluk commit-readiness denetimi beklemektedir.
 
 **Cihaz Baseline Durumu:** SABİTLENMEDİ
 

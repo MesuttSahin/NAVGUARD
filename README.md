@@ -16,7 +16,9 @@ Stage 2D ARCore runtime tracking diagnostics are implemented, statically verifie
 
 Stage 3A — GNSS Anchor + Local ENU Reference Foundation is implemented and statically validated. All 32 tests passed and the debug APK build and diff-integrity check passed. Three of three physical `GPS_PROVIDER` anchor acquisitions succeeded on the tested device; explicit clear/reacquire and acquisition cancellation also passed. The WGS84 → ECEF → local ENU foundation is implemented, including horizontal ENU without a fabricated Up component when altitude is unavailable.
 
-GNSS absolute coordinate accuracy and physical ENU distance accuracy remain **NOT VALIDATED**. Overall physical verification remains **PARTIAL** and the device baseline is **NOT FROZEN**. Stage 3A does not implement GNSS denial/recovery, a Ground Truth Firewall, heading, PDR, ARCore-to-ENU alignment, the Quality Engine, EKF / Sensor Fusion, or navigation benchmarking.
+Stage 3B — Heading / True-North Reference Foundation is implemented and statically validated across six source/test paths. `flutter analyze`, all 61/61 tests, the debug APK build, and `git diff --check` passed. Three of three formal physical heading sessions succeeded on the tested device with approximately 51.14 Hz delivered under a 50 Hz nominal request. Clockwise-positive handset-heading behavior, circular continuity across the 0 / 2π boundary, the locked-anchor `android.hardware.GeomagneticField` correction path, and explicit cancellation were physically observed.
+
+Heading absolute accuracy and true-north absolute accuracy remain **NOT VALIDATED**. Stage 3B represents handset heading using the phone's physical top edge (+Y), not body heading; body heading and handset-to-body calibration are **NOT IMPLEMENTED**. GNSS absolute coordinate accuracy and physical ENU distance accuracy also remain **NOT VALIDATED**. Overall physical verification remains **PARTIAL** and the device baseline is **NOT FROZEN**. PDR, step detection/length, ARCore-to-ENU alignment, the Ground Truth Firewall, Quality Engine, EKF / Sensor Fusion, GNSS denial/recovery, and navigation benchmarking remain unimplemented or unmeasured as applicable.
 
 ### Platform
 
@@ -42,7 +44,9 @@ Stage 2D ARCore çalışma zamanı takip tanıları uygulandı, statik olarak do
 
 Aşama 3A — GNSS Anchor + Yerel ENU Referans Temeli uygulandı ve statik olarak doğrulandı. 32 testin tamamı, debug APK build'i ve diff bütünlüğü kontrolü geçti. Test cihazındaki üç fiziksel `GPS_PROVIDER` anchor ediniminin 3/3'ü başarılı oldu; açık clear/reacquire ve edinim iptali de geçti. WGS84 → ECEF → yerel ENU temeli, yükseklik yokken uydurma bir Up bileşeni üretmeden yatay ENU sağlayacak şekilde uygulandı.
 
-GNSS mutlak koordinat doğruluğu ve fiziksel ENU mesafe doğruluğu **DOĞRULANMAMIŞTIR**. Genel fiziksel doğrulama **KISMİ** durumdadır ve cihaz baseline'ı **SABİTLENMEMİŞTİR**. Stage 3A; GNSS kesinti/recovery, Ground Truth Firewall, heading, PDR, ARCore-to-ENU hizalama, Quality Engine, EKF / Sensör Füzyonu veya navigasyon benchmark'ı uygulamaz.
+Aşama 3B — Heading / Gerçek Kuzey Referans Temeli altı kaynak/test yolu kapsamında uygulandı ve statik olarak doğrulandı. `flutter analyze`, 61/61 testin tamamı, debug APK build'i ve `git diff --check` geçti. Test cihazındaki üç resmî fiziksel heading oturumunun 3/3'ü başarılı oldu; nominal 50 Hz talep altında yaklaşık 51,14 Hz teslim gözlendi. Saat yönünde pozitif telefon-heading davranışı, 0 / 2π sınırındaki dairesel süreklilik, kilitli anchor kullanan `android.hardware.GeomagneticField` düzeltme yolu ve açık iptal fiziksel olarak gözlendi.
+
+Heading mutlak doğruluğu ve gerçek-kuzey mutlak doğruluğu **DOĞRULANMAMIŞTIR**. Stage 3B, body heading yerine telefonun fiziksel üst kenarını (+Y) kullanan handset heading'i temsil eder; body heading ve telefon-vücut kalibrasyonu **UYGULANMAMIŞTIR**. GNSS mutlak koordinat doğruluğu ve fiziksel ENU mesafe doğruluğu da **DOĞRULANMAMIŞTIR**. Genel fiziksel doğrulama **KISMİ** durumdadır ve cihaz baseline'ı **SABİTLENMEMİŞTİR**. PDR, adım algılama/uzunluğu, ARCore-to-ENU hizalama, Ground Truth Firewall, Quality Engine, EKF / Sensör Füzyonu, GNSS kesinti/recovery ve navigasyon benchmark'ı duruma göre uygulanmamış veya ölçülmemiştir.
 
 ### Platform
 

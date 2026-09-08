@@ -53,6 +53,36 @@ void main() {
     expect(find.text('Refresh Anchor Preflight'), findsOneWidget);
     expect(find.text('Acquire GNSS Anchor'), findsOneWidget);
 
+    expect(find.text('Heading / True-North Reference'), findsOneWidget);
+    expect(find.text('Rotation Vector: Unknown'), findsOneWidget);
+    expect(find.text('Anchor: Not locked'), findsOneWidget);
+    expect(find.text('Heading diagnostic: Idle'), findsOneWidget);
+    expect(find.text('Device forward axis: Top edge (+Y)'), findsOneWidget);
+    expect(
+      find.text('Requested sampling: 50 Hz (20,000 µs request)'),
+      findsOneWidget,
+    );
+    expect(find.text('Observed sample rate: Not available'), findsOneWidget);
+    expect(find.text('Valid sample count: Not available'), findsOneWidget);
+    expect(find.text('Magnetic heading: Not available'), findsOneWidget);
+    expect(
+      find.text('True-north corrected heading estimate: Not available'),
+      findsOneWidget,
+    );
+    expect(find.text('Declination: Not available'), findsOneWidget);
+    expect(
+      find.text('Reported heading accuracy: Not available'),
+      findsOneWidget,
+    );
+    expect(find.text('Timestamp monotonicity: Not available'), findsOneWidget);
+    expect(
+      find.text('Cumulative heading change: Not available'),
+      findsOneWidget,
+    );
+    expect(find.text('True-north accuracy: NOT VALIDATED'), findsOneWidget);
+    expect(find.text('Refresh Heading Preflight'), findsOneWidget);
+    expect(find.text('Run Heading Diagnostic'), findsOneWidget);
+
     expect(find.text('ARCore Runtime Diagnostics'), findsOneWidget);
     expect(find.text('Camera Permission: Unknown'), findsOneWidget);
     expect(find.text('ARCore Availability: Unknown'), findsOneWidget);

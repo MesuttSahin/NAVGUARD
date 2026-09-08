@@ -14,6 +14,7 @@ class MainActivity : FlutterActivity() {
     private var sensorTimingDiagnostic: SensorTimingDiagnostic? = null
     private var gnssTimingDiagnostic: GnssTimingDiagnostic? = null
     private var gnssAnchorAcquisition: GnssAnchorAcquisition? = null
+    private var headingFoundationDiagnostic: HeadingFoundationDiagnostic? = null
     private var arCoreTrackingDiagnostic: ArCoreTrackingDiagnostic? = null
     private var locationManager: LocationManager? = null
 
@@ -46,11 +47,17 @@ class MainActivity : FlutterActivity() {
                 GnssAnchorAcquisition(manager)
             }
 
+        headingFoundationDiagnostic =
+            sensorManager?.let { availableSensorManager ->
+                HeadingFoundationDiagnostic(availableSensorManager)
+            }
+
         arCoreTrackingDiagnostic = ArCoreTrackingDiagnostic(applicationContext)
 
         configureSensorChannel(flutterEngine, sensorManager)
         configureGnssChannel(flutterEngine)
         configureGnssAnchorChannel(flutterEngine)
+        configureHeadingFoundationChannel(flutterEngine)
         configureArCoreChannel(flutterEngine)
     }
 
@@ -222,6 +229,125 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    private fun configureHeadingFoundationChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            HEADING_FOUNDATION_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                METHOD_GET_HEADING_FOUNDATION_PREFLIGHT -> {
+                    val diagnostic = headingFoundationDiagnostic
+
+                    if (diagnostic == null) {
+                        result.success(
+                            linkedMapOf(
+                                "schemaVersion" to SCHEMA_VERSION,
+                                "snapshotKind" to
+                                    SNAPSHOT_KIND_HEADING_FOUNDATION_PREFLIGHT,
+                                "rotationVectorAvailable" to false,
+                                "rotationVectorName" to null,
+                                "requestedSamplingPeriodUs" to
+                                    HEADING_REQUESTED_SAMPLING_PERIOD_US,
+                                "diagnosticRunning" to false,
+                            ),
+                        )
+                    } else {
+                        result.success(diagnostic.createPreflightSnapshot())
+                    }
+                }
+
+                METHOD_RUN_HEADING_FOUNDATION_DIAGNOSTIC -> {
+                    runHeadingFoundationDiagnostic(call.arguments, result)
+                }
+
+                METHOD_CANCEL_HEADING_FOUNDATION_DIAGNOSTIC -> {
+                    val diagnostic = headingFoundationDiagnostic
+                    val cancellationRequested =
+                        diagnostic?.cancelActiveSession() == true
+
+                    result.success(
+                        linkedMapOf(
+                            "schemaVersion" to SCHEMA_VERSION,
+                            "snapshotKind" to
+                                SNAPSHOT_KIND_HEADING_FOUNDATION_CANCELLATION,
+                            "cancellationRequested" to cancellationRequested,
+                            "diagnosticRunning" to
+                                (diagnostic?.isDiagnosticRunning() == true),
+                        ),
+                    )
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun runHeadingFoundationDiagnostic(
+        rawArguments: Any?,
+        result: MethodChannel.Result,
+    ) {
+        val diagnostic = headingFoundationDiagnostic
+
+        if (diagnostic == null) {
+            result.error(
+                ERROR_ROTATION_VECTOR_UNAVAILABLE,
+                "TYPE_ROTATION_VECTOR diagnostics are unavailable.",
+                null,
+            )
+            return
+        }
+
+        val arguments = rawArguments as? Map<*, *>
+
+        if (arguments == null) {
+            result.error(
+                ERROR_ANCHOR_REQUIRED,
+                "A locked Stage 3A GNSS anchor is required.",
+                null,
+            )
+            return
+        }
+
+        val latitudeDeg = (arguments["latitudeDeg"] as? Number)?.toDouble()
+        val longitudeDeg = (arguments["longitudeDeg"] as? Number)?.toDouble()
+        val rawAltitude = arguments["altitudeEllipsoidM"]
+        val altitudeEllipsoidM = (rawAltitude as? Number)?.toDouble()
+
+        if (
+            latitudeDeg == null ||
+                !latitudeDeg.isFinite() ||
+                latitudeDeg !in -90.0..90.0 ||
+                longitudeDeg == null ||
+                !longitudeDeg.isFinite() ||
+                longitudeDeg !in -180.0..180.0 ||
+                (rawAltitude != null && altitudeEllipsoidM == null) ||
+                altitudeEllipsoidM?.isFinite() == false
+        ) {
+            result.error(
+                ERROR_INVALID_ANCHOR_ARGUMENT,
+                "The locked GNSS anchor arguments are invalid.",
+                null,
+            )
+            return
+        }
+
+        diagnostic.start(
+            anchorLatitudeDeg = latitudeDeg,
+            anchorLongitudeDeg = longitudeDeg,
+            anchorAltitudeEllipsoidM = altitudeEllipsoidM,
+            callback =
+                object : HeadingFoundationDiagnostic.Callback {
+                    override fun onSuccess(summary: Map<String, Any?>) {
+                        result.success(summary)
+                    }
+
+                    override fun onError(code: String, message: String) {
+                        result.error(code, message, null)
+                    }
+                },
+        )
     }
 
     private fun configureArCoreChannel(flutterEngine: FlutterEngine) {
@@ -649,6 +775,9 @@ class MainActivity : FlutterActivity() {
             "GNSS timing diagnostic cancelled because the activity paused.",
         )
         gnssAnchorAcquisition?.cancelForActivityPause()
+        headingFoundationDiagnostic?.cancelActiveSession(
+            "Heading foundation diagnostic cancelled because the activity paused.",
+        )
         arCoreTrackingDiagnostic?.cancelActiveSession(
             "ARCore tracking diagnostic cancelled because the activity paused.",
         )
@@ -664,6 +793,9 @@ class MainActivity : FlutterActivity() {
             "GNSS timing diagnostic cancelled because the activity was destroyed.",
         )
         gnssAnchorAcquisition?.cancelForActivityDestroy()
+        headingFoundationDiagnostic?.cancelActiveSession(
+            "Heading foundation diagnostic cancelled because the activity was destroyed.",
+        )
         arCoreTrackingDiagnostic?.cancelActiveSession(
             "ARCore tracking diagnostic cancelled because the activity was destroyed.",
         )
@@ -671,6 +803,7 @@ class MainActivity : FlutterActivity() {
         sensorTimingDiagnostic = null
         gnssTimingDiagnostic = null
         gnssAnchorAcquisition = null
+        headingFoundationDiagnostic = null
         arCoreTrackingDiagnostic = null
         locationManager = null
 
@@ -938,6 +1071,8 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/gnss_diagnostics"
         const val GNSS_ANCHOR_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/gnss_anchor"
+        const val HEADING_FOUNDATION_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/heading_foundation"
         const val ARCORE_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/arcore_diagnostics"
 
@@ -960,6 +1095,13 @@ class MainActivity : FlutterActivity() {
         const val METHOD_CANCEL_GNSS_ANCHOR_ACQUISITION =
             "cancelGnssAnchorAcquisition"
 
+        const val METHOD_GET_HEADING_FOUNDATION_PREFLIGHT =
+            "getHeadingFoundationPreflight"
+        const val METHOD_RUN_HEADING_FOUNDATION_DIAGNOSTIC =
+            "runHeadingFoundationDiagnostic"
+        const val METHOD_CANCEL_HEADING_FOUNDATION_DIAGNOSTIC =
+            "cancelHeadingFoundationDiagnostic"
+
         const val METHOD_GET_ARCORE_DIAGNOSTIC_PREFLIGHT =
             "getArCoreDiagnosticPreflight"
         const val METHOD_REQUEST_ARCORE_CAMERA_PERMISSION =
@@ -975,6 +1117,12 @@ class MainActivity : FlutterActivity() {
             "gnss_anchor_preflight"
         const val SNAPSHOT_KIND_GNSS_ANCHOR_CANCELLATION =
             "gnss_anchor_cancellation"
+        const val SNAPSHOT_KIND_HEADING_FOUNDATION_PREFLIGHT =
+            "heading_foundation_preflight"
+        const val SNAPSHOT_KIND_HEADING_FOUNDATION_CANCELLATION =
+            "heading_foundation_cancellation"
+
+        const val HEADING_REQUESTED_SAMPLING_PERIOD_US = 20_000
 
         const val PERMISSION_STATE_PRECISE_GRANTED = "precise_granted"
         const val PERMISSION_STATE_APPROXIMATE_ONLY = "approximate_only"
@@ -1019,6 +1167,10 @@ class MainActivity : FlutterActivity() {
             "gps_provider_disabled"
         const val ERROR_ANCHOR_LOCATION_MANAGER =
             "location_manager_error"
+        const val ERROR_ROTATION_VECTOR_UNAVAILABLE =
+            "rotation_vector_unavailable"
+        const val ERROR_ANCHOR_REQUIRED = "anchor_required"
+        const val ERROR_INVALID_ANCHOR_ARGUMENT = "invalid_anchor_argument"
         const val ERROR_ARCORE_DIAGNOSTIC_UNAVAILABLE =
             "arcore_diagnostic_unavailable"
         const val ERROR_ARCORE_CAMERA_PERMISSION_ALREADY_RUNNING =

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'navigation/gnss_anchor.dart';
+import 'navigation/heading.dart';
 
 void main() {
   runApp(const NavguardApp());
@@ -17,6 +18,8 @@ enum _DiagnosticOperation {
   gnssTiming,
   gnssAnchorPreflight,
   gnssAnchorAcquisition,
+  headingPreflight,
+  headingDiagnostic,
   arCorePreflight,
   arCorePermission,
   arCoreTracking,
@@ -153,6 +156,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     'io.github.mesuttsahin.navguard/gnss_anchor',
   );
 
+  static const MethodChannel _headingFoundationChannel = MethodChannel(
+    'io.github.mesuttsahin.navguard/heading_foundation',
+  );
+
   static const MethodChannel _arCoreChannel = MethodChannel(
     'io.github.mesuttsahin.navguard/arcore_diagnostics',
   );
@@ -169,6 +176,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   GnssAnchorRuntimeState _gnssAnchorState = GnssAnchorRuntimeState.noAnchor;
   GnssAnchor? _gnssAnchor;
   bool _anchorCancellationRequestInFlight = false;
+  HeadingFoundationPreflight? _headingPreflight;
+  HeadingDiagnosticResult? _headingResult;
+  String _headingDiagnosticStatus = 'Idle';
+  bool _headingCancellationRequestInFlight = false;
   String _cameraPermission = 'Unknown';
   String _arCoreAvailability = 'Unknown';
   String _arCoreReady = 'Unknown';
@@ -199,6 +210,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _isGnssAnchorAcquisitionLoading =>
       _activeOperation == _DiagnosticOperation.gnssAnchorAcquisition;
 
+  bool get _isHeadingPreflightLoading =>
+      _activeOperation == _DiagnosticOperation.headingPreflight;
+
+  bool get _isHeadingDiagnosticLoading =>
+      _activeOperation == _DiagnosticOperation.headingDiagnostic;
+
   bool get _isArCorePreflightLoading =>
       _activeOperation == _DiagnosticOperation.arCorePreflight;
 
@@ -207,6 +224,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
 
   bool get _isArCoreTrackingLoading =>
       _activeOperation == _DiagnosticOperation.arCoreTracking;
+
+  bool get _canRunHeadingDiagnostic =>
+      !_isBusy &&
+      _headingPreflight?.rotationVectorAvailable == true &&
+      _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+      _gnssAnchor != null;
 
   String get _anchorFinePermissionLabel {
     final GnssAnchorPreflight? preflight = _gnssAnchorPreflight;
@@ -256,6 +279,81 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     return _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked
         ? 'Yes'
         : 'No';
+  }
+
+  String get _rotationVectorAvailabilityLabel {
+    final HeadingFoundationPreflight? preflight = _headingPreflight;
+
+    if (preflight == null) {
+      return 'Unknown';
+    }
+
+    return preflight.rotationVectorAvailable ? 'Available' : 'Unavailable';
+  }
+
+  String get _headingAnchorLabel {
+    return _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+            _gnssAnchor != null
+        ? 'Locked'
+        : 'Not locked';
+  }
+
+  String get _headingObservedRateLabel {
+    final double? value = _headingResult?.observedSampleRateHz;
+    return value == null ? 'Not available' : '${value.toStringAsFixed(2)} Hz';
+  }
+
+  String get _headingValidSampleCountLabel {
+    return _headingResult?.validHeadingSampleCount.toString() ??
+        'Not available';
+  }
+
+  String get _magneticHeadingLabel {
+    return _formatRadians(_headingResult?.lastMagneticHeadingRad);
+  }
+
+  String get _trueNorthHeadingLabel {
+    return _formatRadians(_headingResult?.lastTrueNorthCorrectedHeadingRad);
+  }
+
+  String get _declinationLabel {
+    return _formatRadians(_headingResult?.declinationRadians);
+  }
+
+  String get _reportedHeadingAccuracyLabel {
+    final HeadingDiagnosticResult? result = _headingResult;
+
+    if (result == null) {
+      return 'Not available';
+    }
+
+    if (!result.reportedHeadingAccuracyAvailable) {
+      return 'Unavailable';
+    }
+
+    return _formatRadians(result.lastReportedHeadingAccuracyRad);
+  }
+
+  String get _headingTimestampMonotonicityLabel {
+    final HeadingDiagnosticResult? result = _headingResult;
+
+    if (result == null) {
+      return 'Not available';
+    }
+
+    return result.nonMonotonicTimestampCount == 0
+        ? 'Monotonic'
+        : '${result.nonMonotonicTimestampCount} non-monotonic update(s)';
+  }
+
+  String get _cumulativeHeadingChangeLabel {
+    return _formatRadians(
+      _headingResult?.cumulativeUnwrappedTrueHeadingDeltaRad,
+    );
+  }
+
+  String _formatRadians(double? value) {
+    return value == null ? 'Not available' : '${value.toStringAsFixed(6)} rad';
   }
 
   String _booleanAvailabilityLabel(bool? value) {
@@ -494,9 +592,153 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     setState(() {
       _gnssAnchor = null;
       _gnssAnchorState = GnssAnchorRuntimeState.noAnchor;
+      _headingResult = null;
+      _headingDiagnosticStatus = 'Idle';
       _formattedOutput = _jsonEncoder.convert(sanitizedResult);
       _errorMessage = null;
     });
+  }
+
+  Future<void> _refreshHeadingPreflight() {
+    return _runDiagnosticRequest(
+      channel: _headingFoundationChannel,
+      operation: _DiagnosticOperation.headingPreflight,
+      methodName: 'getHeadingFoundationPreflight',
+      operationLabel: 'Heading foundation preflight',
+      invalidResponseMessage:
+          'Native heading foundation preflight did not return a map.',
+      beginMarker: 'NAVGUARD_HEADING_PREFLIGHT_BEGIN',
+      endMarker: 'NAVGUARD_HEADING_PREFLIGHT_END',
+      updateHeadingPreflight: true,
+    );
+  }
+
+  Future<void> _runHeadingDiagnostic() async {
+    final GnssAnchor? anchor = _gnssAnchor;
+
+    if (!_canRunHeadingDiagnostic || anchor == null) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = _DiagnosticOperation.headingDiagnostic;
+      _headingDiagnosticStatus = 'Running';
+      _headingResult = null;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+
+    HeadingDiagnosticResult? nextResult;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+
+    try {
+      // The coordinates are internal-only channel arguments. This argument map
+      // is never sent to the generic JSON logger or rendered by the UI.
+      final Object? rawResult = await _headingFoundationChannel
+          .invokeMethod<Object?>(
+            'runHeadingFoundationDiagnostic',
+            <String, Object?>{
+              'latitudeDeg': anchor.latitudeDeg,
+              'longitudeDeg': anchor.longitudeDeg,
+              'altitudeEllipsoidM': anchor.altitudeEllipsoidM,
+            },
+          );
+
+      final HeadingDiagnosticResult parsedResult =
+          HeadingDiagnosticResult.fromPlatform(rawResult);
+      nextResult = parsedResult;
+      sanitizedLog = parsedResult.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(parsedResult.sanitizedMetadata);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextError = 'Heading foundation diagnostic failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'Heading foundation channel is unavailable on this platform.';
+    } on FormatException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'invalid_heading_response',
+      };
+      nextError = 'Native heading foundation response was invalid.';
+    } catch (_) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'unknown_error',
+      };
+      nextError = 'Unexpected error while running the heading diagnostic.';
+    }
+
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_HEADING_DIAGNOSTIC_BEGIN',
+      endMarker: 'NAVGUARD_HEADING_DIAGNOSTIC_END',
+      value: sanitizedLog,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = null;
+      _headingResult = nextResult;
+      _headingDiagnosticStatus = nextResult == null ? 'Failed' : 'Success';
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _cancelHeadingDiagnostic() async {
+    if (!_isHeadingDiagnosticLoading || _headingCancellationRequestInFlight) {
+      return;
+    }
+
+    setState(() {
+      _headingCancellationRequestInFlight = true;
+    });
+
+    try {
+      await _headingFoundationChannel.invokeMethod<Object?>(
+        'cancelHeadingFoundationDiagnostic',
+      );
+    } on PlatformException catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Heading cancellation failed (${error.code}).';
+        });
+      }
+    } on MissingPluginException {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'Heading foundation channel is unavailable on this platform.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'Unexpected error while cancelling heading diagnostic.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _headingCancellationRequestInFlight = false;
+        });
+      }
+    }
   }
 
   Future<void> _refreshArCorePreflight() {
@@ -550,6 +792,7 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     Map<String, Object?>? arguments,
     bool updateGnssState = false,
     bool updateGnssAnchorPreflight = false,
+    bool updateHeadingPreflight = false,
     bool updateArCoreState = false,
   }) async {
     if (_isBusy) {
@@ -566,6 +809,7 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     String? nextError;
     _GnssDisplayState? nextGnssState;
     GnssAnchorPreflight? nextGnssAnchorPreflight;
+    HeadingFoundationPreflight? nextHeadingPreflight;
     _ArCoreDisplayState? nextArCoreState;
 
     try {
@@ -584,6 +828,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
 
       if (updateGnssAnchorPreflight) {
         nextGnssAnchorPreflight = GnssAnchorPreflight.fromPlatform(rawSnapshot);
+      }
+
+      if (updateHeadingPreflight) {
+        nextHeadingPreflight = HeadingFoundationPreflight.fromPlatform(
+          rawSnapshot,
+        );
       }
 
       if (updateArCoreState) {
@@ -634,6 +884,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
 
       if (nextGnssAnchorPreflight != null) {
         _gnssAnchorPreflight = nextGnssAnchorPreflight;
+      }
+
+      if (nextHeadingPreflight != null) {
+        _headingPreflight = nextHeadingPreflight;
       }
 
       if (nextArCoreState != null) {
@@ -939,6 +1193,97 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
               ],
               const Divider(height: 32),
               Text(
+                'Heading / True-North Reference',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text('Rotation Vector: $_rotationVectorAvailabilityLabel'),
+              const SizedBox(height: 4),
+              Text('Anchor: $_headingAnchorLabel'),
+              const SizedBox(height: 4),
+              Text('Heading diagnostic: $_headingDiagnosticStatus'),
+              const SizedBox(height: 4),
+              const Text('Device forward axis: Top edge (+Y)'),
+              const SizedBox(height: 4),
+              const Text('Requested sampling: 50 Hz (20,000 µs request)'),
+              const SizedBox(height: 4),
+              Text('Observed sample rate: $_headingObservedRateLabel'),
+              const SizedBox(height: 4),
+              Text('Valid sample count: $_headingValidSampleCountLabel'),
+              const SizedBox(height: 4),
+              Text('Magnetic heading: $_magneticHeadingLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'True-north corrected heading estimate: '
+                '$_trueNorthHeadingLabel',
+              ),
+              const SizedBox(height: 4),
+              Text('Declination: $_declinationLabel'),
+              const SizedBox(height: 4),
+              Text('Reported heading accuracy: $_reportedHeadingAccuracyLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Timestamp monotonicity: '
+                '$_headingTimestampMonotonicityLabel',
+              ),
+              const SizedBox(height: 4),
+              Text('Cumulative heading change: $_cumulativeHeadingChangeLabel'),
+              const SizedBox(height: 8),
+              const Text(
+                'True-north accuracy: NOT VALIDATED',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isBusy ? null : _refreshHeadingPreflight,
+                icon: _isHeadingPreflightLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(
+                  _isHeadingPreflightLoading
+                      ? 'Refreshing Heading Preflight...'
+                      : 'Refresh Heading Preflight',
+                ),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: _canRunHeadingDiagnostic
+                    ? _runHeadingDiagnostic
+                    : null,
+                icon: _isHeadingDiagnosticLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.explore_outlined),
+                label: Text(
+                  _isHeadingDiagnosticLoading
+                      ? 'Running Heading Diagnostic...'
+                      : 'Run Heading Diagnostic',
+                ),
+              ),
+              if (_isHeadingDiagnosticLoading) ...<Widget>[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _headingCancellationRequestInFlight
+                      ? null
+                      : _cancelHeadingDiagnostic,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: Text(
+                    _headingCancellationRequestInFlight
+                        ? 'Cancelling Heading Diagnostic...'
+                        : 'Cancel Heading Diagnostic',
+                  ),
+                ),
+              ],
+              const Divider(height: 32),
+              Text(
                 'ARCore Runtime Diagnostics',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
@@ -1052,6 +1397,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         return 'Refreshing GNSS anchor preflight...';
       case _DiagnosticOperation.gnssAnchorAcquisition:
         return 'Acquiring GNSS anchor...';
+      case _DiagnosticOperation.headingPreflight:
+        return 'Refreshing heading foundation preflight...';
+      case _DiagnosticOperation.headingDiagnostic:
+        return 'Running heading foundation diagnostic...';
       case _DiagnosticOperation.arCorePreflight:
         return 'Refreshing ARCore preflight...';
       case _DiagnosticOperation.arCorePermission:

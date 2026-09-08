@@ -283,11 +283,11 @@ Every major implementation decision will be documented before or during implemen
 
 ### English
 
-**Current Phase:** Stage 3A — GNSS Anchor + Local ENU Reference Foundation Implemented, Statically Validated, and Physically Verified; Documentation Synchronized; Final Combined Commit-Readiness Audit Pending
+**Current Phase:** Stage 3B — Heading / True-North Reference Foundation Implemented, Statically Validated, and Physically Verified; Documentation Synchronized; Final Combined Commit-Readiness Audit Pending
 
-**Development Status:** Flutter Android Bootstrap and Stages 2A–2D Runtime Diagnostics Verified for Their Defined Scopes; Stage 3A Foreground Pre-Denial GNSS Anchor and WGS84 / Local ENU Foundation Implemented, Tested, and Physically Verified for Its Defined Scope; Remaining Navigation Subsystems Not Implemented
+**Development Status:** Flutter Android Bootstrap and Stages 2A–2D Runtime Diagnostics Verified for Their Defined Scopes; Stage 3A Foreground Pre-Denial GNSS Anchor and WGS84 / Local ENU Foundation and Stage 3B Handset Heading / True-North Correction Foundation Implemented, Tested, and Physically Verified for Their Defined Scopes; Remaining Navigation Subsystems Not Implemented
 
-**Documentation Status:** Technical Documentation Baseline Completed; Current Status Synchronized Through Stage 3A; Combined Commit-Readiness Audit Pending
+**Documentation Status:** Technical Documentation Baseline Completed; Current Status Synchronized Through Stage 3B; Combined Commit-Readiness Audit Pending
 
 **Primary Test Device:** Xiaomi Redmi Note 9 Pro
 
@@ -297,11 +297,11 @@ Every major implementation decision will be documented before or during implemen
 
 ### Türkçe
 
-**Mevcut Aşama:** Aşama 3A — GNSS Anchor + Yerel ENU Referans Temeli Uygulandı, Statik ve Fiziksel Olarak Doğrulandı; Dokümantasyon Senkronize Edildi; Nihai Birleşik Commit-Readiness Denetimi Bekliyor
+**Mevcut Aşama:** Aşama 3B — Heading / Gerçek Kuzey Referans Temeli Uygulandı, Statik ve Fiziksel Olarak Doğrulandı; Dokümantasyon Senkronize Edildi; Nihai Birleşik Commit-Readiness Denetimi Bekliyor
 
-**Geliştirme Durumu:** Flutter Android Bootstrap ve Stage 2A–2D Çalışma Zamanı Tanıları Tanımlı Kapsamlarında Doğrulandı; Stage 3A Yalnızca Ön Planda Çalışan Kesinti-Öncesi GNSS Anchor ile WGS84 / Yerel ENU Temeli Tanımlı Kapsamında Uygulandı, Test Edildi ve Fiziksel Olarak Doğrulandı; Kalan Navigasyon Alt Sistemleri Uygulanmadı
+**Geliştirme Durumu:** Flutter Android Bootstrap ve Stage 2A–2D Çalışma Zamanı Tanıları Tanımlı Kapsamlarında Doğrulandı; Stage 3A Yalnızca Ön Planda Çalışan Kesinti-Öncesi GNSS Anchor ve WGS84 / Yerel ENU Temeli ile Stage 3B Handset Heading / Gerçek Kuzey Düzeltme Temeli Tanımlı Kapsamlarında Uygulandı, Test Edildi ve Fiziksel Olarak Doğrulandı; Kalan Navigasyon Alt Sistemleri Uygulanmadı
 
-**Dokümantasyon Durumu:** Teknik Dokümantasyon Baseline'ı Tamamlandı; Mevcut Durum Stage 3A'ya Kadar Senkronize Edildi; Birleşik Commit-Readiness Denetimi Bekliyor
+**Dokümantasyon Durumu:** Teknik Dokümantasyon Baseline'ı Tamamlandı; Mevcut Durum Stage 3B'ye Kadar Senkronize Edildi; Birleşik Commit-Readiness Denetimi Bekliyor
 
 **Birincil Test Cihazı:** Xiaomi Redmi Note 9 Pro
 
@@ -325,7 +325,9 @@ Stage 2D ARCore runtime tracking diagnostics were implemented, statically verifi
 
 Stage 3A — GNSS Anchor + Local ENU Reference Foundation implemented real foreground `GPS_PROVIDER` preflight and pre-denial anchor acquisition, an immutable runtime anchor with explicit clear/reacquire and cancellation, and WGS84 → ECEF → anchor-relative ENU math. Static validation passed (`flutter analyze`, 32/32 tests, debug APK build, and `git diff --check`). Three of three physical anchor acquisitions succeeded, and clear/reacquire and cancellation were verified. Horizontal ENU is available without fabricating Up when altitude is absent. Shared formal logs were sanitized and did not print raw anchor coordinates.
 
-GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, and same-location anchor repeatability remain **NOT VALIDATED**. Physical verification remains **PARTIAL** and the device baseline is **NOT FROZEN**. Heading / true north, PDR, ARCore-to-ENU alignment, Ground Truth Firewall, Quality Engine, EKF, GNSS denial/recovery, and benchmarking form the next high-level research sequence; no exact next stage number is assigned here. The synchronized 12-path Stage 3A scope remains unstaged pending a final combined commit-readiness audit.
+Stage 3B — Heading / True-North Reference Foundation implemented a `TYPE_ROTATION_VECTOR`-only handset-heading path using the physical top edge / device +Y convention, clockwise-from-North radians normalized into `[0, 2π)`, circular delta math, and locked-anchor `android.hardware.GeomagneticField` correction. Static validation passed (`flutter analyze`, 61/61 tests, debug APK build, and `git diff --check`). Three of three formal physical sessions succeeded at approximately 51.14 Hz observed delivery under a nominal 50 Hz request; monotonic and duplicate-free timestamps, clockwise-positive response, circular continuity beyond 2π, declination-path execution, and explicit cancellation were physically observed.
+
+Heading absolute accuracy, true-north absolute accuracy, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, and same-location anchor repeatability remain **NOT VALIDATED**. Reported heading accuracy was unavailable in all Stage 3B sessions. Body heading, handset-to-body calibration, PDR, step detection/length, ARCore-to-ENU alignment, Ground Truth Firewall, Quality Engine, EKF, GNSS denial/recovery, and benchmarking remain unimplemented or unmeasured as applicable. Physical verification remains **PARTIAL** and the device baseline is **NOT FROZEN**. The next high-level progression may cover PDR / step-event foundations, ARCore-to-ENU alignment, Ground Truth Firewall, Quality Engine, EKF, GNSS denial/recovery, and benchmarking; no exact next stage number is assigned here. The synchronized 10-path Stage 3B scope remains unstaged pending a final combined commit-readiness audit.
 
 ### Türkçe
 
@@ -339,7 +341,9 @@ Stage 2D ARCore çalışma zamanı takip tanıları aynı test cihazında uygula
 
 Stage 3A — GNSS Anchor + Yerel ENU Referans Temeli; gerçek yalnızca ön planda çalışan `GPS_PROVIDER` preflight ve kesinti-öncesi anchor edinimini, açık clear/reacquire ve iptal içeren değişmez çalışma zamanı anchor'ını ve WGS84 → ECEF → anchor-göreli ENU matematiğini uyguladı. Statik doğrulama geçti (`flutter analyze`, 32/32 test, debug APK build'i ve `git diff --check`). Üç fiziksel anchor ediniminin 3/3'ü başarılı oldu; clear/reacquire ve iptal doğrulandı. Yükseklik yokken Up uydurulmadan yatay ENU kullanılabilir. Paylaşılan resmî loglar sanitize edilmişti ve ham anchor koordinatlarını yazdırmadı.
 
-GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu ve aynı-konum anchor tekrarlanabilirliği **DOĞRULANMAMIŞTIR**. Fiziksel doğrulama **KISMİ** durumdadır ve cihaz baseline'ı **SABİTLENMEMİŞTİR**. Heading / gerçek kuzey, PDR, ARCore-to-ENU hizalama, Ground Truth Firewall, Quality Engine, EKF, GNSS kesinti/recovery ve benchmark yüksek seviyeli sonraki araştırma sırasını oluşturur; burada kesin bir sonraki aşama numarası atanmaz. Senkronize 12-yolluk Stage 3A kapsamı unstaged durumdadır ve nihai birleşik commit-readiness denetimini beklemektedir.
+Stage 3B — Heading / Gerçek Kuzey Referans Temeli; fiziksel üst kenar / cihaz +Y convention'ı, Kuzeyden saat yönünde pozitif ve `[0, 2π)` aralığına normalize edilmiş radyanlar, dairesel delta matematiği ve kilitli-anchor `android.hardware.GeomagneticField` düzeltmesi kullanan yalnızca `TYPE_ROTATION_VECTOR` tabanlı handset-heading yolunu uyguladı. Statik doğrulama geçti (`flutter analyze`, 61/61 test, debug APK build'i ve `git diff --check`). Üç resmî fiziksel oturumun 3/3'ü nominal 50 Hz talep altında yaklaşık 51,14 Hz gözlenen teslimle başarılı oldu; monotonik ve duplicate içermeyen zaman damgaları, saat yönünde pozitif tepki, 2π üzerindeki dairesel süreklilik, declination yolunun çalışması ve açık iptal fiziksel olarak gözlendi.
+
+Heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu ve aynı-konum anchor tekrarlanabilirliği **DOĞRULANMAMIŞTIR**. Bildirilen heading doğruluğu tüm Stage 3B oturumlarında kullanılamıyordu. Body heading, telefon-vücut kalibrasyonu, PDR, adım algılama/uzunluğu, ARCore-to-ENU hizalama, Ground Truth Firewall, Quality Engine, EKF, GNSS kesinti/recovery ve benchmark duruma göre uygulanmamış veya ölçülmemiştir. Fiziksel doğrulama **KISMİ** durumdadır ve cihaz baseline'ı **SABİTLENMEMİŞTİR**. Sonraki yüksek seviyeli ilerleme PDR / adım-olayı temelleri, ARCore-to-ENU hizalama, Ground Truth Firewall, Quality Engine, EKF, GNSS kesinti/recovery ve benchmark çalışmalarını kapsayabilir; burada kesin bir sonraki aşama numarası atanmaz. Senkronize 10-yolluk Stage 3B kapsamı unstaged durumdadır ve nihai birleşik commit-readiness denetimini beklemektedir.
 
 ---
 
