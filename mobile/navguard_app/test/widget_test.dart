@@ -74,7 +74,10 @@ void main() {
       find.text('Reported heading accuracy: Not available'),
       findsOneWidget,
     );
-    expect(find.text('Timestamp monotonicity: Not available'), findsOneWidget);
+    expect(
+      find.text('Timestamp monotonicity: Not available'),
+      findsNWidgets(2),
+    );
     expect(
       find.text('Cumulative heading change: Not available'),
       findsOneWidget,
@@ -82,6 +85,18 @@ void main() {
     expect(find.text('True-north accuracy: NOT VALIDATED'), findsOneWidget);
     expect(find.text('Refresh Heading Preflight'), findsOneWidget);
     expect(find.text('Run Heading Diagnostic'), findsOneWidget);
+    expect(find.text('Step-Event Foundation'), findsOneWidget);
+    expect(find.text('Step Detector: Unknown'), findsOneWidget);
+    expect(find.text('Physical activity permission: Unknown'), findsOneWidget);
+    expect(find.text('Step diagnostic: Idle'), findsOneWidget);
+    expect(find.text('Formal window: 30 s'), findsOneWidget);
+    expect(find.text('Detected step events: Not available'), findsOneWidget);
+    expect(find.text('Invalid events: Not available'), findsOneWidget);
+    expect(find.text('Median step interval: Not available'), findsOneWidget);
+    expect(find.text('Observed cadence: Not available'), findsOneWidget);
+    expect(find.text('Step detection accuracy: NOT VALIDATED'), findsOneWidget);
+    expect(find.text('Refresh Step Preflight'), findsOneWidget);
+    expect(find.text('Run Step Diagnostic'), findsOneWidget);
 
     expect(find.text('ARCore Runtime Diagnostics'), findsOneWidget);
     expect(find.text('Camera Permission: Unknown'), findsOneWidget);

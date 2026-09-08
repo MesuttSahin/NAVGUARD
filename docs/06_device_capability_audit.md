@@ -208,11 +208,11 @@ The following sensor sources must be checked individually. *(Aşağıdaki sensö
 | Game Rotation Vector *(Oyun Dönüş Vektörü)* | TYPE_GAME_ROTATION_VECTOR | MEDIUM *(ORTA)* | TBD |
 | Linear Acceleration *(Doğrusal İvme)* | TYPE_LINEAR_ACCELERATION | MEDIUM *(ORTA)* | TBD |
 | Gravity *(Yerçekimi)* | TYPE_GRAVITY | MEDIUM *(ORTA)* | TBD |
-| Step Detector *(Adım Algılayıcı)* | TYPE_STEP_DETECTOR | LOW *(DÜŞÜK)* | TBD |
+| Step Detector *(Adım Algılayıcı)* | TYPE_STEP_DETECTOR | LOW *(DÜŞÜK)* | AVAILABLE AND FORMALLY EXERCISED — STAGE 3C *(MEVCUT VE RESMÎ OLARAK ÇALIŞTIRILDI — STAGE 3C)* |
 | Step Counter *(Adım Sayacı)* | TYPE_STEP_COUNTER | LOW *(DÜŞÜK)* | TBD |
 | Pressure / Barometer *(Basınç / Barometre)* | TYPE_PRESSURE | LOW *(DÜŞÜK)* | TBD |
 
-The Android-provided step detector and step counter will be audited for comparison purposes but will not automatically replace the NAVGUARD step detection algorithm. *(Android tarafından sağlanan adım algılayıcı ve adım sayacı karşılaştırma amacıyla denetlenecek ancak NAVGUARD adım tespit algoritmasının otomatik olarak yerini almayacaktır.)*
+The Android-provided `TYPE_STEP_DETECTOR` is the primary and only formal Stage 3C step source and has been physically audited. `TYPE_STEP_COUNTER` was not used by the formal diagnostic. Stage 3C does not validate general step-detection accuracy and does not implement step length or PDR. *(Android tarafından sağlanan `TYPE_STEP_DETECTOR`, Stage 3C'nin birincil ve tek resmî adım kaynağıdır ve fiziksel olarak denetlenmiştir. `TYPE_STEP_COUNTER` resmî tanıda kullanılmamıştır. Stage 3C genel adım-algılama doğruluğunu doğrulamaz ve adım uzunluğu veya PDR uygulamaz.)*
 
 ### Minimum PASS Condition (Minimum GEÇTİ Koşulu)
 
@@ -569,23 +569,35 @@ The recorded signals must show distinguishable stationary, walking, and turning 
 
 # 22. Native Step Sensor Audit — AUD-STEP-001 (Native Adım Sensörü Denetimi — AUD-STEP-001)
 
-If Android exposes a step detector or step counter on the device, its behavior will be measured for reference. *(Android cihaz üzerinde bir adım algılayıcı veya adım sayacı sunuyorsa davranışı referans amacıyla ölçülecektir.)*
+### English
 
-The native Android step output will not be treated as ground truth without validation. *(Native Android adım çıktısı doğrulama yapılmadan gerçek referans olarak ele alınmayacaktır.)*
+Stage 3C formally exercised Android `Sensor.TYPE_STEP_DETECTOR` on the Xiaomi Redmi Note 9 Pro running Android 12 / API 31. Android reported the sensor display name literally as `pedometer  Non-wakeup`. `TYPE_STEP_COUNTER` was not used as a source or fallback. The runtime path requires `android.permission.ACTIVITY_RECOGNITION` on the tested API level.
 
-A manually counted walking sequence will be used for comparison. *(Karşılaştırma için manuel olarak sayılan bir yürüyüş dizisi kullanılacaktır.)*
+Each formal diagnostic window was 30 seconds. `SensorEvent.timestamp` was the step measurement-time authority, while `SystemClock.elapsedRealtimeNanos()` controlled the operation window. No wall clock was used as step timing authority. The diagnostic returned aggregate counts, interval statistics, and observed cadence; it returned no raw step timestamp list or raw sensor samples and used no persistence. A zero-step session was accepted as a valid result.
 
-### Result Table (Sonuç Tablosu)
+| Session | Manual Steps | Updates | Accepted | Invalid | Out of Window | Unique | Duplicate | Non-Monotonic | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Stationary | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | PASS |
+| Controlled walk 1 | 20 | 21 | 16 | 0 | 5 | 16 | 0 | 0 | PASS WITH OBSERVATION |
+| Controlled walk 2 | 30 | 30 | 30 | 0 | 0 | 30 | 0 | 0 | PASS |
 
-| Item (Öğe) | Result (Sonuç) |
-| --- | --- |
-| TYPE_STEP_DETECTOR Available *(TYPE_STEP_DETECTOR Mevcut)* | TBD |
-| TYPE_STEP_COUNTER Available *(TYPE_STEP_COUNTER Mevcut)* | TBD |
-| Manual Steps *(Manuel Adımlar)* | TBD |
-| Native Detected Steps *(Native Tespit Edilen Adımlar)* | TBD |
-| Absolute Error *(Mutlak Hata)* | TBD |
+The stationary session observed no false step event during that single 30-second window; this is not a global zero-false-positive claim. In the 20-step walk, five delivered events were excluded by the formal session-window filter and the accepted count was 16. This must not be described as an 80% validated sensor-accuracy result, and no one-to-one mapping between excluded events and manually counted steps is inferred. In the 30-step walk, the accepted event count matched the manual count. This single match is not sufficient to validate general step-detection accuracy.
 
-**Actual Status:** TBD *(Gerçek Durum: TBD)*
+### Türkçe
+
+Stage 3C, Android 12 / API 31 çalıştıran Xiaomi Redmi Note 9 Pro üzerinde Android `Sensor.TYPE_STEP_DETECTOR` kaynağını resmî olarak çalıştırdı. Android sensör görünen adını tam olarak `pedometer  Non-wakeup` şeklinde bildirdi. `TYPE_STEP_COUNTER` kaynak veya fallback olarak kullanılmadı. Çalışma zamanı yolu, test edilen API seviyesinde `android.permission.ACTIVITY_RECOGNITION` iznini gerektirir.
+
+Her resmî tanı penceresi 30 saniyeydi. Adım ölçüm-zamanı otoritesi `SensorEvent.timestamp`, operasyon penceresi denetimi ise `SystemClock.elapsedRealtimeNanos()` idi. Wall clock adım zamanlaması otoritesi olarak kullanılmadı. Tanı birleşik sayıları, aralık istatistiklerini ve gözlenen kadansı döndürdü; ham adım zaman damgası listesi veya ham sensör örneği döndürmedi ve kalıcılaştırma kullanmadı. Sıfır-adımlı oturum geçerli sonuç olarak kabul edildi.
+
+| Oturum | Manuel Adım | Update | Kabul Edilen | Geçersiz | Pencere Dışı | Benzersiz | Duplicate | Monotonik Olmayan | Sonuç |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Sabit | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | GEÇTİ |
+| Kontrollü yürüyüş 1 | 20 | 21 | 16 | 0 | 5 | 16 | 0 | 0 | GÖZLEMLE GEÇTİ |
+| Kontrollü yürüyüş 2 | 30 | 30 | 30 | 0 | 0 | 30 | 0 | 0 | GEÇTİ |
+
+Sabit oturumda yalnızca bu 30 saniyelik pencere boyunca false adım olayı gözlenmedi; bu global sıfır-false-positive iddiası değildir. 20-adımlık yürüyüşte teslim edilen beş olay resmî oturum-penceresi filtresiyle dışlandı ve kabul edilen sayı 16 oldu. Bu, doğrulanmış %80 sensör doğruluğu olarak tanımlanamaz ve dışlanan olaylarla manuel sayılan adımlar arasında bire bir eşleme çıkarılamaz. 30-adımlık yürüyüşte kabul edilen olay sayısı manuel sayımla eşleşti. Bu tek eşleşme genel adım-algılama doğruluğunu doğrulamaya yeterli değildir.
+
+**Actual Status:** VERIFIED — STAGE 3C RUNTIME SCOPE; STEP-DETECTION ACCURACY NOT VALIDATED *(Gerçek Durum: DOĞRULANDI — STAGE 3C ÇALIŞMA ZAMANI KAPSAMI; ADIM-ALGILAMA DOĞRULUĞU DOĞRULANMADI)*
 
 ---
 
@@ -1563,6 +1575,7 @@ File names may change during implementation, but the information represented by 
 - [ ]  **Magnetometer stability test completed.** *(Manyetometre kararlılık testi tamamlandı.)*
 - [ ]  **Manual rotation test completed.** *(Manuel dönüş testi tamamlandı.)*
 - [ ]  **Short walking sensor test completed.** *(Kısa yürüyüş sensör testi tamamlandı.)*
+- [x]  **Native `TYPE_STEP_DETECTOR` foundation verified for the Stage 3C diagnostic scope.** *(Native `TYPE_STEP_DETECTOR` temeli Stage 3C tanı kapsamı için doğrulandı.)*
 - [ ]  **GNSS outdoor test completed.** *(GNSS dış mekân testi tamamlandı.)*
 - [ ]  **GNSS ground-truth isolation verified.** *(GNSS gerçek referans izolasyonu doğrulandı.)*
 - [x]  **ARCore installation verified for the Stage 2D diagnostic scope.** *(ARCore kurulumu Stage 2D tanı kapsamı için doğrulandı.)*
@@ -1577,9 +1590,9 @@ File names may change during implementation, but the information represented by 
 - [ ]  **Target architecture gate evaluated.** *(Hedef mimari kapısı değerlendirildi.)*
 - [ ]  **Final device baseline frozen.** *(Nihai cihaz temel referansı sabitlendi.)*
 
-**Stage 3B boundary:** Stage 2A sensor inventory, Stage 2B four-sensor timing, Stage 2C GNSS runtime timing, Stage 2D ARCore runtime tracking, Stage 3A pre-denial GNSS-anchor flow, and Stage 3B handset-heading / true-north-correction foundation are verified for their defined scopes, but they do not complete this checklist. Heading and true-north absolute accuracy, GNSS absolute coordinate and physical ENU accuracy, reference-trajectory recording, GNSS ground-truth isolation, formal ARCore stationary-drift and degradation procedures, ARCore accuracy and coordinate alignment, full sensor-audit procedures, the multi-source clock-alignment strategy, and other required device/runtime checks remain pending.
+**Stage 3C boundary:** Stage 2A sensor inventory, Stage 2B four-sensor timing, Stage 2C GNSS runtime timing, Stage 2D ARCore runtime tracking, Stage 3A pre-denial GNSS-anchor flow, Stage 3B handset-heading / true-north-correction foundation, and Stage 3C step-event foundation are verified for their defined scopes, but they do not complete this checklist. Step-detection accuracy, step length, heading-step association, PDR position, heading and true-north absolute accuracy, GNSS absolute coordinate and physical ENU accuracy, reference-trajectory recording, GNSS ground-truth isolation, formal ARCore stationary-drift and degradation procedures, ARCore accuracy and coordinate alignment, full sensor-audit procedures, the multi-source clock-alignment strategy, and other required device/runtime checks remain pending or unimplemented as applicable.
 
-**Stage 3B sınırı:** Stage 2A sensör envanteri, Stage 2B dört sensörlü zamanlama, Stage 2C GNSS çalışma zamanı zamanlaması, Stage 2D ARCore çalışma zamanı takibi, Stage 3A kesinti-öncesi GNSS anchor akışı ve Stage 3B handset-heading / gerçek-kuzey-düzeltme temeli tanımlı kapsamlarında doğrulanmıştır ancak bu kontrol listesini tamamlamaz. Heading ve gerçek-kuzey mutlak doğruluğu, GNSS mutlak koordinat ve fiziksel ENU doğruluğu, referans rota kaydı, GNSS gerçek referans izolasyonu, resmî ARCore sabit-durum sürüklenme ve bozulma prosedürleri, ARCore doğruluk ve koordinat hizalaması, tam sensör denetimi prosedürleri, çok-kaynaklı saat hizalama stratejisi ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir.
+**Stage 3C sınırı:** Stage 2A sensör envanteri, Stage 2B dört sensörlü zamanlama, Stage 2C GNSS çalışma zamanı zamanlaması, Stage 2D ARCore çalışma zamanı takibi, Stage 3A kesinti-öncesi GNSS anchor akışı, Stage 3B handset-heading / gerçek-kuzey-düzeltme temeli ve Stage 3C adım-olayı temeli tanımlı kapsamlarında doğrulanmıştır ancak bu kontrol listesini tamamlamaz. Adım-algılama doğruluğu, adım uzunluğu, heading-adım ilişkilendirmesi, PDR konumu, heading ve gerçek-kuzey mutlak doğruluğu, GNSS mutlak koordinat ve fiziksel ENU doğruluğu, referans rota kaydı, GNSS gerçek referans izolasyonu, resmî ARCore sabit-durum sürüklenme ve bozulma prosedürleri, ARCore doğruluk ve koordinat hizalaması, tam sensör denetimi prosedürleri, çok-kaynaklı saat hizalama stratejisi ve diğer gerekli cihaz/çalışma zamanı kontrolleri duruma göre beklemekte veya uygulanmamış durumdadır.
 
 ---
 
@@ -1589,7 +1602,7 @@ File names may change during implementation, but the information represented by 
 
 | Area | Result | Notes |
 | --- | --- | --- |
-| Device Environment | PARTIAL | Stages 2B–2D, Stage 3A, and Stage 3B tested on Xiaomi Redmi Note 9 Pro, Android 12 / API 31; full environment audit pending. |
+| Device Environment | PARTIAL | Stages 2B–2D and Stages 3A–3C tested on Xiaomi Redmi Note 9 Pro, Android 12 / API 31; full environment audit pending. |
 | Static Sensor Availability | VERIFIED — STAGE 2A SCOPE | Runtime default-sensor availability and metadata verified; this is not sensor-performance evidence. |
 | Accelerometer | PARTIAL | Stage 2B live delivery/timing verified; signal quality, noise, bias, and calibration pending. |
 | Gyroscope | PARTIAL | Stage 2B live delivery/timing verified; signal quality, noise, bias, and calibration pending. |
@@ -1620,19 +1633,22 @@ File names may change during implementation, but the information represented by 
 | PDR | NOT IMPLEMENTED | Production PDR acquisition and navigation pipeline not implemented. |
 | Handset Heading / True-North Foundation | VERIFIED — STAGE 3B RUNTIME SCOPE | Device +Y/top-edge, clockwise-positive, circular continuity, locked-anchor `GeomagneticField` correction, and cancellation physically exercised; heading and true-north absolute accuracy not validated. |
 | Body Heading / Handset-to-Body Calibration | NOT IMPLEMENTED | Stage 3B represents handset heading only; pocket inference and body alignment are not implemented. |
+| Step-Event Foundation | VERIFIED — STAGE 3C RUNTIME SCOPE | `TYPE_STEP_DETECTOR` formally exercised in one stationary and two controlled-walk sessions; session-window filtering, accepted-timestamp integrity, and cancellation verified. |
+| Step Detection Accuracy | NOT VALIDATED | The limited 0-, 20-, and 30-step observations are not a general accuracy study. |
+| Step Length / Heading-Step Association | NOT IMPLEMENTED | No step-length model, PDR displacement, or heading-to-step association is implemented. |
 | Motion AI | NOT IMPLEMENTED | No motion-classification runtime is connected to navigation. |
 | Quality Engine | NOT IMPLEMENTED | Reported GNSS accuracy metadata was not converted into a quality score. |
 | EKF / Sensor Fusion | NOT IMPLEMENTED | No Stage 2C GNSS or Stage 2D ARCore diagnostic value enters an estimator or fusion update. |
 | Minimum Architecture Gate | TBD | TBD |
 | Target Architecture Gate | TBD | TBD |
 | Device Baseline | NOT FROZEN | Critical runtime audit items remain pending. |
-| Overall Physical Verification | PARTIAL | Stages 2A–2D diagnostic scopes, Stage 3A GNSS-anchor flow, and Stage 3B heading foundation verified; full device audit incomplete. |
+| Overall Physical Verification | PARTIAL | Stages 2A–2D diagnostic scopes and Stage 3A–3C foundations verified for their defined scopes; full device audit incomplete. |
 
 ### Türkçe
 
 | Alan | Sonuç | Notlar |
 | --- | --- | --- |
-| Cihaz Ortamı | KISMİ | Stage 2B–2D, Stage 3A ve Stage 3B, Xiaomi Redmi Note 9 Pro ve Android 12 / API 31 üzerinde test edildi; tam ortam denetimi bekliyor. |
+| Cihaz Ortamı | KISMİ | Stage 2B–2D ve Stage 3A–3C, Xiaomi Redmi Note 9 Pro ve Android 12 / API 31 üzerinde test edildi; tam ortam denetimi bekliyor. |
 | Statik Sensör Kullanılabilirliği | DOĞRULANDI — STAGE 2A KAPSAMI | Çalışma zamanı varsayılan sensör kullanılabilirliği ve metadata doğrulandı; bu sensör performansı kanıtı değildir. |
 | İvmeölçer | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; sinyal kalitesi, gürültü, bias ve kalibrasyon bekliyor. |
 | Jiroskop | KISMİ | Stage 2B canlı iletim/zamanlama doğrulandı; sinyal kalitesi, gürültü, bias ve kalibrasyon bekliyor. |
@@ -1663,13 +1679,16 @@ File names may change during implementation, but the information represented by 
 | PDR | UYGULANMADI | Üretim PDR veri alımı ve navigasyon hattı uygulanmadı. |
 | Handset Heading / Gerçek Kuzey Temeli | DOĞRULANDI — STAGE 3B ÇALIŞMA ZAMANI KAPSAMI | Cihaz +Y/üst-kenar, saat yönünde pozitif convention, dairesel süreklilik, kilitli-anchor `GeomagneticField` düzeltmesi ve iptal fiziksel olarak çalıştırıldı; heading ve gerçek-kuzey mutlak doğruluğu doğrulanmadı. |
 | Body Heading / Telefon-Vücut Kalibrasyonu | UYGULANMADI | Stage 3B yalnızca handset heading'i temsil eder; cep yönelimi çıkarımı ve vücut hizalaması uygulanmadı. |
+| Adım Olayı Temeli | DOĞRULANDI — STAGE 3C ÇALIŞMA ZAMANI KAPSAMI | `TYPE_STEP_DETECTOR` bir sabit ve iki kontrollü-yürüyüş oturumunda resmî olarak çalıştırıldı; oturum-penceresi filtresi, kabul edilen zaman damgası bütünlüğü ve iptal doğrulandı. |
+| Adım Algılama Doğruluğu | DOĞRULANMADI | Sınırlı 0-, 20- ve 30-adımlık gözlemler genel bir doğruluk çalışması değildir. |
+| Adım Uzunluğu / Heading-Adım İlişkilendirmesi | UYGULANMADI | Adım-uzunluğu modeli, PDR yer değiştirmesi veya heading-adım ilişkilendirmesi uygulanmadı. |
 | Motion AI | UYGULANMADI | Navigasyona bağlı bir hareket sınıflandırma çalışma zamanı yoktur. |
 | Quality Engine | UYGULANMADI | Bildirilen GNSS doğruluk metadata'sı bir kalite skoruna dönüştürülmedi. |
 | EKF / Sensör Füzyonu | UYGULANMADI | Hiçbir Stage 2C GNSS veya Stage 2D ARCore tanı değeri tahmin motoru ya da füzyon güncellemesine girmez. |
 | Minimum Mimari Kapısı | TBD | TBD |
 | Hedef Mimari Kapısı | TBD | TBD |
 | Cihaz Baseline'ı | SABİTLENMEDİ | Kritik çalışma zamanı denetim öğeleri bekliyor. |
-| Genel Fiziksel Doğrulama | KISMİ | Stage 2A–2D tanı kapsamları, Stage 3A GNSS anchor akışı ve Stage 3B heading temeli doğrulandı; tam cihaz denetimi tamamlanmadı. |
+| Genel Fiziksel Doğrulama | KISMİ | Stage 2A–2D tanı kapsamları ve Stage 3A–3C temelleri tanımlı kapsamlarında doğrulandı; tam cihaz denetimi tamamlanmadı. |
 
 ---
 
@@ -1683,9 +1702,9 @@ File names may change during implementation, but the information represented by 
 
 **Device Model:** Xiaomi Redmi Note 9 Pro *(Cihaz Modeli: Xiaomi Redmi Note 9 Pro)*
 
-**Android Version:** Android 12 / API 31 — Stage 2B, Stage 2C, Stage 2D, Stage 3A, and Stage 3B tested environment; final baseline pending
+**Android Version:** Android 12 / API 31 — Stage 2B, Stage 2C, Stage 2D, Stage 3A, Stage 3B, and Stage 3C tested environment; final baseline pending
 
-**Android Sürümü:** Android 12 / API 31 — Stage 2B, Stage 2C, Stage 2D, Stage 3A ve Stage 3B test ortamı; nihai baseline bekliyor
+**Android Sürümü:** Android 12 / API 31 — Stage 2B, Stage 2C, Stage 2D, Stage 3A, Stage 3B ve Stage 3C test ortamı; nihai baseline bekliyor
 
 **Minimum Architecture Gate:** TBD *(Minimum Mimari Kapısı: TBD)*
 
@@ -1781,13 +1800,93 @@ Araştırma sınırları açık kalır: heading mutlak doğruluğu **DOĞRULANMA
 
 ---
 
-# 60. Current Document Status (Mevcut Doküman Durumu)
+# 60. Stage 3C Step-Event Foundation Evidence (Stage 3C Adım Olayı Temeli Kanıtı)
+
+### English
+
+Stage 3C — Step-Event Foundation establishes and physically verifies the Android step-event source intended to feed a later baseline PDR implementation. It is not PDR and does not estimate pedestrian position. `Sensor.TYPE_STEP_DETECTOR` is the primary and only formal step source; `TYPE_STEP_COUNTER` is not used as a source or fallback.
+
+The implementation added three new paths and modified four paths, for exactly seven implementation paths. Static validation passed: `flutter analyze --no-pub` PASS, 97/97 tests PASS, `flutter build apk --debug` PASS, and `git diff --check` PASS. No unexpected implementation paths were present and the staging area contained zero files.
+
+The tested device was the Xiaomi Redmi Note 9 Pro running Android 12 / API 31. Android reported the selected sensor display name literally as `pedometer  Non-wakeup`. The runtime path uses `android.permission.ACTIVITY_RECOGNITION`, which was required on the tested API level.
+
+Each formal diagnostic uses a 30-second operation window. `SensorEvent.timestamp` is the physical step timestamp authority. `SystemClock.elapsedRealtimeNanos()` controls the operation window; wall clock is not the step timing authority. The formal contract tracks aggregate values including `updateCount`, `acceptedStepEventCount`, `invalidStepEventCount`, `outOfWindowStepEventCount`, `uniqueTimestampCount`, `duplicateTimestampCount`, `nonMonotonicTimestampCount`, `deltaCount`, step-interval statistics, and observed cadence. It returns no raw step timestamp list or raw sensor samples and uses no persistence. A zero-step session is a valid formal diagnostic result.
+
+| Session | Manual Steps | `updateCount` | Accepted | Invalid | Out of Window | Unique | Duplicate | Non-Monotonic | `deltaCount` | Interpretation |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 1 — Stationary | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | PASS |
+| 2 — Controlled walk | 20 | 21 | 16 | 0 | 5 | 16 | 0 | 0 | 15 | PASS WITH OBSERVATION |
+| 3 — Controlled walk | 30 | 30 | 30 | 0 | 0 | 30 | 0 | 0 | 29 | PASS |
+
+| Session | Minimum Interval | Maximum Interval | Mean Interval | Median Interval | p95 Interval | Observed Cadence |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 — Stationary | null | null | null | null | null | null |
+| 2 — Controlled 20-step walk | 560.0 ms | 760.0 ms | 657.3333333333334 ms | 640.0 ms | 760.0 ms | 91.27789046653143 steps/min |
+| 3 — Controlled 30-step walk | 480.0 ms | 840.0 ms | 640.6896551724138 ms | 640.0 ms | 720.0 ms | 93.64908503767491 steps/min |
+
+No false step event was observed during the single stationary 30-second session. This is a scoped observation and must not be generalized into a global zero-false-positive claim.
+
+In the controlled 20-step walk, five delivered sensor events were excluded by the formal session-window filter and the formal accepted count was 16. This is not an 80% validated sensor-accuracy measurement. No inference is made that every out-of-window event corresponds to one of the manually counted steps.
+
+In the controlled 30-step walk, the accepted event count matched the manually counted 30 steps. This limited physical observation is not sufficient to claim validated general step-detection accuracy.
+
+Across the two walking sessions, `duplicateTimestampCount = 0` and `nonMonotonicTimestampCount = 0`. The stationary session also reported zero duplicate and non-monotonic timestamps because no events were delivered. Only this observed timestamp integrity is claimed.
+
+Explicit cancellation was physically verified. The native error category was `step_diagnostic_cancelled`, and Flutter displayed `Step-event diagnostic failed (step_diagnostic_cancelled).` Cancellation is PASS as an operation-control behavior; it is not a successful measurement result.
+
+Privacy boundaries were preserved in the documented and shared evidence: no raw physical GNSS coordinates, anchor coordinates, device or ADB serial, private Windows path, raw step timestamp, raw rotation-vector stream, API key, token, or secret is included. Stage 3C returns aggregate step evidence only and does not persist it.
+
+Research limits remain explicit: step-detection accuracy **NOT VALIDATED**; step length **NOT IMPLEMENTED**; PDR position **NOT IMPLEMENTED**; heading-step association **NOT IMPLEMENTED**; body heading **NOT IMPLEMENTED**; ARCore-to-ENU **NOT IMPLEMENTED**; Ground Truth Firewall **NOT IMPLEMENTED**; Quality Engine **NOT IMPLEMENTED**; EKF **NOT IMPLEMENTED**; full GNSS-denied navigation **NOT IMPLEMENTED**. The device baseline is **NOT FROZEN** and overall physical verification is **PARTIAL**.
+
+The next planned technical milestone is Stage 4 — Baseline PDR: verified step event + heading reference + deterministic baseline step-length model → local ENU pedestrian displacement. Stage 4 is not implemented. EKF and ARCore fusion are not part of that baseline milestone unless separately authorized.
+
+### Türkçe
+
+Aşama 3C — Adım Olayı Temeli, ilerideki baseline PDR uygulamasını beslemesi amaçlanan Android adım-olayı kaynağını oluşturur ve fiziksel olarak doğrular. PDR değildir ve yaya konumu tahmin etmez. `Sensor.TYPE_STEP_DETECTOR` birincil ve tek resmî adım kaynağıdır; `TYPE_STEP_COUNTER` kaynak veya fallback olarak kullanılmaz.
+
+Uygulama üç yeni yol ekledi ve dört yolu değiştirdi; böylece tam yedi uygulama yolu oluştu. Statik doğrulama geçti: `flutter analyze --no-pub` GEÇTİ, 97/97 test GEÇTİ, `flutter build apk --debug` GEÇTİ ve `git diff --check` GEÇTİ. Beklenmeyen uygulama yolu yoktu ve staging alanında sıfır dosya vardı.
+
+Test cihazı Android 12 / API 31 çalıştıran Xiaomi Redmi Note 9 Pro idi. Android seçilen sensörün görünen adını tam olarak `pedometer  Non-wakeup` şeklinde bildirdi. Çalışma zamanı yolu, test edilen API seviyesinde gerekli olan `android.permission.ACTIVITY_RECOGNITION` iznini kullanır.
+
+Her resmî tanı 30 saniyelik bir operasyon penceresi kullanır. Fiziksel adım zaman damgası otoritesi `SensorEvent.timestamp` değeridir. `SystemClock.elapsedRealtimeNanos()` operasyon penceresini yönetir; wall clock adım zamanlaması otoritesi değildir. Resmî sözleşme; `updateCount`, `acceptedStepEventCount`, `invalidStepEventCount`, `outOfWindowStepEventCount`, `uniqueTimestampCount`, `duplicateTimestampCount`, `nonMonotonicTimestampCount`, `deltaCount`, adım-aralığı istatistikleri ve gözlenen kadans dahil birleşik değerleri izler. Ham adım zaman damgası listesi veya ham sensör örneği döndürmez ve kalıcılaştırma kullanmaz. Sıfır-adımlı oturum geçerli bir resmî tanı sonucudur.
+
+| Oturum | Manuel Adım | `updateCount` | Kabul Edilen | Geçersiz | Pencere Dışı | Benzersiz | Duplicate | Monotonik Olmayan | `deltaCount` | Yorum |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 1 — Sabit | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | GEÇTİ |
+| 2 — Kontrollü yürüyüş | 20 | 21 | 16 | 0 | 5 | 16 | 0 | 0 | 15 | GÖZLEMLE GEÇTİ |
+| 3 — Kontrollü yürüyüş | 30 | 30 | 30 | 0 | 0 | 30 | 0 | 0 | 29 | GEÇTİ |
+
+| Oturum | Minimum Aralık | Maksimum Aralık | Ortalama Aralık | Medyan Aralık | p95 Aralık | Gözlenen Kadans |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 — Sabit | null | null | null | null | null | null |
+| 2 — Kontrollü 20-adımlık yürüyüş | 560,0 ms | 760,0 ms | 657,3333333333334 ms | 640,0 ms | 760,0 ms | 91,27789046653143 adım/dakika |
+| 3 — Kontrollü 30-adımlık yürüyüş | 480,0 ms | 840,0 ms | 640,6896551724138 ms | 640,0 ms | 720,0 ms | 93,64908503767491 adım/dakika |
+
+Tek sabit 30 saniyelik oturumda false adım olayı gözlenmedi. Bu kapsamı sınırlı bir gözlemdir ve global sıfır-false-positive iddiasına genellenmemelidir.
+
+Kontrollü 20-adımlık yürüyüşte teslim edilen beş sensör olayı resmî oturum-penceresi filtresiyle dışlandı ve resmî kabul edilen sayı 16 oldu. Bu, doğrulanmış %80 sensör-doğruluğu ölçümü değildir. Pencere dışındaki her olayın manuel sayılan adımlardan birine karşılık geldiği çıkarımı yapılmaz.
+
+Kontrollü 30-adımlık yürüyüşte kabul edilen olay sayısı manuel olarak sayılan 30 adımla eşleşti. Bu sınırlı fiziksel gözlem, genel adım-algılama doğruluğunun doğrulandığını iddia etmek için yeterli değildir.
+
+İki yürüyüş oturumu genelinde `duplicateTimestampCount = 0` ve `nonMonotonicTimestampCount = 0` idi. Sabit oturum da hiçbir olay teslim edilmediği için sıfır duplicate ve sıfır monotonik olmayan zaman damgası bildirdi. Yalnızca gözlenen bu zaman damgası bütünlüğü iddia edilir.
+
+Açık iptal fiziksel olarak doğrulandı. Native hata kategorisi `step_diagnostic_cancelled` idi ve Flutter `Step-event diagnostic failed (step_diagnostic_cancelled).` mesajını gösterdi. İptal, operasyon-denetimi davranışı olarak GEÇTİ; başarılı ölçüm sonucu değildir.
+
+Dokümante edilen ve paylaşılan kanıtta gizlilik sınırları korundu: ham fiziksel GNSS koordinatı, anchor koordinatı, cihaz veya ADB serisi, özel Windows yolu, ham adım zaman damgası, ham rotation-vector akışı, API anahtarı, token veya secret bulunmaz. Stage 3C yalnızca birleşik adım kanıtı döndürür ve bunu kalıcılaştırmaz.
+
+Araştırma sınırları açık kalır: adım-algılama doğruluğu **DOĞRULANMADI**; adım uzunluğu **UYGULANMADI**; PDR konumu **UYGULANMADI**; heading-adım ilişkilendirmesi **UYGULANMADI**; body heading **UYGULANMADI**; ARCore-to-ENU **UYGULANMADI**; Ground Truth Firewall **UYGULANMADI**; Quality Engine **UYGULANMADI**; EKF **UYGULANMADI**; tam GNSS-kesintili navigasyon **UYGULANMADI**. Cihaz baseline'ı **SABİTLENMEDİ** ve genel fiziksel doğrulama **KISMİ** durumdadır.
+
+Planlanan sonraki teknik kilometre taşı Stage 4 — Baseline PDR'dır: doğrulanmış adım olayı + heading referansı + deterministik baseline adım-uzunluğu modeli → yerel ENU yaya yer değiştirmesi. Stage 4 uygulanmamıştır. EKF ve ARCore füzyonu, ayrıca yetkilendirilmedikçe bu baseline kilometre taşına dahil değildir.
+
+---
+
+# 61. Current Document Status (Mevcut Doküman Durumu)
 
 ### English
 
 **Document Status:** Protocol Completed — Partial Execution
 
-**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A runtime SensorManager capability inventory, Stage 2B four-sensor live timing characterization, Stage 2C GNSS runtime timing characterization, Stage 2D ARCore runtime tracking characterization, Stage 3A GNSS-anchor flow verification, and Stage 3B heading-foundation verification are complete for their defined scopes. The full device capability audit is not complete.
+**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A runtime SensorManager capability inventory, Stage 2B four-sensor live timing characterization, Stage 2C GNSS runtime timing characterization, Stage 2D ARCore runtime tracking characterization, Stage 3A GNSS-anchor flow verification, Stage 3B heading-foundation verification, and Stage 3C step-event-foundation verification are complete for their defined scopes. The full device capability audit is not complete.
 
 **Stage 2A Runtime Sensor Inventory Evidence:** VERIFIED on the tested Xiaomi Redmi Note 9 Pro. SensorManager runtime access, the Flutter–Kotlin diagnostic bridge, and runtime sensor metadata retrieval were verified. The inventory returned 14 requested records: 13 default sensors available and `TYPE_PRESSURE` unavailable. This is capability metadata evidence, not sensor-performance evidence.
 
@@ -1801,9 +1900,11 @@ Araştırma sınırları açık kalır: heading mutlak doğruluğu **DOĞRULANMA
 
 **Stage 3B Heading / True-North Evidence:** VERIFIED for the defined handset-heading foundation scope on the same tested device. `TYPE_ROTATION_VECTOR` was available and formally exercised; three of three 30-second sessions succeeded with approximately 51.14 Hz observed delivery, monotonic and duplicate-free `SensorEvent.timestamp` sequences, clockwise-positive response, circular continuity beyond 2π, locked-anchor `android.hardware.GeomagneticField` correction, and verified cancellation. Reported heading-accuracy metadata was unavailable in all sessions. Heading and true-north absolute accuracy remain not validated.
 
-**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, complete sensor timing/multi-rate procedures, heading absolute accuracy, true-north absolute accuracy, geomagnetic-model freshness, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, same-location anchor repeatability, GNSS ground-truth isolation, ARCore distance/scale/rotation/drift/absolute accuracy, deliberate ARCore degradation handling, ARCore-to-ENU, multi-source clock alignment, and other required device/runtime checks remain pending. Body heading and handset-to-body calibration are not implemented. The GNSS denial controller, Ground Truth Firewall runtime, Evaluation Mode, production PDR acquisition, PDR, step detection, step length, Motion AI, Quality Engine, relocalization, and EKF / Sensor Fusion are not implemented. No navigation benchmark has been evaluated and the 20% improvement target is unmeasured.
+**Stage 3C Step-Event Evidence:** VERIFIED for the defined step-event foundation scope on the same tested device. `TYPE_STEP_DETECTOR` was available as `pedometer  Non-wakeup` and formally exercised in one stationary and two controlled-walk 30-second sessions. The stationary session accepted zero events, the controlled 20-step session accepted 16 events and excluded five delivered events through the formal window filter, and the controlled 30-step session accepted 30 events. Walking-session accepted timestamps were monotonic and duplicate-free; cancellation passed. Step-detection accuracy remains not validated.
 
-**Documentation Synchronization:** Stage 3B status synchronized on 2026-09-08. Six source/test paths and four documentation paths remain unstaged; the final combined 10-path commit-readiness audit is pending.
+**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, complete sensor timing/multi-rate procedures, step-detection accuracy, heading absolute accuracy, true-north absolute accuracy, geomagnetic-model freshness, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, same-location anchor repeatability, GNSS ground-truth isolation, ARCore distance/scale/rotation/drift/absolute accuracy, deliberate ARCore degradation handling, ARCore-to-ENU, multi-source clock alignment, and other required device/runtime checks remain pending. Body heading, handset-to-body calibration, step length, heading-step association, and PDR position are not implemented. The GNSS denial controller, Ground Truth Firewall runtime, Evaluation Mode, PDR, Motion AI, Quality Engine, relocalization, EKF / Sensor Fusion, and full GNSS-denied navigation are not implemented. No navigation benchmark has been evaluated and the 20% improvement target is unmeasured.
+
+**Documentation Synchronization:** Stage 3C status synchronized on 2026-09-08. Seven implementation paths and four documentation paths remain unstaged; the final combined 11-path commit-readiness audit is pending.
 
 **Device Baseline Status:** NOT FROZEN
 
@@ -1817,7 +1918,7 @@ Araştırma sınırları açık kalır: heading mutlak doğruluğu **DOĞRULANMA
 
 **Doküman Durumu:** Protokol Tamamlandı — Kısmi Uygulama
 
-**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A çalışma zamanı SensorManager yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama karakterizasyonu, Stage 2C GNSS çalışma zamanı zamanlama karakterizasyonu, Stage 2D ARCore çalışma zamanı takip karakterizasyonu, Stage 3A GNSS anchor akışı doğrulaması ve Stage 3B heading-temeli doğrulaması tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
+**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A çalışma zamanı SensorManager yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama karakterizasyonu, Stage 2C GNSS çalışma zamanı zamanlama karakterizasyonu, Stage 2D ARCore çalışma zamanı takip karakterizasyonu, Stage 3A GNSS anchor akışı doğrulaması, Stage 3B heading-temeli doğrulaması ve Stage 3C adım-olayı-temeli doğrulaması tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
 
 **Stage 2A Çalışma Zamanı Sensör Envanteri Kanıtı:** Test edilen Xiaomi Redmi Note 9 Pro üzerinde DOĞRULANDI. SensorManager çalışma zamanı erişimi, Flutter–Kotlin tanı köprüsü ve çalışma zamanı sensör metadata alımı doğrulandı. Envanter 14 istenen kayıt döndürdü: 13 varsayılan sensör kullanılabilirdi ve `TYPE_PRESSURE` kullanılamıyordu. Bu yetenek metadata kanıtıdır; sensör performansı kanıtı değildir.
 
@@ -1831,9 +1932,11 @@ Araştırma sınırları açık kalır: heading mutlak doğruluğu **DOĞRULANMA
 
 **Stage 3B Heading / Gerçek Kuzey Kanıtı:** Aynı test cihazındaki tanımlı handset-heading temeli kapsamında DOĞRULANDI. `TYPE_ROTATION_VECTOR` kullanılabilirdi ve resmî olarak çalıştırıldı; üç adet 30 saniyelik oturumun 3/3'ü yaklaşık 51,14 Hz gözlenen teslim, monotonik ve duplicate içermeyen `SensorEvent.timestamp` dizileri, saat yönünde pozitif tepki, 2π üzerindeki dairesel süreklilik, kilitli-anchor `android.hardware.GeomagneticField` düzeltmesi ve doğrulanmış iptal ile başarılı oldu. Bildirilen heading-doğruluk metadata'sı tüm oturumlarda kullanılamıyordu. Heading ve gerçek-kuzey mutlak doğruluğu doğrulanmamış durumda.
 
-**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam sensör zamanlama/çoklu hız prosedürleri, heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, geomanyetik model güncelliği, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu, aynı-konum anchor tekrarlanabilirliği, GNSS gerçek referans izolasyonu, ARCore mesafe/ölçek/dönüş/sürüklenme/mutlak doğruluğu, kasıtlı ARCore bozulma yönetimi, ARCore-to-ENU, çok-kaynaklı saat hizalama ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. Body heading ve telefon-vücut kalibrasyonu uygulanmamıştır. GNSS kesinti denetleyicisi, Ground Truth Firewall runtime, Evaluation Mode, üretim PDR veri alımı, PDR, adım algılama, adım uzunluğu, Motion AI, Quality Engine, relocalization ve EKF / Sensör Füzyonu uygulanmamıştır. Hiçbir navigasyon benchmark'ı değerlendirilmemiştir ve %20 iyileştirme hedefi ölçülmemiştir.
+**Stage 3C Adım Olayı Kanıtı:** Aynı test cihazındaki tanımlı adım-olayı temeli kapsamında DOĞRULANDI. `TYPE_STEP_DETECTOR`, `pedometer  Non-wakeup` adıyla kullanılabilirdi ve bir sabit ile iki kontrollü-yürüyüş 30 saniyelik oturumunda resmî olarak çalıştırıldı. Sabit oturum sıfır olay kabul etti; kontrollü 20-adımlı oturum 16 olay kabul edip teslim edilen beş olayı resmî pencere filtresiyle dışladı; kontrollü 30-adımlı oturum 30 olay kabul etti. Yürüyüş oturumlarının kabul edilen zaman damgaları monotonik ve duplicate içermiyordu; iptal geçti. Adım-algılama doğruluğu doğrulanmamış durumda.
 
-**Dokümantasyon Senkronizasyonu:** Stage 3B durumu 2026-09-08 tarihinde senkronize edildi. Altı kaynak/test yolu ve dört dokümantasyon yolu unstaged durumdadır; nihai birleşik 10-yolluk commit-readiness denetimi beklemektedir.
+**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam sensör zamanlama/çoklu hız prosedürleri, adım-algılama doğruluğu, heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, geomanyetik model güncelliği, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu, aynı-konum anchor tekrarlanabilirliği, GNSS gerçek referans izolasyonu, ARCore mesafe/ölçek/dönüş/sürüklenme/mutlak doğruluğu, kasıtlı ARCore bozulma yönetimi, ARCore-to-ENU, çok-kaynaklı saat hizalama ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. Body heading, telefon-vücut kalibrasyonu, adım uzunluğu, heading-adım ilişkilendirmesi ve PDR konumu uygulanmamıştır. GNSS kesinti denetleyicisi, Ground Truth Firewall runtime, Evaluation Mode, PDR, Motion AI, Quality Engine, relocalization, EKF / Sensör Füzyonu ve tam GNSS-kesintili navigasyon uygulanmamıştır. Hiçbir navigasyon benchmark'ı değerlendirilmemiştir ve %20 iyileştirme hedefi ölçülmemiştir.
+
+**Dokümantasyon Senkronizasyonu:** Stage 3C durumu 2026-09-08 tarihinde senkronize edildi. Yedi uygulama yolu ve dört dokümantasyon yolu unstaged durumdadır; nihai birleşik 11-yolluk commit-readiness denetimi beklemektedir.
 
 **Cihaz Baseline Durumu:** SABİTLENMEDİ
 

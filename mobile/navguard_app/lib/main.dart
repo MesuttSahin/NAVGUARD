@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'navigation/gnss_anchor.dart';
 import 'navigation/heading.dart';
+import 'navigation/step_event.dart';
 
 void main() {
   runApp(const NavguardApp());
@@ -20,6 +21,9 @@ enum _DiagnosticOperation {
   gnssAnchorAcquisition,
   headingPreflight,
   headingDiagnostic,
+  stepPreflight,
+  stepPermission,
+  stepDiagnostic,
   arCorePreflight,
   arCorePermission,
   arCoreTracking,
@@ -160,6 +164,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     'io.github.mesuttsahin.navguard/heading_foundation',
   );
 
+  static const MethodChannel _stepEventChannel = MethodChannel(
+    'io.github.mesuttsahin.navguard/step_event',
+  );
+
   static const MethodChannel _arCoreChannel = MethodChannel(
     'io.github.mesuttsahin.navguard/arcore_diagnostics',
   );
@@ -180,6 +188,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   HeadingDiagnosticResult? _headingResult;
   String _headingDiagnosticStatus = 'Idle';
   bool _headingCancellationRequestInFlight = false;
+  StepEventPreflight? _stepPreflight;
+  StepEventDiagnosticResult? _stepResult;
+  String _stepDiagnosticStatus = 'Idle';
+  bool _stepCancellationRequestInFlight = false;
   String _cameraPermission = 'Unknown';
   String _arCoreAvailability = 'Unknown';
   String _arCoreReady = 'Unknown';
@@ -216,6 +228,15 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _isHeadingDiagnosticLoading =>
       _activeOperation == _DiagnosticOperation.headingDiagnostic;
 
+  bool get _isStepPreflightLoading =>
+      _activeOperation == _DiagnosticOperation.stepPreflight;
+
+  bool get _isStepPermissionLoading =>
+      _activeOperation == _DiagnosticOperation.stepPermission;
+
+  bool get _isStepDiagnosticLoading =>
+      _activeOperation == _DiagnosticOperation.stepDiagnostic;
+
   bool get _isArCorePreflightLoading =>
       _activeOperation == _DiagnosticOperation.arCorePreflight;
 
@@ -230,6 +251,9 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
       _headingPreflight?.rotationVectorAvailable == true &&
       _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
       _gnssAnchor != null;
+
+  bool get _canRunStepDiagnostic =>
+      !_isBusy && _stepPreflight?.canRunStepDiagnostic == true;
 
   String get _anchorFinePermissionLabel {
     final GnssAnchorPreflight? preflight = _gnssAnchorPreflight;
@@ -350,6 +374,70 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     return _formatRadians(
       _headingResult?.cumulativeUnwrappedTrueHeadingDeltaRad,
     );
+  }
+
+  String get _stepDetectorAvailabilityLabel {
+    final StepEventPreflight? preflight = _stepPreflight;
+
+    if (preflight == null) {
+      return 'Unknown';
+    }
+
+    return preflight.stepDetectorAvailable ? 'Available' : 'Unavailable';
+  }
+
+  String get _stepPermissionLabel {
+    final StepEventPreflight? preflight = _stepPreflight;
+
+    if (preflight == null) {
+      return 'Unknown';
+    }
+
+    if (!preflight.activityRecognitionPermissionRequired) {
+      return 'Not required';
+    }
+
+    return preflight.activityRecognitionPermissionGranted
+        ? 'Granted'
+        : 'Denied';
+  }
+
+  String get _detectedStepEventsLabel {
+    return _stepResult?.acceptedStepEventCount.toString() ?? 'Not available';
+  }
+
+  String get _invalidStepEventsLabel {
+    return _stepResult?.invalidStepEventCount.toString() ?? 'Not available';
+  }
+
+  String get _stepTimestampMonotonicityLabel {
+    final StepEventDiagnosticResult? result = _stepResult;
+
+    if (result == null) {
+      return 'Not available';
+    }
+
+    if (result.nonMonotonicTimestampCount == 0 &&
+        result.duplicateTimestampCount == 0) {
+      return 'Monotonic, duplicate-free';
+    }
+
+    return '${result.nonMonotonicTimestampCount} non-monotonic, '
+        '${result.duplicateTimestampCount} duplicate';
+  }
+
+  String get _medianStepIntervalLabel {
+    final double? value = _stepResult?.medianStepIntervalMs;
+
+    return value == null ? 'Not available' : '${value.toStringAsFixed(2)} ms';
+  }
+
+  String get _observedStepCadenceLabel {
+    final double? value = _stepResult?.observedCadenceStepsPerMinute;
+
+    return value == null
+        ? 'Not available'
+        : '${value.toStringAsFixed(2)} steps/min';
   }
 
   String _formatRadians(double? value) {
@@ -741,6 +829,152 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     }
   }
 
+  Future<void> _refreshStepPreflight() {
+    return _runDiagnosticRequest(
+      channel: _stepEventChannel,
+      operation: _DiagnosticOperation.stepPreflight,
+      methodName: 'getStepEventPreflight',
+      operationLabel: 'Step-event preflight',
+      invalidResponseMessage:
+          'Native step-event preflight did not return a map.',
+      beginMarker: 'NAVGUARD_STEP_PREFLIGHT_BEGIN',
+      endMarker: 'NAVGUARD_STEP_PREFLIGHT_END',
+      updateStepPreflight: true,
+    );
+  }
+
+  Future<void> _requestActivityRecognitionPermission() {
+    return _runDiagnosticRequest(
+      channel: _stepEventChannel,
+      operation: _DiagnosticOperation.stepPermission,
+      methodName: 'requestActivityRecognitionPermission',
+      operationLabel: 'Physical activity permission request',
+      invalidResponseMessage:
+          'Native physical activity permission result did not return a map.',
+      beginMarker: 'NAVGUARD_STEP_PERMISSION_BEGIN',
+      endMarker: 'NAVGUARD_STEP_PERMISSION_END',
+      updateStepPreflight: true,
+    );
+  }
+
+  Future<void> _runStepDiagnostic() async {
+    if (!_canRunStepDiagnostic) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = _DiagnosticOperation.stepDiagnostic;
+      _stepDiagnosticStatus = 'Running';
+      _stepResult = null;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+
+    StepEventDiagnosticResult? nextResult;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+
+    try {
+      final Object? rawResult = await _stepEventChannel.invokeMethod<Object?>(
+        'runStepEventDiagnostic',
+      );
+
+      final StepEventDiagnosticResult parsedResult =
+          StepEventDiagnosticResult.fromPlatform(rawResult);
+
+      nextResult = parsedResult;
+      sanitizedLog = parsedResult.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(parsedResult.sanitizedMetadata);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextError = 'Step-event diagnostic failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'Step-event channel is unavailable on this platform.';
+    } on FormatException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'invalid_step_response',
+      };
+      nextError = 'Native step-event response was invalid.';
+    } catch (_) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'unknown_error',
+      };
+      nextError = 'Unexpected error while running the step-event diagnostic.';
+    }
+
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_STEP_DIAGNOSTIC_BEGIN',
+      endMarker: 'NAVGUARD_STEP_DIAGNOSTIC_END',
+      value: sanitizedLog,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = null;
+      _stepResult = nextResult;
+      _stepDiagnosticStatus = nextResult == null ? 'Failed' : 'Success';
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _cancelStepDiagnostic() async {
+    if (!_isStepDiagnosticLoading || _stepCancellationRequestInFlight) {
+      return;
+    }
+
+    setState(() {
+      _stepCancellationRequestInFlight = true;
+    });
+
+    try {
+      await _stepEventChannel.invokeMethod<Object?>(
+        'cancelStepEventDiagnostic',
+      );
+    } on PlatformException catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'Step diagnostic cancellation failed (${error.code}).';
+        });
+      }
+    } on MissingPluginException {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Step-event channel is unavailable on this platform.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Unexpected error while cancelling step diagnostic.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _stepCancellationRequestInFlight = false;
+        });
+      }
+    }
+  }
+
   Future<void> _refreshArCorePreflight() {
     return _runDiagnosticRequest(
       channel: _arCoreChannel,
@@ -793,6 +1027,7 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     bool updateGnssState = false,
     bool updateGnssAnchorPreflight = false,
     bool updateHeadingPreflight = false,
+    bool updateStepPreflight = false,
     bool updateArCoreState = false,
   }) async {
     if (_isBusy) {
@@ -810,6 +1045,7 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     _GnssDisplayState? nextGnssState;
     GnssAnchorPreflight? nextGnssAnchorPreflight;
     HeadingFoundationPreflight? nextHeadingPreflight;
+    StepEventPreflight? nextStepPreflight;
     _ArCoreDisplayState? nextArCoreState;
 
     try {
@@ -834,6 +1070,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         nextHeadingPreflight = HeadingFoundationPreflight.fromPlatform(
           rawSnapshot,
         );
+      }
+
+      if (updateStepPreflight) {
+        nextStepPreflight = StepEventPreflight.fromPlatform(rawSnapshot);
       }
 
       if (updateArCoreState) {
@@ -888,6 +1128,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
 
       if (nextHeadingPreflight != null) {
         _headingPreflight = nextHeadingPreflight;
+      }
+
+      if (nextStepPreflight != null) {
+        _stepPreflight = nextStepPreflight;
       }
 
       if (nextArCoreState != null) {
@@ -1284,6 +1528,107 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
               ],
               const Divider(height: 32),
               Text(
+                'Step-Event Foundation',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text('Step Detector: $_stepDetectorAvailabilityLabel'),
+              const SizedBox(height: 4),
+              Text('Physical activity permission: $_stepPermissionLabel'),
+              const SizedBox(height: 4),
+              Text('Step diagnostic: $_stepDiagnosticStatus'),
+              const SizedBox(height: 4),
+              const Text('Formal window: 30 s'),
+              const SizedBox(height: 4),
+              Text('Detected step events: $_detectedStepEventsLabel'),
+              const SizedBox(height: 4),
+              Text('Invalid events: $_invalidStepEventsLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Timestamp monotonicity: '
+                '$_stepTimestampMonotonicityLabel',
+              ),
+              const SizedBox(height: 4),
+              Text('Median step interval: $_medianStepIntervalLabel'),
+              const SizedBox(height: 4),
+              Text('Observed cadence: $_observedStepCadenceLabel'),
+              const SizedBox(height: 8),
+              const Text(
+                'Step detection accuracy: NOT VALIDATED',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isBusy ? null : _refreshStepPreflight,
+                icon: _isStepPreflightLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(
+                  _isStepPreflightLoading
+                      ? 'Refreshing Step Preflight...'
+                      : 'Refresh Step Preflight',
+                ),
+              ),
+              if (_stepPreflight?.activityRecognitionPermissionRequired ==
+                      true &&
+                  _stepPreflight?.activityRecognitionPermissionGranted ==
+                      false) ...<Widget>[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _isBusy
+                      ? null
+                      : _requestActivityRecognitionPermission,
+                  icon: _isStepPermissionLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.directions_walk),
+                  label: Text(
+                    _isStepPermissionLoading
+                        ? 'Requesting Physical Activity Permission...'
+                        : 'Grant Physical Activity Permission',
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: _canRunStepDiagnostic ? _runStepDiagnostic : null,
+                icon: _isStepDiagnosticLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.directions_walk),
+                label: Text(
+                  _isStepDiagnosticLoading
+                      ? 'Running Step Diagnostic...'
+                      : 'Run Step Diagnostic',
+                ),
+              ),
+              if (_isStepDiagnosticLoading) ...<Widget>[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _stepCancellationRequestInFlight
+                      ? null
+                      : _cancelStepDiagnostic,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: Text(
+                    _stepCancellationRequestInFlight
+                        ? 'Cancelling Step Diagnostic...'
+                        : 'Cancel Step Diagnostic',
+                  ),
+                ),
+              ],
+              const Divider(height: 32),
+              Text(
                 'ARCore Runtime Diagnostics',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
@@ -1401,6 +1746,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         return 'Refreshing heading foundation preflight...';
       case _DiagnosticOperation.headingDiagnostic:
         return 'Running heading foundation diagnostic...';
+      case _DiagnosticOperation.stepPreflight:
+        return 'Refreshing step-event preflight...';
+      case _DiagnosticOperation.stepPermission:
+        return 'Requesting physical activity permission...';
+      case _DiagnosticOperation.stepDiagnostic:
+        return 'Running step-event diagnostic...';
       case _DiagnosticOperation.arCorePreflight:
         return 'Refreshing ARCore preflight...';
       case _DiagnosticOperation.arCorePermission:

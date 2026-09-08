@@ -15,11 +15,13 @@ class MainActivity : FlutterActivity() {
     private var gnssTimingDiagnostic: GnssTimingDiagnostic? = null
     private var gnssAnchorAcquisition: GnssAnchorAcquisition? = null
     private var headingFoundationDiagnostic: HeadingFoundationDiagnostic? = null
+    private var stepEventDiagnostic: StepEventDiagnostic? = null
     private var arCoreTrackingDiagnostic: ArCoreTrackingDiagnostic? = null
     private var locationManager: LocationManager? = null
 
     private val permissionResultLock = Any()
     private var pendingGnssPermissionResult: MethodChannel.Result? = null
+    private var pendingStepPermissionResult: MethodChannel.Result? = null
     private var pendingArCoreCameraPermissionResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -52,12 +54,21 @@ class MainActivity : FlutterActivity() {
                 HeadingFoundationDiagnostic(availableSensorManager)
             }
 
+        stepEventDiagnostic =
+            sensorManager?.let { availableSensorManager ->
+                StepEventDiagnostic(
+                    applicationContext = applicationContext,
+                    sensorManager = availableSensorManager,
+                )
+            }
+
         arCoreTrackingDiagnostic = ArCoreTrackingDiagnostic(applicationContext)
 
         configureSensorChannel(flutterEngine, sensorManager)
         configureGnssChannel(flutterEngine)
         configureGnssAnchorChannel(flutterEngine)
         configureHeadingFoundationChannel(flutterEngine)
+        configureStepEventChannel(flutterEngine)
         configureArCoreChannel(flutterEngine)
     }
 
@@ -347,6 +358,171 @@ class MainActivity : FlutterActivity() {
                         result.error(code, message, null)
                     }
                 },
+        )
+    }
+
+    private fun configureStepEventChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            STEP_EVENT_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                METHOD_GET_STEP_EVENT_PREFLIGHT -> {
+                    val diagnostic = stepEventDiagnostic
+
+                    if (diagnostic == null) {
+                        result.success(
+                            createUnavailableStepEventPreflightSnapshot(),
+                        )
+                    } else {
+                        result.success(diagnostic.createPreflightSnapshot())
+                    }
+                }
+
+                METHOD_REQUEST_ACTIVITY_RECOGNITION_PERMISSION -> {
+                    requestActivityRecognitionPermission(result)
+                }
+
+                METHOD_RUN_STEP_EVENT_DIAGNOSTIC -> {
+                    runStepEventDiagnostic(result)
+                }
+
+                METHOD_CANCEL_STEP_EVENT_DIAGNOSTIC -> {
+                    val diagnostic = stepEventDiagnostic
+                    val cancellationRequested =
+                        diagnostic?.cancelActiveSession() == true
+
+                    result.success(
+                        linkedMapOf(
+                            "schemaVersion" to SCHEMA_VERSION,
+                            "snapshotKind" to
+                                SNAPSHOT_KIND_STEP_EVENT_CANCELLATION,
+                            "cancellationRequested" to
+                                cancellationRequested,
+                            "diagnosticRunning" to
+                                (diagnostic?.isDiagnosticRunning() == true),
+                        ),
+                    )
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun requestActivityRecognitionPermission(
+        result: MethodChannel.Result,
+    ) {
+        val diagnostic = stepEventDiagnostic
+
+        if (diagnostic == null) {
+            result.error(
+                ERROR_STEP_DETECTOR_UNAVAILABLE,
+                "Step-event diagnostics are unavailable.",
+                null,
+            )
+            return
+        }
+
+        val hasPendingRequest =
+            synchronized(permissionResultLock) {
+                pendingStepPermissionResult != null
+            }
+
+        if (hasPendingRequest) {
+            result.error(
+                ERROR_STEP_PERMISSION_REQUEST_ALREADY_RUNNING,
+                "A physical activity permission request is already running.",
+                null,
+            )
+            return
+        }
+
+        if (
+            !isActivityRecognitionPermissionRequired() ||
+                hasActivityRecognitionPermission()
+        ) {
+            result.success(diagnostic.createPreflightSnapshot())
+            return
+        }
+
+        val reserved =
+            synchronized(permissionResultLock) {
+                if (pendingStepPermissionResult != null) {
+                    false
+                } else {
+                    pendingStepPermissionResult = result
+                    true
+                }
+            }
+
+        if (!reserved) {
+            result.error(
+                ERROR_STEP_PERMISSION_REQUEST_ALREADY_RUNNING,
+                "A physical activity permission request is already running.",
+                null,
+            )
+            return
+        }
+
+        try {
+            requestPermissions(
+                arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
+                STEP_ACTIVITY_PERMISSION_REQUEST_CODE,
+            )
+        } catch (_: Exception) {
+            val pendingResult =
+                clearPendingStepPermissionResult(result)
+
+            pendingResult?.error(
+                ERROR_STEP_PERMISSION_REQUEST_FAILED,
+                "Unable to start the physical activity permission request.",
+                null,
+            )
+        }
+    }
+
+    private fun runStepEventDiagnostic(result: MethodChannel.Result) {
+        val diagnostic = stepEventDiagnostic
+
+        if (diagnostic == null) {
+            result.error(
+                ERROR_STEP_DETECTOR_UNAVAILABLE,
+                "Step-event diagnostics are unavailable.",
+                null,
+            )
+            return
+        }
+
+        diagnostic.start(
+            object : StepEventDiagnostic.Callback {
+                override fun onSuccess(summary: Map<String, Any?>) {
+                    result.success(summary)
+                }
+
+                override fun onError(code: String, message: String) {
+                    result.error(code, message, null)
+                }
+            },
+        )
+    }
+
+    private fun createUnavailableStepEventPreflightSnapshot():
+        Map<String, Any?> {
+        val permissionRequired =
+            isActivityRecognitionPermissionRequired()
+
+        return linkedMapOf(
+            "schemaVersion" to SCHEMA_VERSION,
+            "snapshotKind" to SNAPSHOT_KIND_STEP_EVENT_PREFLIGHT,
+            "stepDetectorAvailable" to false,
+            "stepDetectorName" to null,
+            "activityRecognitionPermissionRequired" to
+                permissionRequired,
+            "activityRecognitionPermissionGranted" to
+                hasActivityRecognitionPermission(),
+            "diagnosticRunning" to false,
+            "canRunStepDiagnostic" to false,
         )
     }
 
@@ -737,6 +913,25 @@ class MainActivity : FlutterActivity() {
                 )
             }
 
+            STEP_ACTIVITY_PERMISSION_REQUEST_CODE -> {
+                val pendingResult =
+                    takePendingStepPermissionResult() ?: return
+                val diagnostic = stepEventDiagnostic
+
+                if (diagnostic == null) {
+                    pendingResult.error(
+                        ERROR_STEP_DETECTOR_UNAVAILABLE,
+                        "Step-event diagnostics are unavailable.",
+                        null,
+                    )
+                    return
+                }
+
+                pendingResult.success(
+                    diagnostic.createPreflightSnapshot(),
+                )
+            }
+
             ARCORE_CAMERA_PERMISSION_REQUEST_CODE -> {
                 val pendingResult =
                     takePendingArCoreCameraPermissionResult() ?: return
@@ -778,6 +973,9 @@ class MainActivity : FlutterActivity() {
         headingFoundationDiagnostic?.cancelActiveSession(
             "Heading foundation diagnostic cancelled because the activity paused.",
         )
+        stepEventDiagnostic?.cancelActiveSession(
+            "Step-event diagnostic cancelled because the activity paused.",
+        )
         arCoreTrackingDiagnostic?.cancelActiveSession(
             "ARCore tracking diagnostic cancelled because the activity paused.",
         )
@@ -796,6 +994,9 @@ class MainActivity : FlutterActivity() {
         headingFoundationDiagnostic?.cancelActiveSession(
             "Heading foundation diagnostic cancelled because the activity was destroyed.",
         )
+        stepEventDiagnostic?.cancelActiveSession(
+            "Step-event diagnostic cancelled because the activity was destroyed.",
+        )
         arCoreTrackingDiagnostic?.cancelActiveSession(
             "ARCore tracking diagnostic cancelled because the activity was destroyed.",
         )
@@ -804,12 +1005,18 @@ class MainActivity : FlutterActivity() {
         gnssTimingDiagnostic = null
         gnssAnchorAcquisition = null
         headingFoundationDiagnostic = null
+        stepEventDiagnostic = null
         arCoreTrackingDiagnostic = null
         locationManager = null
 
         takePendingPermissionResult()?.error(
             ERROR_PERMISSION_REQUEST_CANCELLED,
             "GNSS foreground permission request cancelled because the activity was destroyed.",
+            null,
+        )
+        takePendingStepPermissionResult()?.error(
+            ERROR_STEP_PERMISSION_REQUEST_CANCELLED,
+            "Physical activity permission request cancelled because the activity was destroyed.",
             null,
         )
         takePendingArCoreCameraPermissionResult()?.error(
@@ -1006,6 +1213,19 @@ class MainActivity : FlutterActivity() {
         checkSelfPermission(Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED
 
+    private fun isActivityRecognitionPermissionRequired(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+
+    private fun hasActivityRecognitionPermission(): Boolean {
+        if (!isActivityRecognitionPermissionRequired()) {
+            return true
+        }
+
+        return checkSelfPermission(
+            Manifest.permission.ACTIVITY_RECOGNITION,
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
     private fun takePendingPermissionResult(): MethodChannel.Result? =
         synchronized(permissionResultLock) {
             val result = pendingGnssPermissionResult
@@ -1019,6 +1239,25 @@ class MainActivity : FlutterActivity() {
         synchronized(permissionResultLock) {
             if (pendingGnssPermissionResult === expectedResult) {
                 pendingGnssPermissionResult = null
+                expectedResult
+            } else {
+                null
+            }
+        }
+
+    private fun takePendingStepPermissionResult(): MethodChannel.Result? =
+        synchronized(permissionResultLock) {
+            val result = pendingStepPermissionResult
+            pendingStepPermissionResult = null
+            result
+        }
+
+    private fun clearPendingStepPermissionResult(
+        expectedResult: MethodChannel.Result,
+    ): MethodChannel.Result? =
+        synchronized(permissionResultLock) {
+            if (pendingStepPermissionResult === expectedResult) {
+                pendingStepPermissionResult = null
                 expectedResult
             } else {
                 null
@@ -1073,6 +1312,8 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/gnss_anchor"
         const val HEADING_FOUNDATION_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/heading_foundation"
+        const val STEP_EVENT_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/step_event"
         const val ARCORE_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/arcore_diagnostics"
 
@@ -1102,6 +1343,15 @@ class MainActivity : FlutterActivity() {
         const val METHOD_CANCEL_HEADING_FOUNDATION_DIAGNOSTIC =
             "cancelHeadingFoundationDiagnostic"
 
+        const val METHOD_GET_STEP_EVENT_PREFLIGHT =
+            "getStepEventPreflight"
+        const val METHOD_REQUEST_ACTIVITY_RECOGNITION_PERMISSION =
+            "requestActivityRecognitionPermission"
+        const val METHOD_RUN_STEP_EVENT_DIAGNOSTIC =
+            "runStepEventDiagnostic"
+        const val METHOD_CANCEL_STEP_EVENT_DIAGNOSTIC =
+            "cancelStepEventDiagnostic"
+
         const val METHOD_GET_ARCORE_DIAGNOSTIC_PREFLIGHT =
             "getArCoreDiagnosticPreflight"
         const val METHOD_REQUEST_ARCORE_CAMERA_PERMISSION =
@@ -1121,6 +1371,10 @@ class MainActivity : FlutterActivity() {
             "heading_foundation_preflight"
         const val SNAPSHOT_KIND_HEADING_FOUNDATION_CANCELLATION =
             "heading_foundation_cancellation"
+        const val SNAPSHOT_KIND_STEP_EVENT_PREFLIGHT =
+            "step_event_preflight"
+        const val SNAPSHOT_KIND_STEP_EVENT_CANCELLATION =
+            "step_event_cancellation"
 
         const val HEADING_REQUESTED_SAMPLING_PERIOD_US = 20_000
 
@@ -1136,6 +1390,7 @@ class MainActivity : FlutterActivity() {
 
         const val GNSS_PERMISSION_REQUEST_CODE = 42_021
         const val ARCORE_CAMERA_PERMISSION_REQUEST_CODE = 42_022
+        const val STEP_ACTIVITY_PERMISSION_REQUEST_CODE = 42_023
 
         const val ARCORE_PERMISSION_OUTCOME_ALREADY_GRANTED =
             "already_granted"
@@ -1171,6 +1426,14 @@ class MainActivity : FlutterActivity() {
             "rotation_vector_unavailable"
         const val ERROR_ANCHOR_REQUIRED = "anchor_required"
         const val ERROR_INVALID_ANCHOR_ARGUMENT = "invalid_anchor_argument"
+        const val ERROR_STEP_DETECTOR_UNAVAILABLE =
+            "step_detector_unavailable"
+        const val ERROR_STEP_PERMISSION_REQUEST_ALREADY_RUNNING =
+            "activity_recognition_permission_request_already_running"
+        const val ERROR_STEP_PERMISSION_REQUEST_FAILED =
+            "activity_recognition_permission_request_failed"
+        const val ERROR_STEP_PERMISSION_REQUEST_CANCELLED =
+            "activity_recognition_permission_request_cancelled"
         const val ERROR_ARCORE_DIAGNOSTIC_UNAVAILABLE =
             "arcore_diagnostic_unavailable"
         const val ERROR_ARCORE_CAMERA_PERMISSION_ALREADY_RUNNING =

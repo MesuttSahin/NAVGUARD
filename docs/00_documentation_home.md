@@ -283,11 +283,11 @@ Every major implementation decision will be documented before or during implemen
 
 ### English
 
-**Current Phase:** Stage 3B — Heading / True-North Reference Foundation Implemented, Statically Validated, and Physically Verified; Documentation Synchronized; Final Combined Commit-Readiness Audit Pending
+**Current Phase:** Stage 3C — Step-Event Foundation Implemented, Statically Validated, and Physically Verified; Documentation Synchronized; Final Combined Commit-Readiness Audit Pending
 
-**Development Status:** Flutter Android Bootstrap and Stages 2A–2D Runtime Diagnostics Verified for Their Defined Scopes; Stage 3A Foreground Pre-Denial GNSS Anchor and WGS84 / Local ENU Foundation and Stage 3B Handset Heading / True-North Correction Foundation Implemented, Tested, and Physically Verified for Their Defined Scopes; Remaining Navigation Subsystems Not Implemented
+**Development Status:** Flutter Android Bootstrap and Stages 2A–2D Runtime Diagnostics Verified for Their Defined Scopes; Stage 3A Foreground Pre-Denial GNSS Anchor and WGS84 / Local ENU Foundation, Stage 3B Handset Heading / True-North Correction Foundation, and Stage 3C Step-Event Foundation Implemented, Tested, and Physically Verified for Their Defined Scopes; Remaining Navigation Subsystems Not Implemented
 
-**Documentation Status:** Technical Documentation Baseline Completed; Current Status Synchronized Through Stage 3B; Combined Commit-Readiness Audit Pending
+**Documentation Status:** Technical Documentation Baseline Completed; Current Status Synchronized Through Stage 3C; Combined 11-Path Commit-Readiness Audit Pending
 
 **Primary Test Device:** Xiaomi Redmi Note 9 Pro
 
@@ -297,11 +297,11 @@ Every major implementation decision will be documented before or during implemen
 
 ### Türkçe
 
-**Mevcut Aşama:** Aşama 3B — Heading / Gerçek Kuzey Referans Temeli Uygulandı, Statik ve Fiziksel Olarak Doğrulandı; Dokümantasyon Senkronize Edildi; Nihai Birleşik Commit-Readiness Denetimi Bekliyor
+**Mevcut Aşama:** Aşama 3C — Adım Olayı Temeli Uygulandı, Statik ve Fiziksel Olarak Doğrulandı; Dokümantasyon Senkronize Edildi; Nihai Birleşik Commit-Readiness Denetimi Bekliyor
 
-**Geliştirme Durumu:** Flutter Android Bootstrap ve Stage 2A–2D Çalışma Zamanı Tanıları Tanımlı Kapsamlarında Doğrulandı; Stage 3A Yalnızca Ön Planda Çalışan Kesinti-Öncesi GNSS Anchor ve WGS84 / Yerel ENU Temeli ile Stage 3B Handset Heading / Gerçek Kuzey Düzeltme Temeli Tanımlı Kapsamlarında Uygulandı, Test Edildi ve Fiziksel Olarak Doğrulandı; Kalan Navigasyon Alt Sistemleri Uygulanmadı
+**Geliştirme Durumu:** Flutter Android Bootstrap ve Stage 2A–2D Çalışma Zamanı Tanıları Tanımlı Kapsamlarında Doğrulandı; Stage 3A Yalnızca Ön Planda Çalışan Kesinti-Öncesi GNSS Anchor ve WGS84 / Yerel ENU Temeli, Stage 3B Handset Heading / Gerçek Kuzey Düzeltme Temeli ve Stage 3C Adım Olayı Temeli Tanımlı Kapsamlarında Uygulandı, Test Edildi ve Fiziksel Olarak Doğrulandı; Kalan Navigasyon Alt Sistemleri Uygulanmadı
 
-**Dokümantasyon Durumu:** Teknik Dokümantasyon Baseline'ı Tamamlandı; Mevcut Durum Stage 3B'ye Kadar Senkronize Edildi; Birleşik Commit-Readiness Denetimi Bekliyor
+**Dokümantasyon Durumu:** Teknik Dokümantasyon Baseline'ı Tamamlandı; Mevcut Durum Stage 3C'ye Kadar Senkronize Edildi; Birleşik 11-Yolluk Commit-Readiness Denetimi Bekliyor
 
 **Birincil Test Cihazı:** Xiaomi Redmi Note 9 Pro
 
@@ -327,7 +327,9 @@ Stage 3A — GNSS Anchor + Local ENU Reference Foundation implemented real foreg
 
 Stage 3B — Heading / True-North Reference Foundation implemented a `TYPE_ROTATION_VECTOR`-only handset-heading path using the physical top edge / device +Y convention, clockwise-from-North radians normalized into `[0, 2π)`, circular delta math, and locked-anchor `android.hardware.GeomagneticField` correction. Static validation passed (`flutter analyze`, 61/61 tests, debug APK build, and `git diff --check`). Three of three formal physical sessions succeeded at approximately 51.14 Hz observed delivery under a nominal 50 Hz request; monotonic and duplicate-free timestamps, clockwise-positive response, circular continuity beyond 2π, declination-path execution, and explicit cancellation were physically observed.
 
-Heading absolute accuracy, true-north absolute accuracy, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, and same-location anchor repeatability remain **NOT VALIDATED**. Reported heading accuracy was unavailable in all Stage 3B sessions. Body heading, handset-to-body calibration, PDR, step detection/length, ARCore-to-ENU alignment, Ground Truth Firewall, Quality Engine, EKF, GNSS denial/recovery, and benchmarking remain unimplemented or unmeasured as applicable. Physical verification remains **PARTIAL** and the device baseline is **NOT FROZEN**. The next high-level progression may cover PDR / step-event foundations, ARCore-to-ENU alignment, Ground Truth Firewall, Quality Engine, EKF, GNSS denial/recovery, and benchmarking; no exact next stage number is assigned here. The synchronized 10-path Stage 3B scope remains unstaged pending a final combined commit-readiness audit.
+Stage 3C — Step-Event Foundation implemented `Sensor.TYPE_STEP_DETECTOR` as the only formal step source, Android 10+ activity-recognition permission handling, a 30-second operation window controlled by `SystemClock.elapsedRealtimeNanos()`, and aggregate timing derived from `SensorEvent.timestamp`. Static validation passed (`flutter analyze --no-pub`, 97/97 tests, debug APK build, and `git diff --check`). The stationary 0-step session accepted zero events; the controlled 20-step session accepted 16 events and excluded five delivered events through the formal window filter; and the controlled 30-step session accepted 30 events. Walking-session accepted timestamps were duplicate-free and monotonic, and explicit cancellation passed.
+
+Step-detection accuracy, heading absolute accuracy, true-north absolute accuracy, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, and same-location anchor repeatability remain **NOT VALIDATED**. Reported heading accuracy was unavailable in all Stage 3B sessions. Body heading, handset-to-body calibration, step length, heading-step association, PDR position, PDR, ARCore-to-ENU alignment, Ground Truth Firewall, Quality Engine, EKF, GNSS denial/recovery, and full GNSS-denied navigation remain unimplemented or unmeasured as applicable. Physical verification remains **PARTIAL** and the device baseline is **NOT FROZEN**. Stage 3C is a step-event foundation, not PDR. Stage 4 — Baseline PDR is the planned next technical milestone and is not implemented. The synchronized 11-path Stage 3C scope remains unstaged pending a final combined commit-readiness audit.
 
 ### Türkçe
 
@@ -343,7 +345,9 @@ Stage 3A — GNSS Anchor + Yerel ENU Referans Temeli; gerçek yalnızca ön plan
 
 Stage 3B — Heading / Gerçek Kuzey Referans Temeli; fiziksel üst kenar / cihaz +Y convention'ı, Kuzeyden saat yönünde pozitif ve `[0, 2π)` aralığına normalize edilmiş radyanlar, dairesel delta matematiği ve kilitli-anchor `android.hardware.GeomagneticField` düzeltmesi kullanan yalnızca `TYPE_ROTATION_VECTOR` tabanlı handset-heading yolunu uyguladı. Statik doğrulama geçti (`flutter analyze`, 61/61 test, debug APK build'i ve `git diff --check`). Üç resmî fiziksel oturumun 3/3'ü nominal 50 Hz talep altında yaklaşık 51,14 Hz gözlenen teslimle başarılı oldu; monotonik ve duplicate içermeyen zaman damgaları, saat yönünde pozitif tepki, 2π üzerindeki dairesel süreklilik, declination yolunun çalışması ve açık iptal fiziksel olarak gözlendi.
 
-Heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu ve aynı-konum anchor tekrarlanabilirliği **DOĞRULANMAMIŞTIR**. Bildirilen heading doğruluğu tüm Stage 3B oturumlarında kullanılamıyordu. Body heading, telefon-vücut kalibrasyonu, PDR, adım algılama/uzunluğu, ARCore-to-ENU hizalama, Ground Truth Firewall, Quality Engine, EKF, GNSS kesinti/recovery ve benchmark duruma göre uygulanmamış veya ölçülmemiştir. Fiziksel doğrulama **KISMİ** durumdadır ve cihaz baseline'ı **SABİTLENMEMİŞTİR**. Sonraki yüksek seviyeli ilerleme PDR / adım-olayı temelleri, ARCore-to-ENU hizalama, Ground Truth Firewall, Quality Engine, EKF, GNSS kesinti/recovery ve benchmark çalışmalarını kapsayabilir; burada kesin bir sonraki aşama numarası atanmaz. Senkronize 10-yolluk Stage 3B kapsamı unstaged durumdadır ve nihai birleşik commit-readiness denetimini beklemektedir.
+Stage 3C — Adım Olayı Temeli, tek resmî adım kaynağı olarak `Sensor.TYPE_STEP_DETECTOR`, Android 10+ aktivite-tanıma izin yönetimi, `SystemClock.elapsedRealtimeNanos()` ile yönetilen 30 saniyelik operasyon penceresi ve `SensorEvent.timestamp` değerinden türetilen birleşik zamanlamayı uyguladı. Statik doğrulama geçti (`flutter analyze --no-pub`, 97/97 test, debug APK build'i ve `git diff --check`). Sabit 0-adımlı oturum sıfır olay kabul etti; kontrollü 20-adımlı oturum 16 olay kabul edip teslim edilen beş olayı resmî pencere filtresiyle dışladı; kontrollü 30-adımlı oturum 30 olay kabul etti. Yürüyüş oturumlarının kabul edilen zaman damgaları duplicate içermiyordu ve monotonikti; açık iptal geçti.
+
+Adım-algılama doğruluğu, heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu ve aynı-konum anchor tekrarlanabilirliği **DOĞRULANMAMIŞTIR**. Bildirilen heading doğruluğu tüm Stage 3B oturumlarında kullanılamıyordu. Body heading, telefon-vücut kalibrasyonu, adım uzunluğu, heading-adım ilişkilendirmesi, PDR konumu, PDR, ARCore-to-ENU hizalama, Ground Truth Firewall, Quality Engine, EKF, GNSS kesinti/recovery ve tam GNSS-kesintili navigasyon duruma göre uygulanmamış veya ölçülmemiştir. Fiziksel doğrulama **KISMİ** durumdadır ve cihaz baseline'ı **SABİTLENMEMİŞTİR**. Stage 3C bir adım-olayı temelidir; PDR değildir. Stage 4 — Baseline PDR planlanan sonraki teknik kilometre taşıdır ve uygulanmamıştır. Senkronize 11-yolluk Stage 3C kapsamı unstaged durumdadır ve nihai birleşik commit-readiness denetimini beklemektedir.
 
 ---
 
