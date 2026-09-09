@@ -1576,6 +1576,7 @@ File names may change during implementation, but the information represented by 
 - [ ]  **Manual rotation test completed.** *(Manuel dönüş testi tamamlandı.)*
 - [ ]  **Short walking sensor test completed.** *(Kısa yürüyüş sensör testi tamamlandı.)*
 - [x]  **Native `TYPE_STEP_DETECTOR` foundation verified for the Stage 3C diagnostic scope.** *(Native `TYPE_STEP_DETECTOR` temeli Stage 3C tanı kapsamı için doğrulandı.)*
+- [x]  **Deterministic Baseline PDR verified for the Stage 4 diagnostic scope.** *(Deterministik Temel PDR, Stage 4 tanı kapsamı için doğrulandı.)*
 - [ ]  **GNSS outdoor test completed.** *(GNSS dış mekân testi tamamlandı.)*
 - [ ]  **GNSS ground-truth isolation verified.** *(GNSS gerçek referans izolasyonu doğrulandı.)*
 - [x]  **ARCore installation verified for the Stage 2D diagnostic scope.** *(ARCore kurulumu Stage 2D tanı kapsamı için doğrulandı.)*
@@ -1590,9 +1591,9 @@ File names may change during implementation, but the information represented by 
 - [ ]  **Target architecture gate evaluated.** *(Hedef mimari kapısı değerlendirildi.)*
 - [ ]  **Final device baseline frozen.** *(Nihai cihaz temel referansı sabitlendi.)*
 
-**Stage 3C boundary:** Stage 2A sensor inventory, Stage 2B four-sensor timing, Stage 2C GNSS runtime timing, Stage 2D ARCore runtime tracking, Stage 3A pre-denial GNSS-anchor flow, Stage 3B handset-heading / true-north-correction foundation, and Stage 3C step-event foundation are verified for their defined scopes, but they do not complete this checklist. Step-detection accuracy, step length, heading-step association, PDR position, heading and true-north absolute accuracy, GNSS absolute coordinate and physical ENU accuracy, reference-trajectory recording, GNSS ground-truth isolation, formal ARCore stationary-drift and degradation procedures, ARCore accuracy and coordinate alignment, full sensor-audit procedures, the multi-source clock-alignment strategy, and other required device/runtime checks remain pending or unimplemented as applicable.
+**Stage 4 boundary:** Stage 2A sensor inventory, Stage 2B four-sensor timing, Stage 2C GNSS runtime timing, Stage 2D ARCore runtime tracking, Stage 3A pre-denial GNSS-anchor flow, Stage 3B handset-heading / true-north-correction foundation, Stage 3C step-event foundation, and Stage 4 deterministic baseline PDR are verified for their defined scopes, but they do not complete this checklist. PDR accuracy, step-detection accuracy, step-length accuracy, heading and true-north absolute accuracy, GNSS absolute coordinate and physical ENU accuracy, reference-trajectory recording, GNSS ground-truth isolation, formal ARCore stationary-drift and degradation procedures, ARCore accuracy and coordinate alignment, ARCore-to-ENU, full sensor-audit procedures, the multi-source clock-alignment strategy, and other required device/runtime checks remain pending or unimplemented as applicable.
 
-**Stage 3C sınırı:** Stage 2A sensör envanteri, Stage 2B dört sensörlü zamanlama, Stage 2C GNSS çalışma zamanı zamanlaması, Stage 2D ARCore çalışma zamanı takibi, Stage 3A kesinti-öncesi GNSS anchor akışı, Stage 3B handset-heading / gerçek-kuzey-düzeltme temeli ve Stage 3C adım-olayı temeli tanımlı kapsamlarında doğrulanmıştır ancak bu kontrol listesini tamamlamaz. Adım-algılama doğruluğu, adım uzunluğu, heading-adım ilişkilendirmesi, PDR konumu, heading ve gerçek-kuzey mutlak doğruluğu, GNSS mutlak koordinat ve fiziksel ENU doğruluğu, referans rota kaydı, GNSS gerçek referans izolasyonu, resmî ARCore sabit-durum sürüklenme ve bozulma prosedürleri, ARCore doğruluk ve koordinat hizalaması, tam sensör denetimi prosedürleri, çok-kaynaklı saat hizalama stratejisi ve diğer gerekli cihaz/çalışma zamanı kontrolleri duruma göre beklemekte veya uygulanmamış durumdadır.
+**Stage 4 sınırı:** Stage 2A sensör envanteri, Stage 2B dört sensörlü zamanlama, Stage 2C GNSS çalışma zamanı zamanlaması, Stage 2D ARCore çalışma zamanı takibi, Stage 3A kesinti-öncesi GNSS anchor akışı, Stage 3B handset-heading / gerçek-kuzey-düzeltme temeli, Stage 3C adım-olayı temeli ve Stage 4 deterministik temel PDR tanımlı kapsamlarında doğrulanmıştır ancak bu kontrol listesini tamamlamaz. PDR doğruluğu, adım-algılama doğruluğu, adım-uzunluğu doğruluğu, heading ve gerçek-kuzey mutlak doğruluğu, GNSS mutlak koordinat ve fiziksel ENU doğruluğu, referans rota kaydı, GNSS gerçek referans izolasyonu, resmî ARCore sabit-durum sürüklenme ve bozulma prosedürleri, ARCore doğruluk ve koordinat hizalaması, ARCore-to-ENU, tam sensör denetimi prosedürleri, çok-kaynaklı saat hizalama stratejisi ve diğer gerekli cihaz/çalışma zamanı kontrolleri duruma göre beklemekte veya uygulanmamış durumdadır.
 
 ---
 
@@ -1702,9 +1703,9 @@ File names may change during implementation, but the information represented by 
 
 **Device Model:** Xiaomi Redmi Note 9 Pro *(Cihaz Modeli: Xiaomi Redmi Note 9 Pro)*
 
-**Android Version:** Android 12 / API 31 — Stage 2B, Stage 2C, Stage 2D, Stage 3A, Stage 3B, and Stage 3C tested environment; final baseline pending
+**Android Version:** Android 12 / API 31 — Stage 2B, Stage 2C, Stage 2D, Stage 3A, Stage 3B, Stage 3C, and Stage 4 tested environment; final baseline pending
 
-**Android Sürümü:** Android 12 / API 31 — Stage 2B, Stage 2C, Stage 2D, Stage 3A, Stage 3B ve Stage 3C test ortamı; nihai baseline bekliyor
+**Android Sürümü:** Android 12 / API 31 — Stage 2B, Stage 2C, Stage 2D, Stage 3A, Stage 3B, Stage 3C ve Stage 4 test ortamı; nihai baseline bekliyor
 
 **Minimum Architecture Gate:** TBD *(Minimum Mimari Kapısı: TBD)*
 
@@ -1838,7 +1839,7 @@ Privacy boundaries were preserved in the documented and shared evidence: no raw 
 
 Research limits remain explicit: step-detection accuracy **NOT VALIDATED**; step length **NOT IMPLEMENTED**; PDR position **NOT IMPLEMENTED**; heading-step association **NOT IMPLEMENTED**; body heading **NOT IMPLEMENTED**; ARCore-to-ENU **NOT IMPLEMENTED**; Ground Truth Firewall **NOT IMPLEMENTED**; Quality Engine **NOT IMPLEMENTED**; EKF **NOT IMPLEMENTED**; full GNSS-denied navigation **NOT IMPLEMENTED**. The device baseline is **NOT FROZEN** and overall physical verification is **PARTIAL**.
 
-The next planned technical milestone is Stage 4 — Baseline PDR: verified step event + heading reference + deterministic baseline step-length model → local ENU pedestrian displacement. Stage 4 is not implemented. EKF and ARCore fusion are not part of that baseline milestone unless separately authorized.
+The next planned technical milestone at the close of Stage 3C was Stage 4 — Baseline PDR. Stage 4 has since been implemented and is documented in the following section. EKF and ARCore fusion remain outside the Stage 4 baseline.
 
 ### Türkçe
 
@@ -1876,17 +1877,85 @@ Dokümante edilen ve paylaşılan kanıtta gizlilik sınırları korundu: ham fi
 
 Araştırma sınırları açık kalır: adım-algılama doğruluğu **DOĞRULANMADI**; adım uzunluğu **UYGULANMADI**; PDR konumu **UYGULANMADI**; heading-adım ilişkilendirmesi **UYGULANMADI**; body heading **UYGULANMADI**; ARCore-to-ENU **UYGULANMADI**; Ground Truth Firewall **UYGULANMADI**; Quality Engine **UYGULANMADI**; EKF **UYGULANMADI**; tam GNSS-kesintili navigasyon **UYGULANMADI**. Cihaz baseline'ı **SABİTLENMEDİ** ve genel fiziksel doğrulama **KISMİ** durumdadır.
 
-Planlanan sonraki teknik kilometre taşı Stage 4 — Baseline PDR'dır: doğrulanmış adım olayı + heading referansı + deterministik baseline adım-uzunluğu modeli → yerel ENU yaya yer değiştirmesi. Stage 4 uygulanmamıştır. EKF ve ARCore füzyonu, ayrıca yetkilendirilmedikçe bu baseline kilometre taşına dahil değildir.
+Stage 3C kapanışında planlanan sonraki teknik kilometre taşı Stage 4 — Baseline PDR idi. Stage 4 daha sonra uygulandı ve aşağıdaki bölümde dokümante edildi. EKF ve ARCore füzyonu Stage 4 baseline kapsamının dışında kalır.
 
 ---
 
-# 61. Current Document Status (Mevcut Doküman Durumu)
+# 61. Stage 4 Baseline PDR Evidence (Aşama 4 Temel PDR Kanıtı)
+
+### English
+
+Stage 4 — Baseline PDR combines Android `Sensor.TYPE_STEP_DETECTOR` events with true-north-corrected `Sensor.TYPE_ROTATION_VECTOR` handset heading to produce deterministic horizontal local-ENU pedestrian dead-reckoning displacement. The phone's physical top edge / device +Y axis is forward. Heading is clockwise-positive from North and normalized into `[0, 2π)`: 0 rad is North, π/2 East, π South, and 3π/2 West.
+
+The frozen association policy is `latest_valid_heading_at_or_before_step_timestamp`. For each accepted step at `T_step`, Stage 4 selects the valid heading with the greatest `T_heading` satisfying `T_heading <= T_step`. Both sources use `SensorEvent.timestamp` in the Android monotonic sensor time domain. Future heading is never used (`futureHeadingUsed = false`), and there is no interpolation. `SystemClock.elapsedRealtimeNanos()` controls the formal 30-second operation window but is not the measurement-time association authority.
+
+Each associated step uses the deterministic research-baseline parameter `L = 0.75 m`. The model is `fixed_baseline`; the value is not a calibrated or validated physical stride length. Starting from `E = 0, N = 0`, horizontal local ENU is updated with `ΔE = L × sin(ψ)` and `ΔN = L × cos(ψ)`, where `+E` is East and `+N` is North. Only associated steps are integrated. The final result returns aggregate counts, association-age statistics, final East/North, net displacement, and nominal model path length; it does not return a per-step trajectory.
+
+True-north correction uses the locked Stage 3A GNSS anchor only as the position input to `android.hardware.GeomagneticField`. The declination model is reported as `platform_managed`, and model freshness remains not validated. The locked anchor is passed internally; no live GNSS is requested or used during Stage 4 PDR integration (`liveGnssUsed = false`).
+
+Stage 4 added three files and modified three files, for exactly six implementation/test paths. Static validation passed: `flutter analyze --no-pub` PASS, 118/118 tests PASS, `flutter build apk --debug` PASS, and `git diff --check` PASS. No manifest or dependency change was required, and the staging area contained zero files before documentation synchronization.
+
+The physical test device was the Xiaomi Redmi Note 9 Pro running Android 12 / API 31. No device serial or ADB identifier is documented.
+
+The stationary formal session lasted 30 seconds with zero manually performed steps. It reported `acceptedStepEventCount = 0`, `associatedStepCount = 0`, `unassociatedStepCount = 0`, `integratedStepCount = 0`, and 1,527/1,527 valid heading samples with no invalid, duplicate, or non-monotonic heading sample. Final East, North, net displacement, and nominal path length were all 0.0 m. The session is PASS. No false step was observed in this single session; this is not a universal zero-false-positive claim.
+
+Controlled straight walk A used 20 manually counted physical steps. It reported 20 accepted, associated, and integrated steps; zero unassociated, duplicate, or non-monotonic step events; and heading-association ages from 0.440730 to 19.472448 ms, with 9.0234301 ms mean, 8.507214 ms median, and 17.547657 ms p95. The final result was `E = -14.600705246027655 m`, `N = 2.6390348023407615 m`, 14.837287432996142 m net displacement, and 15.0 m nominal path length. The session is PASS. The user later determined that the originally assumed geographic walking direction had been physically selected incorrectly, so the absolute E/N direction is not evidence of a heading defect.
+
+Controlled straight walk B also used 20 manually counted steps and reported 20 accepted, associated, and integrated steps with zero unassociated steps. Heading-association ages ranged from 0.341510 to 18.600833 ms, with 9.3492573 ms mean, 10.1975515 ms median, and 16.419947 ms p95. The final result was `E = 3.7152692548576267 m`, `N = 14.458050397065865 m`, 14.927774345835575 m net displacement, and 15.0 m nominal path length. The session is PASS. The two straight-walk PDR directions differed by approximately a right-angle rotation, consistent with the intended relative turn; this does not validate absolute heading accuracy.
+
+The intended L-shaped pattern was approximately 10 steps, a roughly 90-degree clockwise turn, and 10 more steps. The diagnostic reported 22 accepted, associated, and integrated events with zero unassociated steps. Its final result was `E = -6.621301596775239 m`, `N = 11.423209666808471 m`, 13.203459922585626 m net displacement, and 16.5 m nominal path length. The result is PASS WITH OBSERVATION: the detected count exceeded the intended 20-step pattern by two events. Turning or transition steps may have contributed, but no cause is claimed as proven and step-detection accuracy is not inferred. The net-displacement/path-length invariant remained valid.
+
+After the physical orientation was independently corrected, a targeted Heading Foundation north check used `TYPE_ROTATION_VECTOR` and produced 1,535 valid samples, zero duplicate or non-monotonic timestamps, and approximately 51.1421 Hz observed delivery. The first and last true-north-corrected headings were approximately 0.103615 and 0.124233 rad, with 0.020618 rad cumulative change and 0.004149 rad maximum consecutive circular delta. This PASS resolved the earlier absolute-direction concern and supports that no Stage 4 heading-axis bug was established. It remains limited physical verification, not heading or true-north metrological accuracy validation.
+
+Explicit cancellation returned the native category `baseline_pdr_cancelled`, and Flutter displayed `Baseline PDR diagnostic failed (baseline_pdr_cancelled).` Cancellation is PASS as an operation-control behavior; it is not a successful measurement result.
+
+Across the formal walking observations, `futureHeadingUsed = false`, `unassociatedStepCount = 0`, and duplicate/non-monotonic step and heading timestamp counts were zero. Observed association ages were approximately within the sampling interval of the roughly 50 Hz rotation-vector stream. This is observed timing integrity, not a guaranteed latency specification.
+
+Privacy boundaries were preserved: `rawTrajectoryReturned = false`, `rawSensorSamplesReturned = false`, `rawTimestampsReturned = false`, `persistenceUsed = false`, `liveGnssUsed = false`, and `anchorUsedForDeclination = true`. No raw GNSS or anchor coordinates, device serial, private Windows path, raw trajectory, raw sensor stream, raw sensor timestamp, API key, token, or secret is documented.
+
+Stage 4 implementation, static validation, and physical verification are complete for the defined baseline-PDR scope, and PDR position is implemented. PDR accuracy, step-detection accuracy, step-length accuracy, heading accuracy, true-north accuracy, and distance accuracy remain **NOT VALIDATED**. Body heading, ARCore fusion, ARCore-to-ENU, Ground Truth Firewall, Quality Engine, EKF, and full GNSS-denied navigation remain **NOT IMPLEMENTED**. The device baseline is **NOT FROZEN**, and overall NAVGUARD physical verification remains **PARTIAL**. The next planned milestone is Stage 5 — ARCore Relative Motion → ENU Foundation; it is not implemented.
+
+### Türkçe
+
+Aşama 4 — Temel PDR, deterministik yatay yerel-ENU yaya ölü hesaplama yer değiştirmesi üretmek için Android `Sensor.TYPE_STEP_DETECTOR` olaylarını gerçek-kuzey-düzeltilmiş `Sensor.TYPE_ROTATION_VECTOR` handset heading ile birleştirir. Telefonun fiziksel üst kenarı / cihaz +Y ekseni ileridir. Heading Kuzeyden saat yönünde pozitiftir ve `[0, 2π)` aralığına normalize edilir: 0 rad Kuzey, π/2 Doğu, π Güney ve 3π/2 Batıdır.
+
+Sabitlenen ilişkilendirme politikası `latest_valid_heading_at_or_before_step_timestamp` değeridir. Stage 4, `T_step` anındaki her kabul edilen adım için `T_heading <= T_step` koşulunu sağlayan en büyük `T_heading` değerli geçerli heading'i seçer. Her iki kaynak da Android monotonik sensör zaman alanındaki `SensorEvent.timestamp` değerini kullanır. Gelecek heading hiçbir zaman kullanılmaz (`futureHeadingUsed = false`) ve interpolasyon yoktur. `SystemClock.elapsedRealtimeNanos()` resmî 30 saniyelik operasyon penceresini yönetir ancak ölçüm-zamanı ilişkilendirmesi otoritesi değildir.
+
+Her ilişkilendirilmiş adım deterministik araştırma-baseline parametresi `L = 0,75 m` kullanır. Model `fixed_baseline` değerindedir; bu değer kalibre edilmiş veya doğrulanmış fiziksel adım uzunluğu değildir. `E = 0, N = 0` başlangıcından yatay yerel ENU, `ΔE = L × sin(ψ)` ve `ΔN = L × cos(ψ)` ile güncellenir; `+E` Doğu ve `+N` Kuzeydir. Yalnızca ilişkilendirilmiş adımlar entegre edilir. Nihai sonuç birleşik sayıları, ilişkilendirme-yaşı istatistiklerini, nihai Doğu/Kuzey değerlerini, net yer değiştirmeyi ve nominal model yol uzunluğunu döndürür; adım başına rota döndürmez.
+
+Gerçek-kuzey düzeltmesi kilitli Stage 3A GNSS anchor'ı yalnızca `android.hardware.GeomagneticField` konum girdisi olarak kullanır. Declination modeli `platform_managed` olarak bildirilir ve model güncelliği doğrulanmamış durumda kalır. Kilitli anchor içeride aktarılır; Stage 4 PDR entegrasyonu sırasında canlı GNSS istenmez veya kullanılmaz (`liveGnssUsed = false`).
+
+Stage 4 üç dosya ekledi ve üç dosyayı değiştirdi; böylece tam altı uygulama/test yolu oluştu. Statik doğrulama geçti: `flutter analyze --no-pub` GEÇTİ, 118/118 test GEÇTİ, `flutter build apk --debug` GEÇTİ ve `git diff --check` GEÇTİ. Manifest veya dependency değişikliği gerekmedi ve dokümantasyon senkronizasyonundan önce staging alanında sıfır dosya vardı.
+
+Fiziksel test cihazı Android 12 / API 31 çalıştıran Xiaomi Redmi Note 9 Pro idi. Cihaz serisi veya ADB tanımlayıcısı dokümante edilmedi.
+
+Sabit resmî oturum, manuel olarak sıfır adımla 30 saniye sürdü. `acceptedStepEventCount = 0`, `associatedStepCount = 0`, `unassociatedStepCount = 0`, `integratedStepCount = 0` ve geçersiz, duplicate veya monotonik olmayan heading örneği olmadan 1.527/1.527 geçerli heading örneği bildirdi. Nihai Doğu, Kuzey, net yer değiştirme ve nominal yol uzunluğu değerlerinin tümü 0,0 m idi. Oturum GEÇTİ. Bu tek oturumda false adım gözlenmedi; bu, evrensel sıfır-false-positive iddiası değildir.
+
+Kontrollü düz yürüyüş A, manuel olarak sayılan 20 fiziksel adım kullandı. 20 kabul edilen, ilişkilendirilen ve entegre edilen adım; sıfır ilişkilendirilmemiş, duplicate veya monotonik olmayan adım olayı ve 0,440730–19,472448 ms ilişkilendirme yaşı bildirdi; ortalama 9,0234301 ms, medyan 8,507214 ms ve p95 17,547657 ms idi. Nihai sonuç `E = -14,600705246027655 m`, `N = 2,6390348023407615 m`, 14,837287432996142 m net yer değiştirme ve 15,0 m nominal yol uzunluğu idi. Oturum GEÇTİ. Kullanıcı daha sonra ilk varsayılan coğrafi yürüyüş yönünün fiziksel olarak yanlış seçildiğini belirledi; bu nedenle mutlak E/N yönü heading hatası kanıtı değildir.
+
+Kontrollü düz yürüyüş B de manuel olarak sayılan 20 adım kullandı ve sıfır ilişkilendirilmemiş adımla 20 kabul edilen, ilişkilendirilen ve entegre edilen adım bildirdi. Heading ilişkilendirme yaşları 0,341510–18,600833 ms aralığındaydı; ortalama 9,3492573 ms, medyan 10,1975515 ms ve p95 16,419947 ms idi. Nihai sonuç `E = 3,7152692548576267 m`, `N = 14,458050397065865 m`, 14,927774345835575 m net yer değiştirme ve 15,0 m nominal yol uzunluğu idi. Oturum GEÇTİ. İki düz-yürüyüş PDR yönü hedeflenen göreli dönüşle tutarlı biçimde yaklaşık dik açı kadar farklıydı; bu, mutlak heading doğruluğunu doğrulamaz.
+
+Hedeflenen L-biçimli desen yaklaşık 10 adım, yaklaşık 90 derece saat yönünde dönüş ve 10 adım daha içeriyordu. Tanı, sıfır ilişkilendirilmemiş adımla 22 kabul edilen, ilişkilendirilen ve entegre edilen olay bildirdi. Nihai sonuç `E = -6,621301596775239 m`, `N = 11,423209666808471 m`, 13,203459922585626 m net yer değiştirme ve 16,5 m nominal yol uzunluğu idi. Sonuç GÖZLEMLE GEÇTİ: algılanan sayı hedeflenen 20-adımlık deseni iki olay aştı. Dönüş veya geçiş adımları katkıda bulunmuş olabilir ancak hiçbir neden kanıtlanmış olarak iddia edilmez ve adım-algılama doğruluğu çıkarımı yapılmaz. Net-yer-değiştirme/yol-uzunluğu değişmezi geçerli kaldı.
+
+Fiziksel yön bağımsız olarak düzeltildikten sonra hedefli Heading Foundation kuzey kontrolü `TYPE_ROTATION_VECTOR` kullandı; 1.535 geçerli örnek, sıfır duplicate veya monotonik olmayan zaman damgası ve yaklaşık 51,1421 Hz gözlenen teslim üretti. İlk ve son gerçek-kuzey-düzeltilmiş heading değerleri yaklaşık 0,103615 ve 0,124233 rad; birleşik değişim 0,020618 rad ve maksimum ardışık dairesel delta 0,004149 rad idi. Bu GEÇTİ sonucu önceki mutlak-yön endişesini çözdü ve Stage 4 heading-ekseni hatası saptanmadığını destekledi. Yine de bu, heading veya gerçek-kuzey metrolojik doğruluk doğrulaması değil, sınırlı fiziksel doğrulamadır.
+
+Açık iptal native `baseline_pdr_cancelled` kategorisini döndürdü ve Flutter `Baseline PDR diagnostic failed (baseline_pdr_cancelled).` mesajını gösterdi. İptal operasyon-denetimi davranışı olarak GEÇTİ; başarılı ölçüm sonucu değildir.
+
+Resmî yürüyüş gözlemlerinin tümünde `futureHeadingUsed = false`, `unassociatedStepCount = 0` ve duplicate/monotonik olmayan adım ile heading zaman damgası sayıları sıfırdı. Gözlenen ilişkilendirme yaşları yaklaşık 50 Hz rotation-vector akışının örnekleme aralığı içinde kaldı. Bu, gözlenen zamanlama bütünlüğüdür; garanti edilen gecikme şartnamesi değildir.
+
+Gizlilik sınırları korundu: `rawTrajectoryReturned = false`, `rawSensorSamplesReturned = false`, `rawTimestampsReturned = false`, `persistenceUsed = false`, `liveGnssUsed = false` ve `anchorUsedForDeclination = true`. Ham GNSS veya anchor koordinatı, cihaz serisi, özel Windows yolu, ham rota, ham sensör akışı, ham sensör zaman damgası, API anahtarı, token veya secret dokümante edilmedi.
+
+Stage 4 uygulaması, statik doğrulaması ve fiziksel doğrulaması tanımlı baseline-PDR kapsamı için tamamlandı ve PDR konumu uygulandı. PDR doğruluğu, adım-algılama doğruluğu, adım-uzunluğu doğruluğu, heading doğruluğu, gerçek-kuzey doğruluğu ve mesafe doğruluğu **DOĞRULANMAMIŞTIR**. Body heading, ARCore füzyonu, ARCore-to-ENU, Ground Truth Firewall, Quality Engine, EKF ve tam GNSS-kesintili navigasyon **UYGULANMAMIŞTIR**. Cihaz baseline'ı **SABİTLENMEMİŞTİR** ve genel NAVGUARD fiziksel doğrulaması **KISMİ** durumdadır. Planlanan sonraki kilometre taşı Aşama 5 — ARCore Göreli Hareket → ENU Temeli'dir; uygulanmamıştır.
+
+---
+
+# 62. Current Document Status (Mevcut Doküman Durumu)
 
 ### English
 
 **Document Status:** Protocol Completed — Partial Execution
 
-**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A runtime SensorManager capability inventory, Stage 2B four-sensor live timing characterization, Stage 2C GNSS runtime timing characterization, Stage 2D ARCore runtime tracking characterization, Stage 3A GNSS-anchor flow verification, Stage 3B heading-foundation verification, and Stage 3C step-event-foundation verification are complete for their defined scopes. The full device capability audit is not complete.
+**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A runtime SensorManager capability inventory, Stage 2B four-sensor live timing characterization, Stage 2C GNSS runtime timing characterization, Stage 2D ARCore runtime tracking characterization, Stage 3A GNSS-anchor flow verification, Stage 3B heading-foundation verification, Stage 3C step-event-foundation verification, and Stage 4 baseline-PDR verification are complete for their defined scopes. The full device capability audit is not complete.
 
 **Stage 2A Runtime Sensor Inventory Evidence:** VERIFIED on the tested Xiaomi Redmi Note 9 Pro. SensorManager runtime access, the Flutter–Kotlin diagnostic bridge, and runtime sensor metadata retrieval were verified. The inventory returned 14 requested records: 13 default sensors available and `TYPE_PRESSURE` unavailable. This is capability metadata evidence, not sensor-performance evidence.
 
@@ -1902,9 +1971,11 @@ Planlanan sonraki teknik kilometre taşı Stage 4 — Baseline PDR'dır: doğrul
 
 **Stage 3C Step-Event Evidence:** VERIFIED for the defined step-event foundation scope on the same tested device. `TYPE_STEP_DETECTOR` was available as `pedometer  Non-wakeup` and formally exercised in one stationary and two controlled-walk 30-second sessions. The stationary session accepted zero events, the controlled 20-step session accepted 16 events and excluded five delivered events through the formal window filter, and the controlled 30-step session accepted 30 events. Walking-session accepted timestamps were monotonic and duplicate-free; cancellation passed. Step-detection accuracy remains not validated.
 
-**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, complete sensor timing/multi-rate procedures, step-detection accuracy, heading absolute accuracy, true-north absolute accuracy, geomagnetic-model freshness, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, same-location anchor repeatability, GNSS ground-truth isolation, ARCore distance/scale/rotation/drift/absolute accuracy, deliberate ARCore degradation handling, ARCore-to-ENU, multi-source clock alignment, and other required device/runtime checks remain pending. Body heading, handset-to-body calibration, step length, heading-step association, and PDR position are not implemented. The GNSS denial controller, Ground Truth Firewall runtime, Evaluation Mode, PDR, Motion AI, Quality Engine, relocalization, EKF / Sensor Fusion, and full GNSS-denied navigation are not implemented. No navigation benchmark has been evaluated and the 20% improvement target is unmeasured.
+**Stage 4 Baseline PDR Evidence:** VERIFIED for the defined deterministic baseline-PDR scope on the same tested device. Static validation passed with 118/118 tests. One stationary session, two 20-step straight walks, an intended 20-step L-shaped walk with 22 detected events, a corrected independent north check, and explicit cancellation were completed. The walking steps were causally associated without future heading use; PDR position is implemented. The earlier absolute-direction concern was resolved as a physically misidentified walking reference, not a Stage 4 heading-axis defect.
 
-**Documentation Synchronization:** Stage 3C status synchronized on 2026-09-08. Seven implementation paths and four documentation paths remain unstaged; the final combined 11-path commit-readiness audit is pending.
+**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, complete sensor timing/multi-rate procedures, PDR accuracy, step-detection accuracy, step-length accuracy, heading absolute accuracy, true-north absolute accuracy, geomagnetic-model freshness, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, same-location anchor repeatability, GNSS ground-truth isolation, ARCore distance/scale/rotation/drift/absolute accuracy, deliberate ARCore degradation handling, ARCore-to-ENU, multi-source clock alignment, and other required device/runtime checks remain pending. Body heading and handset-to-body calibration are not implemented. The GNSS denial controller, Ground Truth Firewall runtime, Evaluation Mode, ARCore fusion, Motion AI, Quality Engine, relocalization, EKF / Sensor Fusion, and full GNSS-denied navigation are not implemented. No navigation benchmark has been evaluated and the 20% improvement target is unmeasured.
+
+**Documentation Synchronization:** Stage 4 status synchronized on 2026-09-09. Six implementation/test paths and four documentation paths remain unstaged; the final combined 10-path commit-readiness audit is pending.
 
 **Device Baseline Status:** NOT FROZEN
 
@@ -1918,7 +1989,7 @@ Planlanan sonraki teknik kilometre taşı Stage 4 — Baseline PDR'dır: doğrul
 
 **Doküman Durumu:** Protokol Tamamlandı — Kısmi Uygulama
 
-**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A çalışma zamanı SensorManager yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama karakterizasyonu, Stage 2C GNSS çalışma zamanı zamanlama karakterizasyonu, Stage 2D ARCore çalışma zamanı takip karakterizasyonu, Stage 3A GNSS anchor akışı doğrulaması, Stage 3B heading-temeli doğrulaması ve Stage 3C adım-olayı-temeli doğrulaması tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
+**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A çalışma zamanı SensorManager yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama karakterizasyonu, Stage 2C GNSS çalışma zamanı zamanlama karakterizasyonu, Stage 2D ARCore çalışma zamanı takip karakterizasyonu, Stage 3A GNSS anchor akışı doğrulaması, Stage 3B heading-temeli doğrulaması, Stage 3C adım-olayı-temeli doğrulaması ve Stage 4 baseline-PDR doğrulaması tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
 
 **Stage 2A Çalışma Zamanı Sensör Envanteri Kanıtı:** Test edilen Xiaomi Redmi Note 9 Pro üzerinde DOĞRULANDI. SensorManager çalışma zamanı erişimi, Flutter–Kotlin tanı köprüsü ve çalışma zamanı sensör metadata alımı doğrulandı. Envanter 14 istenen kayıt döndürdü: 13 varsayılan sensör kullanılabilirdi ve `TYPE_PRESSURE` kullanılamıyordu. Bu yetenek metadata kanıtıdır; sensör performansı kanıtı değildir.
 
@@ -1934,9 +2005,11 @@ Planlanan sonraki teknik kilometre taşı Stage 4 — Baseline PDR'dır: doğrul
 
 **Stage 3C Adım Olayı Kanıtı:** Aynı test cihazındaki tanımlı adım-olayı temeli kapsamında DOĞRULANDI. `TYPE_STEP_DETECTOR`, `pedometer  Non-wakeup` adıyla kullanılabilirdi ve bir sabit ile iki kontrollü-yürüyüş 30 saniyelik oturumunda resmî olarak çalıştırıldı. Sabit oturum sıfır olay kabul etti; kontrollü 20-adımlı oturum 16 olay kabul edip teslim edilen beş olayı resmî pencere filtresiyle dışladı; kontrollü 30-adımlı oturum 30 olay kabul etti. Yürüyüş oturumlarının kabul edilen zaman damgaları monotonik ve duplicate içermiyordu; iptal geçti. Adım-algılama doğruluğu doğrulanmamış durumda.
 
-**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam sensör zamanlama/çoklu hız prosedürleri, adım-algılama doğruluğu, heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, geomanyetik model güncelliği, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu, aynı-konum anchor tekrarlanabilirliği, GNSS gerçek referans izolasyonu, ARCore mesafe/ölçek/dönüş/sürüklenme/mutlak doğruluğu, kasıtlı ARCore bozulma yönetimi, ARCore-to-ENU, çok-kaynaklı saat hizalama ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. Body heading, telefon-vücut kalibrasyonu, adım uzunluğu, heading-adım ilişkilendirmesi ve PDR konumu uygulanmamıştır. GNSS kesinti denetleyicisi, Ground Truth Firewall runtime, Evaluation Mode, PDR, Motion AI, Quality Engine, relocalization, EKF / Sensör Füzyonu ve tam GNSS-kesintili navigasyon uygulanmamıştır. Hiçbir navigasyon benchmark'ı değerlendirilmemiştir ve %20 iyileştirme hedefi ölçülmemiştir.
+**Stage 4 Temel PDR Kanıtı:** Aynı test cihazındaki tanımlı deterministik baseline-PDR kapsamında DOĞRULANDI. Statik doğrulama 118/118 testle geçti. Bir sabit oturum, iki 20-adımlık düz yürüyüş, algılanan 22 olaylı hedeflenmiş 20-adımlık L-biçimli yürüyüş, düzeltilmiş bağımsız kuzey kontrolü ve açık iptal tamamlandı. Yürüyüş adımları gelecek heading kullanılmadan nedensel olarak ilişkilendirildi; PDR konumu uygulandı. Önceki mutlak-yön endişesi Stage 4 heading-ekseni hatası değil, fiziksel olarak yanlış tanımlanmış yürüyüş referansı olarak çözüldü.
 
-**Dokümantasyon Senkronizasyonu:** Stage 3C durumu 2026-09-08 tarihinde senkronize edildi. Yedi uygulama yolu ve dört dokümantasyon yolu unstaged durumdadır; nihai birleşik 11-yolluk commit-readiness denetimi beklemektedir.
+**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam sensör zamanlama/çoklu hız prosedürleri, PDR doğruluğu, adım-algılama doğruluğu, adım-uzunluğu doğruluğu, heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, geomanyetik model güncelliği, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu, aynı-konum anchor tekrarlanabilirliği, GNSS gerçek referans izolasyonu, ARCore mesafe/ölçek/dönüş/sürüklenme/mutlak doğruluğu, kasıtlı ARCore bozulma yönetimi, ARCore-to-ENU, çok-kaynaklı saat hizalama ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. Body heading ve telefon-vücut kalibrasyonu uygulanmamıştır. GNSS kesinti denetleyicisi, Ground Truth Firewall runtime, Evaluation Mode, ARCore füzyonu, Motion AI, Quality Engine, relocalization, EKF / Sensör Füzyonu ve tam GNSS-kesintili navigasyon uygulanmamıştır. Hiçbir navigasyon benchmark'ı değerlendirilmemiştir ve %20 iyileştirme hedefi ölçülmemiştir.
+
+**Dokümantasyon Senkronizasyonu:** Stage 4 durumu 2026-09-09 tarihinde senkronize edildi. Altı uygulama/test yolu ve dört dokümantasyon yolu unstaged durumdadır; nihai birleşik 10-yolluk commit-readiness denetimi beklemektedir.
 
 **Cihaz Baseline Durumu:** SABİTLENMEDİ
 

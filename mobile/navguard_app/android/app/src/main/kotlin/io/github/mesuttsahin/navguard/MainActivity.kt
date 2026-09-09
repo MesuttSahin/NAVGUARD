@@ -16,6 +16,7 @@ class MainActivity : FlutterActivity() {
     private var gnssAnchorAcquisition: GnssAnchorAcquisition? = null
     private var headingFoundationDiagnostic: HeadingFoundationDiagnostic? = null
     private var stepEventDiagnostic: StepEventDiagnostic? = null
+    private var baselinePdrDiagnostic: BaselinePdrDiagnostic? = null
     private var arCoreTrackingDiagnostic: ArCoreTrackingDiagnostic? = null
     private var locationManager: LocationManager? = null
 
@@ -62,6 +63,14 @@ class MainActivity : FlutterActivity() {
                 )
             }
 
+        baselinePdrDiagnostic =
+            sensorManager?.let { availableSensorManager ->
+                BaselinePdrDiagnostic(
+                    applicationContext = applicationContext,
+                    sensorManager = availableSensorManager,
+                )
+            }
+
         arCoreTrackingDiagnostic = ArCoreTrackingDiagnostic(applicationContext)
 
         configureSensorChannel(flutterEngine, sensorManager)
@@ -69,6 +78,7 @@ class MainActivity : FlutterActivity() {
         configureGnssAnchorChannel(flutterEngine)
         configureHeadingFoundationChannel(flutterEngine)
         configureStepEventChannel(flutterEngine)
+        configureBaselinePdrChannel(flutterEngine)
         configureArCoreChannel(flutterEngine)
     }
 
@@ -526,6 +536,129 @@ class MainActivity : FlutterActivity() {
         )
     }
 
+    private fun configureBaselinePdrChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            BASELINE_PDR_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                METHOD_GET_BASELINE_PDR_PREFLIGHT -> {
+                    val diagnostic = baselinePdrDiagnostic
+                    result.success(
+                        diagnostic?.createPreflightSnapshot()
+                            ?: createUnavailableBaselinePdrPreflightSnapshot(),
+                    )
+                }
+
+                METHOD_RUN_BASELINE_PDR_DIAGNOSTIC -> {
+                    runBaselinePdrDiagnostic(call.arguments, result)
+                }
+
+                METHOD_CANCEL_BASELINE_PDR_DIAGNOSTIC -> {
+                    val diagnostic = baselinePdrDiagnostic
+                    val cancellationRequested =
+                        diagnostic?.cancelActiveSession() == true
+
+                    result.success(
+                        linkedMapOf(
+                            "schemaVersion" to SCHEMA_VERSION,
+                            "snapshotKind" to
+                                SNAPSHOT_KIND_BASELINE_PDR_CANCELLATION,
+                            "cancellationRequested" to cancellationRequested,
+                            "diagnosticRunning" to
+                                (diagnostic?.isDiagnosticRunning() == true),
+                        ),
+                    )
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun runBaselinePdrDiagnostic(
+        rawArguments: Any?,
+        result: MethodChannel.Result,
+    ) {
+        val diagnostic = baselinePdrDiagnostic
+        if (diagnostic == null) {
+            result.error(
+                ERROR_BASELINE_PDR_ROTATION_VECTOR_UNAVAILABLE,
+                "Baseline PDR diagnostics are unavailable.",
+                null,
+            )
+            return
+        }
+
+        val arguments = rawArguments as? Map<*, *>
+        if (arguments == null) {
+            result.error(
+                ERROR_BASELINE_PDR_ANCHOR_REQUIRED,
+                "A locked Stage 3A GNSS anchor is required.",
+                null,
+            )
+            return
+        }
+
+        val latitudeDeg = (arguments["latitudeDeg"] as? Number)?.toDouble()
+        val longitudeDeg = (arguments["longitudeDeg"] as? Number)?.toDouble()
+        val rawAltitude = arguments["altitudeEllipsoidM"]
+        val altitudeEllipsoidM = (rawAltitude as? Number)?.toDouble()
+
+        if (
+            latitudeDeg == null ||
+                !latitudeDeg.isFinite() ||
+                latitudeDeg !in -90.0..90.0 ||
+                longitudeDeg == null ||
+                !longitudeDeg.isFinite() ||
+                longitudeDeg !in -180.0..180.0 ||
+                (rawAltitude != null && altitudeEllipsoidM == null) ||
+                altitudeEllipsoidM?.isFinite() == false
+        ) {
+            result.error(
+                ERROR_BASELINE_PDR_ANCHOR_REQUIRED,
+                "The locked Stage 3A GNSS anchor arguments are invalid.",
+                null,
+            )
+            return
+        }
+
+        diagnostic.start(
+            anchorLatitudeDeg = latitudeDeg,
+            anchorLongitudeDeg = longitudeDeg,
+            anchorAltitudeEllipsoidM = altitudeEllipsoidM,
+            callback =
+                object : BaselinePdrDiagnostic.Callback {
+                    override fun onSuccess(summary: Map<String, Any?>) {
+                        result.success(summary)
+                    }
+
+                    override fun onError(code: String, message: String) {
+                        result.error(code, message, null)
+                    }
+                },
+        )
+    }
+
+    private fun createUnavailableBaselinePdrPreflightSnapshot():
+        Map<String, Any?> {
+        val permissionRequired = isActivityRecognitionPermissionRequired()
+        val permissionGranted = hasActivityRecognitionPermission()
+
+        return linkedMapOf(
+            "schemaVersion" to SCHEMA_VERSION,
+            "snapshotKind" to SNAPSHOT_KIND_BASELINE_PDR_PREFLIGHT,
+            "rotationVectorAvailable" to false,
+            "rotationVectorName" to null,
+            "stepDetectorAvailable" to false,
+            "stepDetectorName" to null,
+            "activityRecognitionPermissionRequired" to permissionRequired,
+            "activityRecognitionPermissionGranted" to permissionGranted,
+            "diagnosticRunning" to false,
+            "nativeSensorsReady" to false,
+        )
+    }
+
     private fun configureArCoreChannel(flutterEngine: FlutterEngine) {
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -976,6 +1109,9 @@ class MainActivity : FlutterActivity() {
         stepEventDiagnostic?.cancelActiveSession(
             "Step-event diagnostic cancelled because the activity paused.",
         )
+        baselinePdrDiagnostic?.cancelActiveSession(
+            "Baseline PDR diagnostic cancelled because the activity paused.",
+        )
         arCoreTrackingDiagnostic?.cancelActiveSession(
             "ARCore tracking diagnostic cancelled because the activity paused.",
         )
@@ -997,6 +1133,9 @@ class MainActivity : FlutterActivity() {
         stepEventDiagnostic?.cancelActiveSession(
             "Step-event diagnostic cancelled because the activity was destroyed.",
         )
+        baselinePdrDiagnostic?.cancelActiveSession(
+            "Baseline PDR diagnostic cancelled because the activity was destroyed.",
+        )
         arCoreTrackingDiagnostic?.cancelActiveSession(
             "ARCore tracking diagnostic cancelled because the activity was destroyed.",
         )
@@ -1006,6 +1145,7 @@ class MainActivity : FlutterActivity() {
         gnssAnchorAcquisition = null
         headingFoundationDiagnostic = null
         stepEventDiagnostic = null
+        baselinePdrDiagnostic = null
         arCoreTrackingDiagnostic = null
         locationManager = null
 
@@ -1314,6 +1454,8 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/heading_foundation"
         const val STEP_EVENT_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/step_event"
+        const val BASELINE_PDR_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/baseline_pdr"
         const val ARCORE_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/arcore_diagnostics"
 
@@ -1352,6 +1494,13 @@ class MainActivity : FlutterActivity() {
         const val METHOD_CANCEL_STEP_EVENT_DIAGNOSTIC =
             "cancelStepEventDiagnostic"
 
+        const val METHOD_GET_BASELINE_PDR_PREFLIGHT =
+            "getBaselinePdrPreflight"
+        const val METHOD_RUN_BASELINE_PDR_DIAGNOSTIC =
+            "runBaselinePdrDiagnostic"
+        const val METHOD_CANCEL_BASELINE_PDR_DIAGNOSTIC =
+            "cancelBaselinePdrDiagnostic"
+
         const val METHOD_GET_ARCORE_DIAGNOSTIC_PREFLIGHT =
             "getArCoreDiagnosticPreflight"
         const val METHOD_REQUEST_ARCORE_CAMERA_PERMISSION =
@@ -1375,6 +1524,10 @@ class MainActivity : FlutterActivity() {
             "step_event_preflight"
         const val SNAPSHOT_KIND_STEP_EVENT_CANCELLATION =
             "step_event_cancellation"
+        const val SNAPSHOT_KIND_BASELINE_PDR_PREFLIGHT =
+            "baseline_pdr_preflight"
+        const val SNAPSHOT_KIND_BASELINE_PDR_CANCELLATION =
+            "baseline_pdr_cancellation"
 
         const val HEADING_REQUESTED_SAMPLING_PERIOD_US = 20_000
 
@@ -1434,6 +1587,10 @@ class MainActivity : FlutterActivity() {
             "activity_recognition_permission_request_failed"
         const val ERROR_STEP_PERMISSION_REQUEST_CANCELLED =
             "activity_recognition_permission_request_cancelled"
+        const val ERROR_BASELINE_PDR_ROTATION_VECTOR_UNAVAILABLE =
+            "baseline_pdr_rotation_vector_unavailable"
+        const val ERROR_BASELINE_PDR_ANCHOR_REQUIRED =
+            "baseline_pdr_anchor_required"
         const val ERROR_ARCORE_DIAGNOSTIC_UNAVAILABLE =
             "arcore_diagnostic_unavailable"
         const val ERROR_ARCORE_CAMERA_PERMISSION_ALREADY_RUNNING =

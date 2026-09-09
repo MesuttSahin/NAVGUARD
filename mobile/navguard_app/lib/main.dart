@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'navigation/baseline_pdr.dart';
 import 'navigation/gnss_anchor.dart';
 import 'navigation/heading.dart';
 import 'navigation/step_event.dart';
@@ -24,6 +25,8 @@ enum _DiagnosticOperation {
   stepPreflight,
   stepPermission,
   stepDiagnostic,
+  baselinePdrPreflight,
+  baselinePdrDiagnostic,
   arCorePreflight,
   arCorePermission,
   arCoreTracking,
@@ -168,6 +171,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     'io.github.mesuttsahin.navguard/step_event',
   );
 
+  static const MethodChannel _baselinePdrChannel = MethodChannel(
+    'io.github.mesuttsahin.navguard/baseline_pdr',
+  );
+
   static const MethodChannel _arCoreChannel = MethodChannel(
     'io.github.mesuttsahin.navguard/arcore_diagnostics',
   );
@@ -192,6 +199,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   StepEventDiagnosticResult? _stepResult;
   String _stepDiagnosticStatus = 'Idle';
   bool _stepCancellationRequestInFlight = false;
+  BaselinePdrPreflight? _baselinePdrPreflight;
+  BaselinePdrDiagnosticResult? _baselinePdrResult;
+  String _baselinePdrStatus = 'Idle';
+  bool _baselinePdrCancellationRequestInFlight = false;
   String _cameraPermission = 'Unknown';
   String _arCoreAvailability = 'Unknown';
   String _arCoreReady = 'Unknown';
@@ -237,6 +248,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _isStepDiagnosticLoading =>
       _activeOperation == _DiagnosticOperation.stepDiagnostic;
 
+  bool get _isBaselinePdrPreflightLoading =>
+      _activeOperation == _DiagnosticOperation.baselinePdrPreflight;
+
+  bool get _isBaselinePdrDiagnosticLoading =>
+      _activeOperation == _DiagnosticOperation.baselinePdrDiagnostic;
+
   bool get _isArCorePreflightLoading =>
       _activeOperation == _DiagnosticOperation.arCorePreflight;
 
@@ -254,6 +271,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
 
   bool get _canRunStepDiagnostic =>
       !_isBusy && _stepPreflight?.canRunStepDiagnostic == true;
+
+  bool get _canRunBaselinePdr =>
+      !_isBusy &&
+      _baselinePdrPreflight?.nativeSensorsReady == true &&
+      _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+      _gnssAnchor != null;
 
   String get _anchorFinePermissionLabel {
     final GnssAnchorPreflight? preflight = _gnssAnchorPreflight;
@@ -440,8 +463,84 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         : '${value.toStringAsFixed(2)} steps/min';
   }
 
+  String get _baselinePdrRotationVectorLabel {
+    final BaselinePdrPreflight? preflight = _baselinePdrPreflight;
+    if (preflight == null) {
+      return 'Unknown';
+    }
+    return preflight.rotationVectorAvailable ? 'Available' : 'Unavailable';
+  }
+
+  String get _baselinePdrStepDetectorLabel {
+    final BaselinePdrPreflight? preflight = _baselinePdrPreflight;
+    if (preflight == null) {
+      return 'Unknown';
+    }
+    return preflight.stepDetectorAvailable ? 'Available' : 'Unavailable';
+  }
+
+  String get _baselinePdrPermissionLabel {
+    final BaselinePdrPreflight? preflight = _baselinePdrPreflight;
+    if (preflight == null) {
+      return 'Unknown';
+    }
+    if (!preflight.activityRecognitionPermissionRequired) {
+      return 'Not required';
+    }
+    return preflight.activityRecognitionPermissionGranted
+        ? 'Granted'
+        : 'Denied';
+  }
+
+  String get _baselinePdrAnchorLabel {
+    return _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+            _gnssAnchor != null
+        ? 'Locked'
+        : 'Required';
+  }
+
+  String get _baselinePdrDetectedStepsLabel {
+    return _baselinePdrResult?.acceptedStepEventCount.toString() ??
+        'Not available';
+  }
+
+  String get _baselinePdrIntegratedStepsLabel {
+    return _baselinePdrResult?.integratedStepCount.toString() ??
+        'Not available';
+  }
+
+  String get _baselinePdrUnassociatedStepsLabel {
+    return _baselinePdrResult?.unassociatedStepCount.toString() ??
+        'Not available';
+  }
+
+  String get _baselinePdrFinalEastLabel {
+    return _formatMeters(_baselinePdrResult?.finalEastM);
+  }
+
+  String get _baselinePdrFinalNorthLabel {
+    return _formatMeters(_baselinePdrResult?.finalNorthM);
+  }
+
+  String get _baselinePdrNetDisplacementLabel {
+    return _formatMeters(_baselinePdrResult?.netDisplacementM);
+  }
+
+  String get _baselinePdrNominalPathLabel {
+    return _formatMeters(_baselinePdrResult?.nominalIntegratedPathLengthM);
+  }
+
+  String get _baselinePdrMedianAssociationAgeLabel {
+    final double? value = _baselinePdrResult?.medianHeadingAssociationAgeMs;
+    return value == null ? 'Not available' : '${value.toStringAsFixed(3)} ms';
+  }
+
   String _formatRadians(double? value) {
     return value == null ? 'Not available' : '${value.toStringAsFixed(6)} rad';
+  }
+
+  String _formatMeters(double? value) {
+    return value == null ? 'Not available' : '${value.toStringAsFixed(3)} m';
   }
 
   String _booleanAvailabilityLabel(bool? value) {
@@ -682,6 +781,8 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
       _gnssAnchorState = GnssAnchorRuntimeState.noAnchor;
       _headingResult = null;
       _headingDiagnosticStatus = 'Idle';
+      _baselinePdrResult = null;
+      _baselinePdrStatus = 'Idle';
       _formattedOutput = _jsonEncoder.convert(sanitizedResult);
       _errorMessage = null;
     });
@@ -970,6 +1071,194 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
       if (mounted) {
         setState(() {
           _stepCancellationRequestInFlight = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _refreshBaselinePdrPreflight() async {
+    if (_isBusy) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = _DiagnosticOperation.baselinePdrPreflight;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+
+    BaselinePdrPreflight? nextPreflight;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+
+    try {
+      final Object? rawResult = await _baselinePdrChannel.invokeMethod<Object?>(
+        'getBaselinePdrPreflight',
+      );
+      final BaselinePdrPreflight parsed = BaselinePdrPreflight.fromPlatform(
+        rawResult,
+      );
+      nextPreflight = parsed;
+      sanitizedLog = parsed.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(parsed.sanitizedMetadata);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextError = 'Baseline PDR preflight failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'Baseline PDR channel is unavailable on this platform.';
+    } on FormatException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'invalid_baseline_pdr_preflight',
+      };
+      nextError = 'Native baseline PDR preflight response was invalid.';
+    } catch (_) {
+      nextError = 'Unexpected error while refreshing baseline PDR preflight.';
+    }
+
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_BASELINE_PDR_PREFLIGHT_BEGIN',
+      endMarker: 'NAVGUARD_BASELINE_PDR_PREFLIGHT_END',
+      value: sanitizedLog,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = null;
+      _baselinePdrPreflight = nextPreflight;
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _runBaselinePdrDiagnostic() async {
+    final GnssAnchor? anchor = _gnssAnchor;
+    if (!_canRunBaselinePdr || anchor == null) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = _DiagnosticOperation.baselinePdrDiagnostic;
+      _baselinePdrStatus = 'Running';
+      _baselinePdrResult = null;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+
+    BaselinePdrDiagnosticResult? nextResult;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+
+    try {
+      // Locked-anchor coordinates are internal-only declination inputs. They
+      // are never included in sanitized logs, result metadata, or UI output.
+      final Object? rawResult = await _baselinePdrChannel
+          .invokeMethod<Object?>('runBaselinePdrDiagnostic', <String, Object?>{
+            'latitudeDeg': anchor.latitudeDeg,
+            'longitudeDeg': anchor.longitudeDeg,
+            'altitudeEllipsoidM': anchor.altitudeEllipsoidM,
+          });
+      final BaselinePdrDiagnosticResult parsed =
+          BaselinePdrDiagnosticResult.fromPlatform(rawResult);
+      nextResult = parsed;
+      sanitizedLog = parsed.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(parsed.sanitizedMetadata);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextError = 'Baseline PDR diagnostic failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'Baseline PDR channel is unavailable on this platform.';
+    } on FormatException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'invalid_baseline_pdr_response',
+      };
+      nextError = 'Native baseline PDR response was invalid.';
+    } catch (_) {
+      nextError = 'Unexpected error while running baseline PDR.';
+    }
+
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_BASELINE_PDR_DIAGNOSTIC_BEGIN',
+      endMarker: 'NAVGUARD_BASELINE_PDR_DIAGNOSTIC_END',
+      value: sanitizedLog,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = null;
+      _baselinePdrResult = nextResult;
+      _baselinePdrStatus = nextResult == null ? 'Failed' : 'Success';
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _cancelBaselinePdrDiagnostic() async {
+    if (!_isBaselinePdrDiagnosticLoading ||
+        _baselinePdrCancellationRequestInFlight) {
+      return;
+    }
+
+    setState(() {
+      _baselinePdrCancellationRequestInFlight = true;
+    });
+
+    try {
+      await _baselinePdrChannel.invokeMethod<Object?>(
+        'cancelBaselinePdrDiagnostic',
+      );
+    } on PlatformException catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Baseline PDR cancellation failed (${error.code}).';
+        });
+      }
+    } on MissingPluginException {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'Baseline PDR channel is unavailable on this platform.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Unexpected error while cancelling baseline PDR.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _baselinePdrCancellationRequestInFlight = false;
         });
       }
     }
@@ -1629,6 +1918,116 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
               ],
               const Divider(height: 32),
               Text(
+                'Baseline PDR',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text('Rotation Vector: $_baselinePdrRotationVectorLabel'),
+              const SizedBox(height: 4),
+              Text('Step Detector: $_baselinePdrStepDetectorLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Physical activity permission: '
+                '$_baselinePdrPermissionLabel',
+              ),
+              const SizedBox(height: 4),
+              Text('Anchor: $_baselinePdrAnchorLabel'),
+              const SizedBox(height: 4),
+              Text('Baseline PDR: $_baselinePdrStatus'),
+              const SizedBox(height: 4),
+              const Text('Formal window: 30 s'),
+              const SizedBox(height: 4),
+              const Text('Step length model: Fixed 0.75 m'),
+              const SizedBox(height: 4),
+              Text('Detected step events: $_baselinePdrDetectedStepsLabel'),
+              const SizedBox(height: 4),
+              Text('Integrated steps: $_baselinePdrIntegratedStepsLabel'),
+              const SizedBox(height: 4),
+              Text('Unassociated steps: $_baselinePdrUnassociatedStepsLabel'),
+              const SizedBox(height: 4),
+              Text('Final East: $_baselinePdrFinalEastLabel'),
+              const SizedBox(height: 4),
+              Text('Final North: $_baselinePdrFinalNorthLabel'),
+              const SizedBox(height: 4),
+              Text('Net displacement: $_baselinePdrNetDisplacementLabel'),
+              const SizedBox(height: 4),
+              Text('Nominal path length: $_baselinePdrNominalPathLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Median heading association age: '
+                '$_baselinePdrMedianAssociationAgeLabel',
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Step length accuracy: NOT VALIDATED\n'
+                'True-north accuracy: NOT VALIDATED\n'
+                'Distance accuracy: NOT VALIDATED\n'
+                'Body heading: NOT IMPLEMENTED',
+                textAlign: TextAlign.center,
+              ),
+              if (_baselinePdrPreflight
+                          ?.activityRecognitionPermissionRequired ==
+                      true &&
+                  _baselinePdrPreflight?.activityRecognitionPermissionGranted ==
+                      false) ...<Widget>[
+                const SizedBox(height: 8),
+                const Text(
+                  'Physical activity permission required. '
+                  'Grant it from Step-Event Foundation.',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isBusy ? null : _refreshBaselinePdrPreflight,
+                icon: _isBaselinePdrPreflightLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(
+                  _isBaselinePdrPreflightLoading
+                      ? 'Refreshing Baseline PDR Preflight...'
+                      : 'Refresh Baseline PDR Preflight',
+                ),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: _canRunBaselinePdr
+                    ? _runBaselinePdrDiagnostic
+                    : null,
+                icon: _isBaselinePdrDiagnosticLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.route_outlined),
+                label: Text(
+                  _isBaselinePdrDiagnosticLoading
+                      ? 'Running Baseline PDR...'
+                      : 'Run Baseline PDR',
+                ),
+              ),
+              if (_isBaselinePdrDiagnosticLoading) ...<Widget>[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _baselinePdrCancellationRequestInFlight
+                      ? null
+                      : _cancelBaselinePdrDiagnostic,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: Text(
+                    _baselinePdrCancellationRequestInFlight
+                        ? 'Cancelling Baseline PDR...'
+                        : 'Cancel Baseline PDR',
+                  ),
+                ),
+              ],
+              const Divider(height: 32),
+              Text(
                 'ARCore Runtime Diagnostics',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
@@ -1752,6 +2151,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         return 'Requesting physical activity permission...';
       case _DiagnosticOperation.stepDiagnostic:
         return 'Running step-event diagnostic...';
+      case _DiagnosticOperation.baselinePdrPreflight:
+        return 'Refreshing baseline PDR preflight...';
+      case _DiagnosticOperation.baselinePdrDiagnostic:
+        return 'Running baseline PDR diagnostic...';
       case _DiagnosticOperation.arCorePreflight:
         return 'Refreshing ARCore preflight...';
       case _DiagnosticOperation.arCorePermission:

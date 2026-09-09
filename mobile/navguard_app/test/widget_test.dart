@@ -54,7 +54,7 @@ void main() {
     expect(find.text('Acquire GNSS Anchor'), findsOneWidget);
 
     expect(find.text('Heading / True-North Reference'), findsOneWidget);
-    expect(find.text('Rotation Vector: Unknown'), findsOneWidget);
+    expect(find.text('Rotation Vector: Unknown'), findsNWidgets(2));
     expect(find.text('Anchor: Not locked'), findsOneWidget);
     expect(find.text('Heading diagnostic: Idle'), findsOneWidget);
     expect(find.text('Device forward axis: Top edge (+Y)'), findsOneWidget);
@@ -86,17 +86,45 @@ void main() {
     expect(find.text('Refresh Heading Preflight'), findsOneWidget);
     expect(find.text('Run Heading Diagnostic'), findsOneWidget);
     expect(find.text('Step-Event Foundation'), findsOneWidget);
-    expect(find.text('Step Detector: Unknown'), findsOneWidget);
-    expect(find.text('Physical activity permission: Unknown'), findsOneWidget);
+    expect(find.text('Step Detector: Unknown'), findsNWidgets(2));
+    expect(
+      find.text('Physical activity permission: Unknown'),
+      findsNWidgets(2),
+    );
     expect(find.text('Step diagnostic: Idle'), findsOneWidget);
-    expect(find.text('Formal window: 30 s'), findsOneWidget);
-    expect(find.text('Detected step events: Not available'), findsOneWidget);
+    expect(find.text('Formal window: 30 s'), findsNWidgets(2));
+    expect(find.text('Detected step events: Not available'), findsNWidgets(2));
     expect(find.text('Invalid events: Not available'), findsOneWidget);
     expect(find.text('Median step interval: Not available'), findsOneWidget);
     expect(find.text('Observed cadence: Not available'), findsOneWidget);
     expect(find.text('Step detection accuracy: NOT VALIDATED'), findsOneWidget);
     expect(find.text('Refresh Step Preflight'), findsOneWidget);
     expect(find.text('Run Step Diagnostic'), findsOneWidget);
+
+    expect(find.text('Baseline PDR'), findsOneWidget);
+    expect(find.text('Anchor: Required'), findsOneWidget);
+    expect(find.text('Baseline PDR: Idle'), findsOneWidget);
+    expect(find.text('Step length model: Fixed 0.75 m'), findsOneWidget);
+    expect(find.text('Integrated steps: Not available'), findsOneWidget);
+    expect(find.text('Unassociated steps: Not available'), findsOneWidget);
+    expect(find.text('Final East: Not available'), findsOneWidget);
+    expect(find.text('Final North: Not available'), findsOneWidget);
+    expect(find.text('Net displacement: Not available'), findsOneWidget);
+    expect(find.text('Nominal path length: Not available'), findsOneWidget);
+    expect(
+      find.text('Median heading association age: Not available'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Step length accuracy: NOT VALIDATED'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Body heading: NOT IMPLEMENTED'),
+      findsOneWidget,
+    );
+    expect(find.text('Refresh Baseline PDR Preflight'), findsOneWidget);
+    expect(find.text('Run Baseline PDR'), findsOneWidget);
 
     expect(find.text('ARCore Runtime Diagnostics'), findsOneWidget);
     expect(find.text('Camera Permission: Unknown'), findsOneWidget);
