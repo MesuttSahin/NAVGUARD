@@ -54,7 +54,7 @@ void main() {
     expect(find.text('Acquire GNSS Anchor'), findsOneWidget);
 
     expect(find.text('Heading / True-North Reference'), findsOneWidget);
-    expect(find.text('Rotation Vector: Unknown'), findsNWidgets(2));
+    expect(find.text('Rotation Vector: Unknown'), findsNWidgets(3));
     expect(find.text('Anchor: Not locked'), findsOneWidget);
     expect(find.text('Heading diagnostic: Idle'), findsOneWidget);
     expect(find.text('Device forward axis: Top edge (+Y)'), findsOneWidget);
@@ -107,8 +107,8 @@ void main() {
     expect(find.text('Step length model: Fixed 0.75 m'), findsOneWidget);
     expect(find.text('Integrated steps: Not available'), findsOneWidget);
     expect(find.text('Unassociated steps: Not available'), findsOneWidget);
-    expect(find.text('Final East: Not available'), findsOneWidget);
-    expect(find.text('Final North: Not available'), findsOneWidget);
+    expect(find.text('Final East: Not available'), findsNWidgets(2));
+    expect(find.text('Final North: Not available'), findsNWidgets(2));
     expect(find.text('Net displacement: Not available'), findsOneWidget);
     expect(find.text('Nominal path length: Not available'), findsOneWidget);
     expect(
@@ -135,5 +135,40 @@ void main() {
     expect(find.text('Tracking Acquisition Timeout: 30 s'), findsOneWidget);
     expect(find.text('Tracking Collection Duration: 30 s'), findsOneWidget);
     expect(find.text('Run ARCore Tracking Diagnostic'), findsOneWidget);
+
+    expect(find.text('ARCore → ENU Foundation'), findsOneWidget);
+    expect(find.text('ARCore: Unknown'), findsOneWidget);
+    expect(find.text('Camera permission: Unknown'), findsOneWidget);
+    expect(find.text('GNSS Anchor: Required'), findsOneWidget);
+    expect(find.text('Alignment: Not started'), findsOneWidget);
+    expect(find.text('ARCore → ENU: Idle'), findsOneWidget);
+    expect(find.text('Alignment hold: 2 s'), findsOneWidget);
+    expect(find.text('Formal movement window: 30 s'), findsOneWidget);
+    expect(find.text('Tracking fraction: Not available'), findsOneWidget);
+    expect(find.text('Usable ENU frames: Not available'), findsOneWidget);
+    expect(find.text('Final Up: Not available'), findsOneWidget);
+    expect(find.text('Horizontal displacement: Not available'), findsOneWidget);
+    expect(find.text('3D displacement: Not available'), findsOneWidget);
+    expect(
+      find.text('Max horizontal excursion: Not available'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Median AR frame interval: Not available'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('ARCore position accuracy: NOT VALIDATED'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('PDR fusion: NOT IMPLEMENTED'), findsOneWidget);
+    expect(
+      find.text('Refresh ARCore → ENU Preflight', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Run ARCore → ENU Diagnostic', skipOffstage: false),
+      findsOneWidget,
+    );
   });
 }

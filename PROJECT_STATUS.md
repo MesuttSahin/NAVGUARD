@@ -4,21 +4,21 @@
 
 ### Current State
 
-**Project Phase:** Stage 4 — Baseline PDR Implemented, Statically Validated, and Physically Verified — Documentation Synchronization Complete; Commit-Readiness Audit Pending
+**Project Phase:** Stage 5 — ARCore Relative Motion → ENU Foundation Implemented, Statically Validated, and Physically Verified — Documentation Synchronization Complete; Commit-Readiness Audit Pending
 
-**Repository Status:** Six Stage 4 Implementation/Test Paths and Four Documentation Paths Unstaged — Final Combined 10-Path Commit-Readiness Audit Pending
+**Repository Status:** Six Stage 5 Implementation/Test Paths and Four Documentation Paths Unstaged — Final Combined 10-Path Commit-Readiness Audit Pending
 
 **Technical Documentation:** Baseline Completed
 
-**Application Development:** Started — Bootstrap + SensorManager Capability Inventory + Four-Sensor Live Timing Diagnostics + GNSS Runtime Timing Diagnostics + ARCore Runtime Tracking Diagnostics + GNSS Anchor / WGS84 Local ENU Foundation + Handset Heading / True-North Correction Foundation + Step-Event Foundation + Deterministic Baseline PDR
+**Application Development:** Started — Bootstrap + SensorManager Capability Inventory + Four-Sensor Live Timing Diagnostics + GNSS Runtime Timing Diagnostics + ARCore Runtime Tracking Diagnostics + GNSS Anchor / WGS84 Local ENU Foundation + Handset Heading / True-North Correction Foundation + Step-Event Foundation + Deterministic Baseline PDR + ARCore Relative Motion → ENU Foundation
 
-**Experimental Evaluation:** Partial — Device/runtime diagnostic characterization and Stage 3A–4 foundation verification only; navigation and metrological accuracy evaluation not started
+**Experimental Evaluation:** Partial — Device/runtime diagnostic characterization and Stage 3A–5 foundation verification only; navigation and metrological accuracy evaluation not started
 
 ---
 
 ### Current Milestone
 
-Stage 4 implementation, 118/118-test static validation, physical baseline-PDR verification, cancellation verification, and documentation synchronization are complete. Preparation for the final combined 10-path commit-readiness audit is in progress.
+Stage 5 implementation, 141/141-test static validation, scoped physical ARCore-to-ENU verification, cancellation verification, and documentation synchronization are complete. Preparation for the final combined 10-path commit-readiness audit is in progress.
 ---
 
 ### Completed
@@ -91,20 +91,28 @@ Stage 4 implementation, 118/118-test static validation, physical baseline-PDR ve
 * An intended 10 + turn + 10 L-shaped walk accepted, associated, and integrated 22 events, ending at approximately `(-6.621, 11.423) m` with 13.203 m net displacement and 16.5 m nominal path length. The two-event difference is recorded without assigning a proven cause or claiming step-detection accuracy.
 * A targeted independent north check after correcting the physical orientation produced first/last true-north-corrected headings of approximately 0.1036/0.1242 rad with 1,535 valid samples, resolving the earlier direction concern without validating heading or true-north absolute accuracy.
 * Explicit Stage 4 cancellation returned `baseline_pdr_cancelled`. No raw trajectory, sensor samples, sensor timestamps, anchor coordinates, or live GNSS data is returned or persisted by the Stage 4 result.
+* Stage 5 implemented segment-relative local ENU displacement from ARCore `Frame.getAndroidSensorPose()` using the Android sensor frame: +X physical device right, +Y physical top edge, and +Z outward from the screen. Display-rotation remapping and camera optical forward are not used.
+* After a 2-second stationary-assumed alignment with a 15-second acquisition timeout, Stage 5 creates a local ARCore anchor at the initial Android sensor pose. Formal relative pose is `anchor.pose.inverse().compose(currentAndroidSensorPose)`, and the 30-second movement window is controlled by `SystemClock.elapsedRealtimeNanos()`.
+* Initial device-to-true-ENU alignment uses `TYPE_ROTATION_VECTOR` plus locked-anchor `android.hardware.GeomagneticField` declination. The locked Stage 3A anchor is used only for declination; no live GNSS, travel bearing, Geospatial API, cloud anchor, or fallback motion estimator is used.
+* Rotation-vector timing uses `SensorEvent.timestamp`; ARCore ordering and aggregate frame timing use `Frame.getTimestamp()`. ARCore defines no shared timestamp epoch with sensor events, so `crossClockTimestampComparisonUsed = false` and no cross-clock latency is calculated.
+* Stage 5 changed exactly six implementation/test paths. `flutter analyze --no-pub`, all 141/141 tests, `flutter build apk --debug`, and `git diff --check` passed; no manifest or dependency change was required.
+* The stationary formal session ended approximately 0.081 m horizontally from the origin with approximately 0.100 m maximum horizontal excursion. The north-like walk ended near `(E, N) = (1.507, 8.223) m`; the east-like walk ended near `(9.129, -1.176) m` with one duplicate and zero non-monotonic AR frame timestamps.
+* The approximate 90-degree in-place rotation ended at approximately 0.503 m horizontal displacement, substantially below the approximately 8–9 m straight-walk results. This is a qualitative axis/translation observation, not a validated error threshold. Explicit cancellation returned `arcore_enu_cancelled`.
+* Completed Stage 5 formal measurement sessions reported `trackingFraction = 1.0` and no `PAUSED` or `STOPPED` frames. No universal tracking guarantee or tracking-loss recovery validation follows. Raw ARCore poses, trajectories, rotation-vector samples, timestamps, camera images, and anchor coordinates are not returned or persisted.
 
 ---
 
 ### In Progress
 
-* The six Stage 4 implementation/test paths and four synchronized documentation paths remain unstaged while the final combined 10-path commit-readiness audit is prepared.
+* The six Stage 5 implementation/test paths and four synchronized documentation paths remain unstaged while the final combined 10-path commit-readiness audit is prepared.
 
 ---
 
 ### Next
 
-* Run the final combined Stage 4 implementation and documentation commit-readiness audit.
-* If that gate passes, perform controlled staging of the approved 10-path Stage 4 scope.
-* Continue with the planned Stage 5 — ARCore Relative Motion → ENU Foundation. Stage 5 is not implemented.
+* Run the final combined Stage 5 implementation and documentation commit-readiness audit.
+* If that gate passes, perform controlled staging of the approved 10-path Stage 5 scope.
+* Continue with the planned Stage 6 — Evaluation Mode + Ground Truth Firewall. Stage 6 is not implemented.
 * Complete the remaining device/runtime checks before freezing the device baseline.
 
 ---
@@ -115,7 +123,7 @@ Stage 4 implementation, 118/118-test static validation, physical baseline-PDR ve
 | ------------------------------------------- | ----------------------------------------------------------------- |
 | Development Environment                     | Completed                                                         |
 | Android / Flutter Project                   | Implemented — Bootstrap                                           |
-| Device Capability Verification              | Partial — Stage 2A Metadata + Stage 2B Sensor Timing + Stage 2C GNSS Timing + Stage 2D ARCore Tracking + Stage 3A GNSS Anchor Flow + Stage 3B Heading Foundation + Stage 3C Step Events + Stage 4 Baseline PDR |
+| Device Capability Verification              | Partial — Stage 2A Metadata + Stage 2B Sensor Timing + Stage 2C GNSS Timing + Stage 2D ARCore Tracking + Stage 3A GNSS Anchor Flow + Stage 3B Heading Foundation + Stage 3C Step Events + Stage 4 Baseline PDR + Stage 5 ARCore-to-ENU |
 | SensorManager Capability Inventory          | Implemented and Physically Verified                               |
 | Continuous Sensor Acquisition               | Implemented — Stage 2B Diagnostic Timing Scope Only               |
 | Sensor Rate / Timestamp Characterization    | Physically Verified — Tested Stage 2B Scope                       |
@@ -127,7 +135,7 @@ Stage 4 implementation, 118/118-test static validation, physical baseline-PDR ve
 | GNSS Denial Controller / Ground Truth Firewall | Not Implemented                                                |
 | ARCore Runtime Tracking Diagnostics         | Implemented and Physically Verified — Tested Stage 2D Scope       |
 | ARCore Distance / Absolute Accuracy         | Not Validated                                                     |
-| ARCore-to-ENU Transform                     | Not Implemented                                                   |
+| ARCore-to-ENU Transform                     | Implemented and Physically Verified — Stage 5 Scope; Accuracy Not Validated |
 | PDR                                         | Baseline Position Implemented and Physically Verified — Accuracy Not Validated |
 | Handset Heading / True-North Foundation     | Implemented and Physically Verified — Stage 3B Runtime Scope; Absolute Accuracy Not Validated |
 | Body Heading / Handset-to-Body Calibration  | Not Implemented                                                   |
@@ -137,8 +145,8 @@ Stage 4 implementation, 118/118-test static validation, physical baseline-PDR ve
 | Motion AI                                   | Not Implemented                                                   |
 | Quality Engine                              | Not Implemented                                                   |
 | EKF / Sensor Fusion                         | Not Implemented                                                   |
-| Testing                                     | Stage 1 + Stage 2A + Stage 2B + Stage 2C + Stage 2D + Stage 3A + Stage 3B + Stage 3C + Stage 4 Defined Scopes Passed |
-| Field Experiments                           | Not Started                                                       |
+| Testing                                     | Stage 1 + Stage 2A + Stage 2B + Stage 2C + Stage 2D + Stage 3A + Stage 3B + Stage 3C + Stage 4 + Stage 5 Defined Scopes Passed |
+| Field Experiments                           | Partial — Scoped Foundation Verification Only                     |
 | Final Benchmark / Evaluation                | Not Run                                                           |
 
 ---
@@ -171,7 +179,7 @@ Raw experimental data, precise location logs, credentials, secrets, and other se
 
 ### Current Development Rule
 
-Flutter Android bootstrap, Stage 2A SensorManager runtime capability inventory, Stage 2B four-sensor live timing diagnostics, Stage 2C GNSS runtime timing diagnostics, Stage 2D ARCore runtime tracking diagnostics, Stage 3A — GNSS Anchor + Local ENU Reference Foundation, Stage 3B — Heading / True-North Reference Foundation, Stage 3C — Step-Event Foundation, and Stage 4 — Baseline PDR are implemented and verified for their defined scopes.
+Flutter Android bootstrap, Stage 2A SensorManager runtime capability inventory, Stage 2B four-sensor live timing diagnostics, Stage 2C GNSS runtime timing diagnostics, Stage 2D ARCore runtime tracking diagnostics, Stage 3A — GNSS Anchor + Local ENU Reference Foundation, Stage 3B — Heading / True-North Reference Foundation, Stage 3C — Step-Event Foundation, Stage 4 — Baseline PDR, and Stage 5 — ARCore Relative Motion → ENU Foundation are implemented and verified for their defined scopes.
 
 Stage 2B physically verified live event delivery and timestamp-derived timing behavior for the accelerometer, gyroscope, magnetometer, and rotation vector in 12 tested sessions under a 20,000 µs request. Requested and observed rates remain distinct, the 60 ms gap threshold remains provisional, and these results do not verify sensor noise, bias, calibration, heading, or navigation performance.
 
@@ -187,7 +195,9 @@ Stage 3C physically verified the `TYPE_STEP_DETECTOR`-only formal step-event pat
 
 Stage 4 physically verified the deterministic baseline-PDR runtime path. The stationary session integrated zero steps; both manually counted 20-step straight walks integrated 20 steps; and the intended 20-step L-shaped pattern integrated 22 detected events. All walking events were causally associated without future headings, and explicit cancellation passed. A corrected independent north check resolved the earlier physically misidentified direction reference. No accuracy percentage or metrological accuracy claim follows from these scoped observations.
 
-Physical verification remains partial and the device baseline is not frozen. PDR accuracy, step-detection accuracy, step-length accuracy, heading absolute accuracy, true-north absolute accuracy, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, and same-location anchor repeatability were not validated. Body heading and handset-to-body calibration are not implemented. ARCore distance, scale, rotation, drift, and absolute accuracy remain unvalidated; ARCore-to-ENU and ARCore fusion are not implemented. The denial controller, Ground Truth Firewall runtime, Motion AI, Quality Engine, EKF / Sensor Fusion, relocalization, and full GNSS-denied navigation are not implemented. Other required device checks remain pending; the 20% improvement target is unmeasured and no navigation benchmark has been evaluated.
+Stage 5 physically verified the defined ARCore-to-ENU runtime path. The stationary, independently identified north-like, independently identified east-like, and approximate 90-degree in-place rotation sessions completed; the straight-walk outputs had the expected dominant positive ENU axes, the rotation displacement remained much smaller than the straight-walk displacements, and explicit cancellation passed. All completed formal sessions reported full camera tracking in their observed windows. These observations validate the scoped runtime flow and qualitative axis/sign behavior, not metrological accuracy.
+
+Physical verification remains partial and the device baseline is not frozen. PDR accuracy, step-detection accuracy, step-length accuracy, heading absolute accuracy, true-north absolute accuracy, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, same-location anchor repeatability, ARCore position/distance/vertical accuracy, and ENU-alignment accuracy were not validated. Body heading and handset-to-body calibration are not implemented. ARCore-to-ENU is implemented, but ARCore/PDR fusion is not. The denial controller, Ground Truth Firewall runtime, Evaluation Mode, Motion AI, Quality Engine, EKF / Sensor Fusion, relocalization, and full GNSS-denied navigation are not implemented. Other required device checks remain pending; the 20% improvement target is unmeasured and no navigation benchmark has been evaluated.
 
 ---
 
@@ -203,21 +213,21 @@ Physical verification remains partial and the device baseline is not frozen. PDR
 
 ### Mevcut Durum
 
-**Proje Aşaması:** Aşama 4 — Temel PDR Uygulandı, Statik Olarak Doğrulandı ve Fiziksel Olarak Doğrulandı — Dokümantasyon Senkronizasyonu Tamamlandı; Commit-Readiness Denetimi Bekliyor
+**Proje Aşaması:** Aşama 5 — ARCore Göreli Hareket → ENU Temeli Uygulandı, Statik Olarak Doğrulandı ve Fiziksel Olarak Doğrulandı — Dokümantasyon Senkronizasyonu Tamamlandı; Commit-Readiness Denetimi Bekliyor
 
-**Repository Durumu:** Altı Stage 4 Uygulama/Test Yolu ve Dört Dokümantasyon Yolu Unstaged — Nihai Birleşik 10-Yolluk Commit-Readiness Denetimi Bekliyor
+**Repository Durumu:** Altı Stage 5 Uygulama/Test Yolu ve Dört Dokümantasyon Yolu Unstaged — Nihai Birleşik 10-Yolluk Commit-Readiness Denetimi Bekliyor
 
 **Teknik Dokümantasyon:** Baseline Tamamlandı
 
-**Uygulama Geliştirme:** Başladı — Bootstrap + SensorManager Yetenek Envanteri + Dört Sensörlü Canlı Zamanlama Tanıları + GNSS Çalışma Zamanı Zamanlama Tanıları + ARCore Çalışma Zamanı Takip Tanıları + GNSS Anchor / WGS84 Yerel ENU Temeli + Handset Heading / Gerçek Kuzey Düzeltme Temeli + Adım Olayı Temeli + Deterministik Temel PDR
+**Uygulama Geliştirme:** Başladı — Bootstrap + SensorManager Yetenek Envanteri + Dört Sensörlü Canlı Zamanlama Tanıları + GNSS Çalışma Zamanı Zamanlama Tanıları + ARCore Çalışma Zamanı Takip Tanıları + GNSS Anchor / WGS84 Yerel ENU Temeli + Handset Heading / Gerçek Kuzey Düzeltme Temeli + Adım Olayı Temeli + Deterministik Temel PDR + ARCore Göreli Hareket → ENU Temeli
 
-**Deneysel Değerlendirme:** Kısmi — Cihaz/çalışma zamanı tanı karakterizasyonu ve Stage 3A–4 temel doğrulamaları; navigasyon ve metrolojik doğruluk değerlendirmesi başlamadı
+**Deneysel Değerlendirme:** Kısmi — Cihaz/çalışma zamanı tanı karakterizasyonu ve Stage 3A–5 temel doğrulamaları; navigasyon ve metrolojik doğruluk değerlendirmesi başlamadı
 
 ---
 
 ### Mevcut Kilometre Taşı
 
-Stage 4 uygulaması, 118/118 testli statik doğrulaması, fiziksel baseline-PDR doğrulaması, iptal doğrulaması ve dokümantasyon senkronizasyonu tamamlandı. Nihai birleşik 10-yolluk commit-readiness denetimi için hazırlık devam ediyor.
+Stage 5 uygulaması, 141/141 testli statik doğrulaması, kapsamı belirli fiziksel ARCore-to-ENU doğrulaması, iptal doğrulaması ve dokümantasyon senkronizasyonu tamamlandı. Nihai birleşik 10-yolluk commit-readiness denetimi için hazırlık devam ediyor.
 
 ---
 
@@ -291,20 +301,28 @@ Stage 4 uygulaması, 118/118 testli statik doğrulaması, fiziksel baseline-PDR 
 * Hedeflenen 10 + dönüş + 10 L-biçimli yürüyüş 22 olayı kabul etti, ilişkilendirdi ve entegre etti; yaklaşık `(-6,621, 11,423) m`, 13,203 m net yer değiştirme ve 16,5 m nominal yol uzunluğu üretti. İki olaylık fark, kanıtlanmış neden veya adım-algılama doğruluğu iddiası olmadan kaydedilir.
 * Fiziksel yön düzeltildikten sonraki hedefli bağımsız kuzey kontrolü, 1.535 geçerli örnekle yaklaşık 0,1036/0,1242 rad ilk/son gerçek-kuzey-düzeltilmiş heading üretti; bu, heading veya gerçek-kuzey mutlak doğruluğunu doğrulamadan önceki yön endişesini çözdü.
 * Açık Stage 4 iptali `baseline_pdr_cancelled` döndürdü. Stage 4 sonucu ham rota, sensör örneği, sensör zaman damgası, anchor koordinatı veya canlı GNSS verisi döndürmez ya da kalıcılaştırmaz.
+* Stage 5, Android sensör çerçevesinde ARCore `Frame.getAndroidSensorPose()` kullanarak segment-göreli yerel ENU yer değiştirmesini uyguladı: +X cihazın fiziksel sağı, +Y fiziksel üst kenar ve +Z ekrandan dışarıdır. Ekran-dönüşü remapping'i ve kamera optik ileri yönü kullanılmaz.
+* Sabitliğin varsayıldığı 2 saniyelik hizalama ve 15 saniyelik edinim timeout'undan sonra Stage 5 ilk Android sensör pozunda yerel ARCore anchor'ı oluşturur. Resmî göreli poz `anchor.pose.inverse().compose(currentAndroidSensorPose)` ile hesaplanır ve 30 saniyelik hareket penceresi `SystemClock.elapsedRealtimeNanos()` ile yönetilir.
+* İlk cihazdan gerçek ENU'ya hizalama, `TYPE_ROTATION_VECTOR` ile kilitli-anchor `android.hardware.GeomagneticField` declination değerini kullanır. Kilitli Stage 3A anchor yalnızca declination için kullanılır; canlı GNSS, travel bearing, Geospatial API, cloud anchor veya fallback hareket tahmin motoru kullanılmaz.
+* Rotation-vector zamanlaması `SensorEvent.timestamp`; ARCore sıralama ve birleşik kare zamanlaması `Frame.getTimestamp()` kullanır. ARCore, sensör olaylarıyla ortak zaman damgası epoch'u tanımlamadığından `crossClockTimestampComparisonUsed = false` değeridir ve cross-clock gecikmesi hesaplanmaz.
+* Stage 5 tam altı uygulama/test yolunu değiştirdi. `flutter analyze --no-pub`, 141/141 testin tamamı, `flutter build apk --debug` ve `git diff --check` geçti; manifest veya dependency değişikliği gerekmedi.
+* Sabit resmî oturum başlangıçtan yaklaşık 0,081 m yatay uzaklıkta, yaklaşık 0,100 m maksimum yatay sapmayla sonlandı. Kuzey-benzeri yürüyüş yaklaşık `(E, N) = (1,507, 8,223) m`; doğu-benzeri yürüyüş bir duplicate ve sıfır monotonik-olmayan AR kare zaman damgasıyla yaklaşık `(9,129, -1,176) m` sonucunu verdi.
+* Yaklaşık 90 derecelik yerinde dönüş yaklaşık 0,503 m yatay yer değiştirmeyle, yaklaşık 8–9 m düz-yürüyüş sonuçlarından belirgin biçimde düşük kaldı. Bu nitel bir eksen/öteleme gözlemidir; doğrulanmış hata eşiği değildir. Açık iptal `arcore_enu_cancelled` döndürdü.
+* Tamamlanan Stage 5 resmî ölçüm oturumları `trackingFraction = 1.0` ve sıfır `PAUSED`/`STOPPED` kare bildirdi. Bundan evrensel takip garantisi veya tracking-loss recovery doğrulaması çıkarılamaz. Ham ARCore pozları, rotalar, rotation-vector örnekleri, zaman damgaları, kamera görüntüleri ve anchor koordinatları döndürülmez veya kalıcılaştırılmaz.
 
 ---
 
 ### Devam Edenler
 
-* Altı Stage 4 uygulama/test yolu ve dört senkronize dokümantasyon yolu unstaged durumdadır; nihai birleşik 10-yolluk commit-readiness denetimi hazırlanmaktadır.
+* Altı Stage 5 uygulama/test yolu ve dört senkronize dokümantasyon yolu unstaged durumdadır; nihai birleşik 10-yolluk commit-readiness denetimi hazırlanmaktadır.
 
 ---
 
 ### Sonraki Adımlar
 
-* Nihai birleşik Stage 4 uygulama ve dokümantasyon commit-readiness denetimini çalıştır.
-* Bu kapı geçerse onaylanan 10-yolluk Stage 4 kapsamını kontrollü biçimde stage et.
-* Planlanan Aşama 5 — ARCore Göreli Hareket → ENU Temeli ile devam et. Stage 5 uygulanmamıştır.
+* Nihai birleşik Stage 5 uygulama ve dokümantasyon commit-readiness denetimini çalıştır.
+* Bu kapı geçerse onaylanan 10-yolluk Stage 5 kapsamını kontrollü biçimde stage et.
+* Planlanan Aşama 6 — Değerlendirme Modu + Ground Truth Firewall ile devam et. Stage 6 uygulanmamıştır.
 * Cihaz baseline'ını sabitlemeden önce kalan cihaz/çalışma zamanı kontrollerini tamamla.
 
 ---
@@ -315,7 +333,7 @@ Stage 4 uygulaması, 118/118 testli statik doğrulaması, fiziksel baseline-PDR 
 | ------------------------------------------- | ----------------------------------------------------------------- |
 | Geliştirme Ortamı                           | Tamamlandı                                                        |
 | Android / Flutter Projesi                   | Uygulandı — Bootstrap                                             |
-| Cihaz Yetenek Doğrulaması                   | Kısmi — Stage 2A Metadata + Stage 2B Sensör Zamanlaması + Stage 2C GNSS Zamanlaması + Stage 2D ARCore Takibi + Stage 3A GNSS Anchor Akışı + Stage 3B Heading Temeli + Stage 3C Adım Olayları + Stage 4 Temel PDR |
+| Cihaz Yetenek Doğrulaması                   | Kısmi — Stage 2A Metadata + Stage 2B Sensör Zamanlaması + Stage 2C GNSS Zamanlaması + Stage 2D ARCore Takibi + Stage 3A GNSS Anchor Akışı + Stage 3B Heading Temeli + Stage 3C Adım Olayları + Stage 4 Temel PDR + Stage 5 ARCore-to-ENU |
 | SensorManager Yetenek Envanteri             | Uygulandı ve Fiziksel Olarak Doğrulandı                           |
 | Sürekli Sensör Verisi Alımı                 | Uygulandı — Yalnızca Stage 2B Tanı Zamanlaması Kapsamı             |
 | Sensör Hızı / Zaman Damgası Karakterizasyonu | Fiziksel Olarak Doğrulandı — Test Edilen Stage 2B Kapsamı       |
@@ -327,7 +345,7 @@ Stage 4 uygulaması, 118/118 testli statik doğrulaması, fiziksel baseline-PDR 
 | GNSS Kesinti Denetleyicisi / Ground Truth Firewall | Uygulanmadı                                                |
 | ARCore Çalışma Zamanı Takip Tanıları        | Uygulandı ve Fiziksel Olarak Doğrulandı — Test Edilen Stage 2D Kapsamı |
 | ARCore Mesafe / Mutlak Doğruluğu            | Doğrulanmadı                                                      |
-| ARCore-to-ENU Dönüşümü                      | Uygulanmadı                                                       |
+| ARCore-to-ENU Dönüşümü                      | Uygulandı ve Fiziksel Olarak Doğrulandı — Stage 5 Kapsamı; Doğruluk Doğrulanmadı |
 | PDR                                         | Baseline Konumu Uygulandı ve Fiziksel Olarak Doğrulandı — Doğruluk Doğrulanmadı |
 | Handset Heading / Gerçek Kuzey Temeli       | Uygulandı ve Fiziksel Olarak Doğrulandı — Stage 3B Çalışma Zamanı Kapsamı; Mutlak Doğruluk Doğrulanmadı |
 | Body Heading / Telefon-Vücut Kalibrasyonu   | Uygulanmadı                                                       |
@@ -337,8 +355,8 @@ Stage 4 uygulaması, 118/118 testli statik doğrulaması, fiziksel baseline-PDR 
 | Motion AI                                   | Uygulanmadı                                                       |
 | Quality Engine                              | Uygulanmadı                                                       |
 | EKF / Sensör Füzyonu                        | Uygulanmadı                                                       |
-| Test                                        | Stage 1 + Stage 2A + Stage 2B + Stage 2C + Stage 2D + Stage 3A + Stage 3B + Stage 3C + Stage 4 Tanımlı Kapsamları Geçti |
-| Saha Deneyleri                              | Başlamadı                                                         |
+| Test                                        | Stage 1 + Stage 2A + Stage 2B + Stage 2C + Stage 2D + Stage 3A + Stage 3B + Stage 3C + Stage 4 + Stage 5 Tanımlı Kapsamları Geçti |
+| Saha Deneyleri                              | Kısmi — Yalnızca Kapsamı Belirli Temel Doğrulaması                |
 | Nihai Benchmark / Değerlendirme             | Çalıştırılmadı                                                    |
 
 ---
@@ -371,7 +389,7 @@ Ham deneysel veriler, hassas konum logları, kimlik bilgileri, gizli bilgiler ve
 
 ### Mevcut Geliştirme Kuralı
 
-Flutter Android bootstrap, Stage 2A SensorManager çalışma zamanı yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama tanıları, Stage 2C GNSS çalışma zamanı zamanlama tanıları, Stage 2D ARCore çalışma zamanı takip tanıları, Aşama 3A — GNSS Anchor + Yerel ENU Referans Temeli, Aşama 3B — Heading / Gerçek Kuzey Referans Temeli, Aşama 3C — Adım Olayı Temeli ve Aşama 4 — Temel PDR tanımlı kapsamlarında uygulandı ve doğrulandı.
+Flutter Android bootstrap, Stage 2A SensorManager çalışma zamanı yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama tanıları, Stage 2C GNSS çalışma zamanı zamanlama tanıları, Stage 2D ARCore çalışma zamanı takip tanıları, Aşama 3A — GNSS Anchor + Yerel ENU Referans Temeli, Aşama 3B — Heading / Gerçek Kuzey Referans Temeli, Aşama 3C — Adım Olayı Temeli, Aşama 4 — Temel PDR ve Aşama 5 — ARCore Göreli Hareket → ENU Temeli tanımlı kapsamlarında uygulandı ve doğrulandı.
 
 Stage 2B, 20.000 µs talep altında 12 test oturumunda ivmeölçer, jiroskop, manyetometre ve dönüş vektörü için canlı olay iletimini ve timestamp-türevli zamanlama davranışını fiziksel olarak doğruladı. Talep edilen ve gözlenen hızlar ayrı kalır, 60 ms boşluk eşiği geçicidir ve bu sonuçlar sensör gürültüsünü, bias'ı, kalibrasyonu, heading'i veya navigasyon performansını doğrulamaz.
 
@@ -387,7 +405,9 @@ Stage 3C, Android 12 / API 31 üzerinde yalnızca `TYPE_STEP_DETECTOR` kullanan 
 
 Stage 4, deterministik baseline-PDR çalışma zamanı yolunu fiziksel olarak doğruladı. Sabit oturum sıfır adım entegre etti; manuel sayılan iki 20-adımlık düz yürüyüşün her biri 20 adım entegre etti; hedeflenen 20-adımlık L-biçimli desen ise algılanan 22 olayı entegre etti. Tüm yürüyüş olayları gelecek heading kullanmadan nedensel olarak ilişkilendirildi ve açık iptal geçti. Düzeltilmiş bağımsız kuzey kontrolü, daha önce fiziksel olarak yanlış tanımlanan yön referansına ilişkin endişeyi çözdü. Bu kapsamlı olmayan gözlemlerden doğruluk yüzdesi veya metrolojik doğruluk iddiası çıkarılmaz.
 
-Fiziksel doğrulama kısmi durumdadır ve cihaz baseline'ı sabitlenmemiştir. PDR doğruluğu, adım-algılama doğruluğu, adım-uzunluğu doğruluğu, heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu ve aynı-konum anchor tekrarlanabilirliği doğrulanmadı. Body heading ve telefon-vücut kalibrasyonu uygulanmadı. ARCore mesafe, ölçek, dönüş, sürüklenme ve mutlak doğruluğu doğrulanmamış durumda; ARCore-to-ENU ile ARCore füzyonu uygulanmadı. Kesinti denetleyicisi, Ground Truth Firewall runtime, Motion AI, Quality Engine, EKF / Sensör Füzyonu, relocalization ve tam GNSS-kesintili navigasyon uygulanmamıştır. Diğer gerekli cihaz kontrolleri beklemektedir; %20 iyileştirme hedefi ölçülmemiştir ve hiçbir navigasyon benchmark'ı değerlendirilmemiştir.
+Stage 5, tanımlı ARCore-to-ENU çalışma zamanı yolunu fiziksel olarak doğruladı. Sabit, bağımsız tanımlanmış kuzey-benzeri, bağımsız tanımlanmış doğu-benzeri ve yaklaşık 90 derecelik yerinde dönüş oturumları tamamlandı; düz-yürüyüş çıktılarında beklenen pozitif ENU eksenleri baskındı, dönüş yer değiştirmesi düz-yürüyüş yer değiştirmelerinden çok daha düşük kaldı ve açık iptal geçti. Tamamlanan tüm resmî oturumlarda gözlenen pencereler boyunca tam kamera takibi bildirildi. Bu gözlemler kapsamı belirli çalışma zamanı akışını ve nitel eksen/işaret davranışını doğrular; metrolojik doğruluğu doğrulamaz.
+
+Fiziksel doğrulama kısmi durumdadır ve cihaz baseline'ı sabitlenmemiştir. PDR doğruluğu, adım-algılama doğruluğu, adım-uzunluğu doğruluğu, heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu, aynı-konum anchor tekrarlanabilirliği, ARCore konum/mesafe/dikey doğruluğu ve ENU-hizalama doğruluğu doğrulanmadı. Body heading ve telefon-vücut kalibrasyonu uygulanmadı. ARCore-to-ENU uygulandı ancak ARCore/PDR füzyonu uygulanmadı. Kesinti denetleyicisi, Ground Truth Firewall runtime, Değerlendirme Modu, Motion AI, Quality Engine, EKF / Sensör Füzyonu, relocalization ve tam GNSS-kesintili navigasyon uygulanmamıştır. Diğer gerekli cihaz kontrolleri beklemektedir; %20 iyileştirme hedefi ölçülmemiştir ve hiçbir navigasyon benchmark'ı değerlendirilmemiştir.
 
 ---
 

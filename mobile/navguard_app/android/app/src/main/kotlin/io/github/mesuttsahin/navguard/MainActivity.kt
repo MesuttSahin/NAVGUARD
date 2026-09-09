@@ -18,6 +18,7 @@ class MainActivity : FlutterActivity() {
     private var stepEventDiagnostic: StepEventDiagnostic? = null
     private var baselinePdrDiagnostic: BaselinePdrDiagnostic? = null
     private var arCoreTrackingDiagnostic: ArCoreTrackingDiagnostic? = null
+    private var arCoreEnuDiagnostic: ArCoreEnuDiagnostic? = null
     private var locationManager: LocationManager? = null
 
     private val permissionResultLock = Any()
@@ -72,6 +73,13 @@ class MainActivity : FlutterActivity() {
             }
 
         arCoreTrackingDiagnostic = ArCoreTrackingDiagnostic(applicationContext)
+        arCoreEnuDiagnostic =
+            sensorManager?.let { availableSensorManager ->
+                ArCoreEnuDiagnostic(
+                    applicationContext = applicationContext,
+                    sensorManager = availableSensorManager,
+                )
+            }
 
         configureSensorChannel(flutterEngine, sensorManager)
         configureGnssChannel(flutterEngine)
@@ -80,6 +88,7 @@ class MainActivity : FlutterActivity() {
         configureStepEventChannel(flutterEngine)
         configureBaselinePdrChannel(flutterEngine)
         configureArCoreChannel(flutterEngine)
+        configureArCoreEnuChannel(flutterEngine)
     }
 
     private fun configureSensorChannel(
@@ -789,6 +798,120 @@ class MainActivity : FlutterActivity() {
         )
     }
 
+    private fun configureArCoreEnuChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            ARCORE_ENU_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                METHOD_GET_ARCORE_ENU_PREFLIGHT -> {
+                    result.success(
+                        arCoreEnuDiagnostic?.createPreflightSnapshot()
+                            ?: createUnavailableArCoreEnuPreflightSnapshot(),
+                    )
+                }
+
+                METHOD_RUN_ARCORE_ENU_DIAGNOSTIC -> {
+                    runArCoreEnuDiagnostic(call.arguments, result)
+                }
+
+                METHOD_CANCEL_ARCORE_ENU_DIAGNOSTIC -> {
+                    val diagnostic = arCoreEnuDiagnostic
+                    val cancellationRequested =
+                        diagnostic?.cancelActiveSession() == true
+                    result.success(
+                        linkedMapOf(
+                            "schemaVersion" to SCHEMA_VERSION,
+                            "snapshotKind" to SNAPSHOT_KIND_ARCORE_ENU_CANCELLATION,
+                            "cancellationRequested" to cancellationRequested,
+                            "diagnosticRunning" to
+                                (diagnostic?.isDiagnosticRunning() == true),
+                        ),
+                    )
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun runArCoreEnuDiagnostic(
+        rawArguments: Any?,
+        result: MethodChannel.Result,
+    ) {
+        val diagnostic = arCoreEnuDiagnostic
+        if (diagnostic == null) {
+            result.error(
+                ERROR_ARCORE_ENU_UNAVAILABLE,
+                "ARCore-to-ENU diagnostics are unavailable.",
+                null,
+            )
+            return
+        }
+
+        val arguments = rawArguments as? Map<*, *>
+        if (arguments == null) {
+            result.error(
+                ERROR_ARCORE_ENU_ANCHOR_REQUIRED,
+                "A locked Stage 3A GNSS anchor is required.",
+                null,
+            )
+            return
+        }
+
+        val latitudeDeg = (arguments["latitudeDeg"] as? Number)?.toDouble()
+        val longitudeDeg = (arguments["longitudeDeg"] as? Number)?.toDouble()
+        val rawAltitude = arguments["altitudeEllipsoidM"]
+        val altitudeEllipsoidM = (rawAltitude as? Number)?.toDouble()
+        if (
+            latitudeDeg == null ||
+                !latitudeDeg.isFinite() ||
+                latitudeDeg !in -90.0..90.0 ||
+                longitudeDeg == null ||
+                !longitudeDeg.isFinite() ||
+                longitudeDeg !in -180.0..180.0 ||
+                (rawAltitude != null && altitudeEllipsoidM == null) ||
+                altitudeEllipsoidM?.isFinite() == false
+        ) {
+            result.error(
+                ERROR_ARCORE_ENU_ANCHOR_REQUIRED,
+                "The locked Stage 3A GNSS anchor arguments are invalid.",
+                null,
+            )
+            return
+        }
+
+        diagnostic.start(
+            anchorLatitudeDeg = latitudeDeg,
+            anchorLongitudeDeg = longitudeDeg,
+            anchorAltitudeEllipsoidM = altitudeEllipsoidM,
+            callback =
+                object : ArCoreEnuDiagnostic.Callback {
+                    override fun onSuccess(summary: Map<String, Any?>) {
+                        result.success(summary)
+                    }
+
+                    override fun onError(code: String, message: String) {
+                        result.error(code, message, null)
+                    }
+                },
+        )
+    }
+
+    private fun createUnavailableArCoreEnuPreflightSnapshot():
+        Map<String, Any?> =
+        linkedMapOf(
+            "schemaVersion" to SCHEMA_VERSION,
+            "snapshotKind" to SNAPSHOT_KIND_ARCORE_ENU_PREFLIGHT,
+            "arCoreSupported" to false,
+            "arCoreInstalled" to false,
+            "cameraPermissionGranted" to hasCameraPermission(),
+            "rotationVectorAvailable" to false,
+            "rotationVectorName" to null,
+            "diagnosticRunning" to false,
+            "nativeReady" to false,
+        )
+
     private fun requestGnssForegroundPermission(result: MethodChannel.Result) {
         val manager = locationManager
 
@@ -1115,6 +1238,9 @@ class MainActivity : FlutterActivity() {
         arCoreTrackingDiagnostic?.cancelActiveSession(
             "ARCore tracking diagnostic cancelled because the activity paused.",
         )
+        arCoreEnuDiagnostic?.cancelActiveSession(
+            "ARCore-to-ENU diagnostic cancelled because the activity paused.",
+        )
 
         super.onPause()
     }
@@ -1139,6 +1265,9 @@ class MainActivity : FlutterActivity() {
         arCoreTrackingDiagnostic?.cancelActiveSession(
             "ARCore tracking diagnostic cancelled because the activity was destroyed.",
         )
+        arCoreEnuDiagnostic?.cancelActiveSession(
+            "ARCore-to-ENU diagnostic cancelled because the activity was destroyed.",
+        )
 
         sensorTimingDiagnostic = null
         gnssTimingDiagnostic = null
@@ -1147,6 +1276,7 @@ class MainActivity : FlutterActivity() {
         stepEventDiagnostic = null
         baselinePdrDiagnostic = null
         arCoreTrackingDiagnostic = null
+        arCoreEnuDiagnostic = null
         locationManager = null
 
         takePendingPermissionResult()?.error(
@@ -1458,6 +1588,8 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/baseline_pdr"
         const val ARCORE_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/arcore_diagnostics"
+        const val ARCORE_ENU_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/arcore_enu"
 
         const val METHOD_GET_SENSOR_CAPABILITY_INVENTORY =
             "getSensorCapabilityInventory"
@@ -1507,6 +1639,12 @@ class MainActivity : FlutterActivity() {
             "requestArCoreCameraPermission"
         const val METHOD_RUN_ARCORE_TRACKING_DIAGNOSTIC =
             "runArCoreTrackingDiagnostic"
+        const val METHOD_GET_ARCORE_ENU_PREFLIGHT =
+            "getArCoreEnuPreflight"
+        const val METHOD_RUN_ARCORE_ENU_DIAGNOSTIC =
+            "runArCoreEnuDiagnostic"
+        const val METHOD_CANCEL_ARCORE_ENU_DIAGNOSTIC =
+            "cancelArCoreEnuDiagnostic"
 
         const val SNAPSHOT_KIND_GNSS_PREFLIGHT =
             "gnss_diagnostic_preflight"
@@ -1528,6 +1666,10 @@ class MainActivity : FlutterActivity() {
             "baseline_pdr_preflight"
         const val SNAPSHOT_KIND_BASELINE_PDR_CANCELLATION =
             "baseline_pdr_cancellation"
+        const val SNAPSHOT_KIND_ARCORE_ENU_PREFLIGHT =
+            "arcore_enu_preflight"
+        const val SNAPSHOT_KIND_ARCORE_ENU_CANCELLATION =
+            "arcore_enu_cancellation"
 
         const val HEADING_REQUESTED_SAMPLING_PERIOD_US = 20_000
 
@@ -1599,5 +1741,8 @@ class MainActivity : FlutterActivity() {
             "arcore_camera_permission_request_failed"
         const val ERROR_ARCORE_CAMERA_PERMISSION_REQUEST_CANCELLED =
             "arcore_camera_permission_request_cancelled"
+        const val ERROR_ARCORE_ENU_UNAVAILABLE = "arcore_enu_unavailable"
+        const val ERROR_ARCORE_ENU_ANCHOR_REQUIRED =
+            "arcore_enu_anchor_required"
     }
 }

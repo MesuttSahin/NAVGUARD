@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'navigation/arcore_enu.dart';
 import 'navigation/baseline_pdr.dart';
 import 'navigation/gnss_anchor.dart';
 import 'navigation/heading.dart';
@@ -30,6 +31,8 @@ enum _DiagnosticOperation {
   arCorePreflight,
   arCorePermission,
   arCoreTracking,
+  arCoreEnuPreflight,
+  arCoreEnuDiagnostic,
 }
 
 class _SensorOption {
@@ -179,6 +182,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     'io.github.mesuttsahin.navguard/arcore_diagnostics',
   );
 
+  static const MethodChannel _arCoreEnuChannel = MethodChannel(
+    'io.github.mesuttsahin.navguard/arcore_enu',
+  );
+
   static const JsonEncoder _jsonEncoder = JsonEncoder.withIndent('  ');
 
   _DiagnosticOperation? _activeOperation;
@@ -207,6 +214,11 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   String _arCoreAvailability = 'Unknown';
   String _arCoreReady = 'Unknown';
   bool? _canRunFormalArCoreDiagnostic;
+  ArCoreEnuPreflight? _arCoreEnuPreflight;
+  ArCoreEnuDiagnosticResult? _arCoreEnuResult;
+  String _arCoreEnuAlignmentStatus = 'Not started';
+  String _arCoreEnuStatus = 'Idle';
+  bool _arCoreEnuCancellationRequestInFlight = false;
   String? _formattedOutput;
   String? _errorMessage;
 
@@ -263,6 +275,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _isArCoreTrackingLoading =>
       _activeOperation == _DiagnosticOperation.arCoreTracking;
 
+  bool get _isArCoreEnuPreflightLoading =>
+      _activeOperation == _DiagnosticOperation.arCoreEnuPreflight;
+
+  bool get _isArCoreEnuDiagnosticLoading =>
+      _activeOperation == _DiagnosticOperation.arCoreEnuDiagnostic;
+
   bool get _canRunHeadingDiagnostic =>
       !_isBusy &&
       _headingPreflight?.rotationVectorAvailable == true &&
@@ -275,6 +293,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _canRunBaselinePdr =>
       !_isBusy &&
       _baselinePdrPreflight?.nativeSensorsReady == true &&
+      _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+      _gnssAnchor != null;
+
+  bool get _canRunArCoreEnuDiagnostic =>
+      !_isBusy &&
+      _arCoreEnuPreflight?.nativeReady == true &&
       _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
       _gnssAnchor != null;
 
@@ -535,6 +559,79 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     return value == null ? 'Not available' : '${value.toStringAsFixed(3)} ms';
   }
 
+  String get _arCoreEnuAvailabilityLabel {
+    final ArCoreEnuPreflight? preflight = _arCoreEnuPreflight;
+    if (preflight == null) {
+      return 'Unknown';
+    }
+    return preflight.arCoreSupported && preflight.arCoreInstalled
+        ? 'Available'
+        : 'Unavailable';
+  }
+
+  String get _arCoreEnuCameraPermissionLabel {
+    final ArCoreEnuPreflight? preflight = _arCoreEnuPreflight;
+    if (preflight == null) {
+      return 'Unknown';
+    }
+    return preflight.cameraPermissionGranted ? 'Granted' : 'Denied';
+  }
+
+  String get _arCoreEnuRotationVectorLabel {
+    final ArCoreEnuPreflight? preflight = _arCoreEnuPreflight;
+    if (preflight == null) {
+      return 'Unknown';
+    }
+    return preflight.rotationVectorAvailable ? 'Available' : 'Unavailable';
+  }
+
+  String get _arCoreEnuAnchorLabel {
+    return _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+            _gnssAnchor != null
+        ? 'Locked'
+        : 'Required';
+  }
+
+  String get _arCoreEnuTrackingFractionLabel {
+    final double? value = _arCoreEnuResult?.trackingFraction;
+    return value == null
+        ? 'Not available'
+        : '${(value * 100.0).toStringAsFixed(1)}%';
+  }
+
+  String get _arCoreEnuUsableFramesLabel {
+    return _arCoreEnuResult?.usableEnuFrameCount.toString() ?? 'Not available';
+  }
+
+  String get _arCoreEnuFinalEastLabel {
+    return _formatMeters(_arCoreEnuResult?.finalEastM);
+  }
+
+  String get _arCoreEnuFinalNorthLabel {
+    return _formatMeters(_arCoreEnuResult?.finalNorthM);
+  }
+
+  String get _arCoreEnuFinalUpLabel {
+    return _formatMeters(_arCoreEnuResult?.finalUpM);
+  }
+
+  String get _arCoreEnuHorizontalDisplacementLabel {
+    return _formatMeters(_arCoreEnuResult?.finalHorizontalDisplacementM);
+  }
+
+  String get _arCoreEnu3dDisplacementLabel {
+    return _formatMeters(_arCoreEnuResult?.final3dDisplacementM);
+  }
+
+  String get _arCoreEnuMaxHorizontalExcursionLabel {
+    return _formatMeters(_arCoreEnuResult?.maxHorizontalDisplacementM);
+  }
+
+  String get _arCoreEnuMedianFrameIntervalLabel {
+    final double? value = _arCoreEnuResult?.medianFrameDeltaMs;
+    return value == null ? 'Not available' : '${value.toStringAsFixed(3)} ms';
+  }
+
   String _formatRadians(double? value) {
     return value == null ? 'Not available' : '${value.toStringAsFixed(6)} rad';
   }
@@ -783,6 +880,9 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
       _headingDiagnosticStatus = 'Idle';
       _baselinePdrResult = null;
       _baselinePdrStatus = 'Idle';
+      _arCoreEnuResult = null;
+      _arCoreEnuAlignmentStatus = 'Not started';
+      _arCoreEnuStatus = 'Idle';
       _formattedOutput = _jsonEncoder.convert(sanitizedResult);
       _errorMessage = null;
     });
@@ -1302,6 +1402,195 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
       beginMarker: 'NAVGUARD_ARCORE_TRACKING_BEGIN',
       endMarker: 'NAVGUARD_ARCORE_TRACKING_END',
     );
+  }
+
+  Future<void> _refreshArCoreEnuPreflight() async {
+    if (_isBusy) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = _DiagnosticOperation.arCoreEnuPreflight;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+
+    ArCoreEnuPreflight? nextPreflight;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+
+    try {
+      final Object? rawSnapshot = await _arCoreEnuChannel.invokeMethod<Object?>(
+        'getArCoreEnuPreflight',
+      );
+      final ArCoreEnuPreflight parsed = ArCoreEnuPreflight.fromPlatform(
+        rawSnapshot,
+      );
+      nextPreflight = parsed;
+      sanitizedLog = parsed.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(parsed.sanitizedMetadata);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextError = 'ARCore-to-ENU preflight failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'ARCore-to-ENU channel is unavailable on this platform.';
+    } on FormatException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'invalid_arcore_enu_preflight',
+      };
+      nextError = 'Native ARCore-to-ENU preflight response was invalid.';
+    } catch (_) {
+      nextError = 'Unexpected error while refreshing ARCore-to-ENU preflight.';
+    }
+
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_ARCORE_ENU_PREFLIGHT_BEGIN',
+      endMarker: 'NAVGUARD_ARCORE_ENU_PREFLIGHT_END',
+      value: sanitizedLog,
+    );
+
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _activeOperation = null;
+      _arCoreEnuPreflight = nextPreflight;
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _runArCoreEnuDiagnostic() async {
+    final GnssAnchor? anchor = _gnssAnchor;
+    if (!_canRunArCoreEnuDiagnostic || anchor == null) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = _DiagnosticOperation.arCoreEnuDiagnostic;
+      _arCoreEnuResult = null;
+      _arCoreEnuAlignmentStatus = 'Aligning';
+      _arCoreEnuStatus = 'Running';
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+
+    ArCoreEnuDiagnosticResult? nextResult;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+
+    try {
+      // Locked-anchor coordinates are internal-only declination inputs. The
+      // argument map is never logged, rendered, or retained by this screen.
+      final Object? rawResult = await _arCoreEnuChannel
+          .invokeMethod<Object?>('runArCoreEnuDiagnostic', <String, Object?>{
+            'latitudeDeg': anchor.latitudeDeg,
+            'longitudeDeg': anchor.longitudeDeg,
+            'altitudeEllipsoidM': anchor.altitudeEllipsoidM,
+          });
+      final ArCoreEnuDiagnosticResult parsed =
+          ArCoreEnuDiagnosticResult.fromPlatform(rawResult);
+      nextResult = parsed;
+      sanitizedLog = parsed.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(parsed.sanitizedMetadata);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextError = 'ARCore-to-ENU diagnostic failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'ARCore-to-ENU channel is unavailable on this platform.';
+    } on FormatException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'invalid_arcore_enu_response',
+      };
+      nextError = 'Native ARCore-to-ENU result was invalid.';
+    } catch (_) {
+      nextError = 'Unexpected error while running ARCore-to-ENU diagnostics.';
+    }
+
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_ARCORE_ENU_DIAGNOSTIC_BEGIN',
+      endMarker: 'NAVGUARD_ARCORE_ENU_DIAGNOSTIC_END',
+      value: sanitizedLog,
+    );
+
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _activeOperation = null;
+      _arCoreEnuResult = nextResult;
+      _arCoreEnuAlignmentStatus = nextResult == null ? 'Failed' : 'Completed';
+      _arCoreEnuStatus = nextResult == null ? 'Failed' : 'Success';
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _cancelArCoreEnuDiagnostic() async {
+    if (!_isArCoreEnuDiagnosticLoading ||
+        _arCoreEnuCancellationRequestInFlight) {
+      return;
+    }
+
+    setState(() {
+      _arCoreEnuCancellationRequestInFlight = true;
+    });
+
+    try {
+      await _arCoreEnuChannel.invokeMethod<Object?>(
+        'cancelArCoreEnuDiagnostic',
+      );
+    } on PlatformException catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'ARCore-to-ENU cancellation failed (${error.code}).';
+        });
+      }
+    } on MissingPluginException {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'ARCore-to-ENU channel is unavailable on this platform.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'Unexpected error while cancelling ARCore-to-ENU diagnostics.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _arCoreEnuCancellationRequestInFlight = false;
+        });
+      }
+    }
   }
 
   Future<void> _runDiagnosticRequest({
@@ -2099,6 +2388,128 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
               ),
               const Divider(height: 32),
               Text(
+                'ARCore → ENU Foundation',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text('ARCore: $_arCoreEnuAvailabilityLabel'),
+              const SizedBox(height: 4),
+              Text('Camera permission: $_arCoreEnuCameraPermissionLabel'),
+              const SizedBox(height: 4),
+              Text('Rotation Vector: $_arCoreEnuRotationVectorLabel'),
+              const SizedBox(height: 4),
+              Text('GNSS Anchor: $_arCoreEnuAnchorLabel'),
+              const SizedBox(height: 4),
+              Text('Alignment: $_arCoreEnuAlignmentStatus'),
+              const SizedBox(height: 4),
+              Text('ARCore → ENU: $_arCoreEnuStatus'),
+              const SizedBox(height: 12),
+              const Text('Alignment hold: 2 s'),
+              const SizedBox(height: 4),
+              const Text('Formal movement window: 30 s'),
+              const SizedBox(height: 8),
+              const Text(
+                'Hold the phone still for the 2-second alignment phase.\n'
+                'Keep the screen approximately upward and the device top edge stable.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text('Tracking fraction: $_arCoreEnuTrackingFractionLabel'),
+              const SizedBox(height: 4),
+              Text('Usable ENU frames: $_arCoreEnuUsableFramesLabel'),
+              const SizedBox(height: 4),
+              Text('Final East: $_arCoreEnuFinalEastLabel'),
+              const SizedBox(height: 4),
+              Text('Final North: $_arCoreEnuFinalNorthLabel'),
+              const SizedBox(height: 4),
+              Text('Final Up: $_arCoreEnuFinalUpLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Horizontal displacement: '
+                '$_arCoreEnuHorizontalDisplacementLabel',
+              ),
+              const SizedBox(height: 4),
+              Text('3D displacement: $_arCoreEnu3dDisplacementLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Max horizontal excursion: '
+                '$_arCoreEnuMaxHorizontalExcursionLabel',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Median AR frame interval: '
+                '$_arCoreEnuMedianFrameIntervalLabel',
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'ARCore position accuracy: NOT VALIDATED\n'
+                'ARCore distance accuracy: NOT VALIDATED\n'
+                'ENU alignment accuracy: NOT VALIDATED\n'
+                'True-north accuracy: NOT VALIDATED\n'
+                'PDR fusion: NOT IMPLEMENTED\n'
+                'EKF: NOT IMPLEMENTED',
+                textAlign: TextAlign.center,
+              ),
+              if (_arCoreEnuPreflight?.cameraPermissionGranted ==
+                  false) ...<Widget>[
+                const SizedBox(height: 8),
+                const Text(
+                  'Camera permission required. '
+                  'Grant it from ARCore Runtime Diagnostics.',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isBusy ? null : _refreshArCoreEnuPreflight,
+                icon: _isArCoreEnuPreflightLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(
+                  _isArCoreEnuPreflightLoading
+                      ? 'Refreshing ARCore → ENU Preflight...'
+                      : 'Refresh ARCore → ENU Preflight',
+                ),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: _canRunArCoreEnuDiagnostic
+                    ? _runArCoreEnuDiagnostic
+                    : null,
+                icon: _isArCoreEnuDiagnosticLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.explore_outlined),
+                label: Text(
+                  _isArCoreEnuDiagnosticLoading
+                      ? 'Running ARCore → ENU Diagnostic...'
+                      : 'Run ARCore → ENU Diagnostic',
+                ),
+              ),
+              if (_isArCoreEnuDiagnosticLoading) ...<Widget>[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _arCoreEnuCancellationRequestInFlight
+                      ? null
+                      : _cancelArCoreEnuDiagnostic,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: Text(
+                    _arCoreEnuCancellationRequestInFlight
+                        ? 'Cancelling ARCore → ENU Diagnostic...'
+                        : 'Cancel ARCore → ENU Diagnostic',
+                  ),
+                ),
+              ],
+              const Divider(height: 32),
+              Text(
                 _isBusy ? _activeOperationLabel : 'Diagnostic Output',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
@@ -2161,6 +2572,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         return 'Requesting ARCore camera permission...';
       case _DiagnosticOperation.arCoreTracking:
         return 'Running ARCore tracking diagnostic...';
+      case _DiagnosticOperation.arCoreEnuPreflight:
+        return 'Refreshing ARCore-to-ENU preflight...';
+      case _DiagnosticOperation.arCoreEnuDiagnostic:
+        return 'Running ARCore-to-ENU diagnostic...';
       case null:
         return 'Diagnostic Output';
     }
