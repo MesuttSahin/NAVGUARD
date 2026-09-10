@@ -26,7 +26,7 @@ void main() {
 
     expect(find.text('GNSS Runtime Timing Diagnostic'), findsOneWidget);
     expect(find.text('Precise location permission: Unknown'), findsOneWidget);
-    expect(find.text('GPS provider: Unknown'), findsNWidgets(2));
+    expect(find.text('GPS provider: Unknown'), findsNWidgets(3));
     expect(find.text('Location services: Unknown'), findsNWidgets(2));
     expect(find.text('Refresh GNSS Preflight'), findsOneWidget);
     expect(find.text('Request Precise Location Permission'), findsOneWidget);
@@ -54,7 +54,7 @@ void main() {
     expect(find.text('Acquire GNSS Anchor'), findsOneWidget);
 
     expect(find.text('Heading / True-North Reference'), findsOneWidget);
-    expect(find.text('Rotation Vector: Unknown'), findsNWidgets(3));
+    expect(find.text('Rotation Vector: Unknown'), findsNWidgets(4));
     expect(find.text('Anchor: Not locked'), findsOneWidget);
     expect(find.text('Heading diagnostic: Idle'), findsOneWidget);
     expect(find.text('Device forward axis: Top edge (+Y)'), findsOneWidget);
@@ -86,7 +86,7 @@ void main() {
     expect(find.text('Refresh Heading Preflight'), findsOneWidget);
     expect(find.text('Run Heading Diagnostic'), findsOneWidget);
     expect(find.text('Step-Event Foundation'), findsOneWidget);
-    expect(find.text('Step Detector: Unknown'), findsNWidgets(2));
+    expect(find.text('Step Detector: Unknown'), findsNWidgets(3));
     expect(
       find.text('Physical activity permission: Unknown'),
       findsNWidgets(2),
@@ -105,7 +105,7 @@ void main() {
     expect(find.text('Anchor: Required'), findsOneWidget);
     expect(find.text('Baseline PDR: Idle'), findsOneWidget);
     expect(find.text('Step length model: Fixed 0.75 m'), findsOneWidget);
-    expect(find.text('Integrated steps: Not available'), findsOneWidget);
+    expect(find.text('Integrated steps: Not available'), findsNWidgets(2));
     expect(find.text('Unassociated steps: Not available'), findsOneWidget);
     expect(find.text('Final East: Not available'), findsNWidgets(2));
     expect(find.text('Final North: Not available'), findsNWidgets(2));
@@ -139,7 +139,7 @@ void main() {
     expect(find.text('ARCore → ENU Foundation'), findsOneWidget);
     expect(find.text('ARCore: Unknown'), findsOneWidget);
     expect(find.text('Camera permission: Unknown'), findsOneWidget);
-    expect(find.text('GNSS Anchor: Required'), findsOneWidget);
+    expect(find.text('GNSS Anchor: Required'), findsNWidgets(2));
     expect(find.text('Alignment: Not started'), findsOneWidget);
     expect(find.text('ARCore → ENU: Idle'), findsOneWidget);
     expect(find.text('Alignment hold: 2 s'), findsOneWidget);
@@ -168,6 +168,63 @@ void main() {
     );
     expect(
       find.text('Run ARCore → ENU Diagnostic', skipOffstage: false),
+      findsOneWidget,
+    );
+
+    expect(
+      find.text('Evaluation Mode + Ground Truth Firewall', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(find.text('Location permission: Unknown'), findsOneWidget);
+    expect(find.text('Physical Activity permission: Unknown'), findsOneWidget);
+    expect(find.text('Firewall self-test: Not run'), findsOneWidget);
+    expect(find.text('Evaluation state: Idle'), findsOneWidget);
+    expect(
+      find.text('Protected GNSS role: Ground Truth Only'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Denied estimator: Config A Baseline PDR'),
+      findsOneWidget,
+    );
+    expect(find.text('Formal evaluation: 30 s'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Protected GNSS is physically active in Evaluation Mode.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('GNSS correction: DISABLED'), findsOneWidget);
+    expect(
+      find.textContaining('Ground Truth Firewall: ENABLED'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(
+        'Lock the GNSS anchor at the physical start point',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Protected GT fixes: Not available'), findsOneWidget);
+    expect(find.text('Matched GT fixes: Not available'), findsOneWidget);
+    expect(find.text('Final denied East: Not available'), findsOneWidget);
+    expect(find.text('Final denied North: Not available'), findsOneWidget);
+    expect(find.text('Median horizontal error: Not available'), findsOneWidget);
+    expect(find.text('P95 horizontal error: Not available'), findsOneWidget);
+    expect(
+      find.text('Final denied pre-correction error: Not available'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Median estimator age at GT: Not available'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Refresh Evaluation Preflight', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Run Evaluation Mode', skipOffstage: false),
       findsOneWidget,
     );
   });

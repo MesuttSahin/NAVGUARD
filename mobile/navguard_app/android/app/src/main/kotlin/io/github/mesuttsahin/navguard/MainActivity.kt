@@ -19,6 +19,7 @@ class MainActivity : FlutterActivity() {
     private var baselinePdrDiagnostic: BaselinePdrDiagnostic? = null
     private var arCoreTrackingDiagnostic: ArCoreTrackingDiagnostic? = null
     private var arCoreEnuDiagnostic: ArCoreEnuDiagnostic? = null
+    private var evaluationModeDiagnostic: EvaluationModeDiagnostic? = null
     private var locationManager: LocationManager? = null
 
     private val permissionResultLock = Any()
@@ -81,6 +82,17 @@ class MainActivity : FlutterActivity() {
                 )
             }
 
+        evaluationModeDiagnostic =
+            if (sensorManager != null && availableLocationManager != null) {
+                EvaluationModeDiagnostic(
+                    applicationContext = applicationContext,
+                    locationManager = availableLocationManager,
+                    sensorManager = sensorManager,
+                )
+            } else {
+                null
+            }
+
         configureSensorChannel(flutterEngine, sensorManager)
         configureGnssChannel(flutterEngine)
         configureGnssAnchorChannel(flutterEngine)
@@ -89,6 +101,7 @@ class MainActivity : FlutterActivity() {
         configureBaselinePdrChannel(flutterEngine)
         configureArCoreChannel(flutterEngine)
         configureArCoreEnuChannel(flutterEngine)
+        configureEvaluationModeChannel(flutterEngine)
     }
 
     private fun configureSensorChannel(
@@ -912,6 +925,134 @@ class MainActivity : FlutterActivity() {
             "nativeReady" to false,
         )
 
+    private fun configureEvaluationModeChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            EVALUATION_MODE_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                METHOD_GET_EVALUATION_MODE_PREFLIGHT -> {
+                    result.success(
+                        evaluationModeDiagnostic?.createPreflightSnapshot()
+                            ?: createUnavailableEvaluationModePreflightSnapshot(),
+                    )
+                }
+
+                METHOD_RUN_EVALUATION_MODE_DIAGNOSTIC -> {
+                    runEvaluationModeDiagnostic(call.arguments, result)
+                }
+
+                METHOD_CANCEL_EVALUATION_MODE_DIAGNOSTIC -> {
+                    val diagnostic = evaluationModeDiagnostic
+                    val cancellationRequested =
+                        diagnostic?.cancelActiveSession() == true
+                    result.success(
+                        linkedMapOf(
+                            "schemaVersion" to SCHEMA_VERSION,
+                            "snapshotKind" to SNAPSHOT_KIND_EVALUATION_CANCELLATION,
+                            "cancellationRequested" to cancellationRequested,
+                            "diagnosticRunning" to
+                                (diagnostic?.isDiagnosticRunning() == true),
+                        ),
+                    )
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun runEvaluationModeDiagnostic(
+        rawArguments: Any?,
+        result: MethodChannel.Result,
+    ) {
+        val diagnostic = evaluationModeDiagnostic
+        if (diagnostic == null) {
+            result.error(
+                ERROR_EVALUATION_UNAVAILABLE,
+                "Evaluation Mode diagnostics are unavailable.",
+                null,
+            )
+            return
+        }
+        if (isAnotherEvaluationExclusiveOperationRunning()) {
+            result.error(
+                ERROR_EVALUATION_ALREADY_RUNNING,
+                "Another mutually exclusive NAVGUARD operation is running.",
+                null,
+            )
+            return
+        }
+
+        val arguments = rawArguments as? Map<*, *>
+        val latitudeDeg = (arguments?.get("latitudeDeg") as? Number)?.toDouble()
+        val longitudeDeg = (arguments?.get("longitudeDeg") as? Number)?.toDouble()
+        val rawAltitude = arguments?.get("altitudeEllipsoidM")
+        val altitudeEllipsoidM = (rawAltitude as? Number)?.toDouble()
+        if (
+            latitudeDeg == null ||
+                !latitudeDeg.isFinite() ||
+                latitudeDeg !in -90.0..90.0 ||
+                longitudeDeg == null ||
+                !longitudeDeg.isFinite() ||
+                longitudeDeg !in -180.0..180.0 ||
+                (rawAltitude != null && altitudeEllipsoidM == null) ||
+                altitudeEllipsoidM?.isFinite() == false
+        ) {
+            result.error(
+                ERROR_EVALUATION_ANCHOR_REQUIRED,
+                "A valid locked Stage 3A GNSS anchor is required.",
+                null,
+            )
+            return
+        }
+
+        diagnostic.start(
+            anchorLatitudeDeg = latitudeDeg,
+            anchorLongitudeDeg = longitudeDeg,
+            anchorAltitudeEllipsoidM = altitudeEllipsoidM,
+            callback =
+                object : EvaluationModeDiagnostic.Callback {
+                    override fun onSuccess(summary: Map<String, Any?>) {
+                        result.success(summary)
+                    }
+
+                    override fun onError(code: String, message: String) {
+                        result.error(code, message, null)
+                    }
+                },
+        )
+    }
+
+    private fun isAnotherEvaluationExclusiveOperationRunning(): Boolean =
+        gnssAnchorAcquisition?.isAcquisitionRunning() == true ||
+            headingFoundationDiagnostic?.isDiagnosticRunning() == true ||
+            stepEventDiagnostic?.isDiagnosticRunning() == true ||
+            baselinePdrDiagnostic?.isDiagnosticRunning() == true ||
+            arCoreEnuDiagnostic?.isDiagnosticRunning() == true
+
+    private fun createUnavailableEvaluationModePreflightSnapshot():
+        Map<String, Any?> {
+        val activityPermissionRequired = isActivityRecognitionPermissionRequired()
+        return linkedMapOf(
+            "schemaVersion" to SCHEMA_VERSION,
+            "snapshotKind" to SNAPSHOT_KIND_EVALUATION_PREFLIGHT,
+            "gpsProviderAvailable" to false,
+            "gpsProviderEnabled" to false,
+            "fineLocationPermissionGranted" to hasFineLocationPermission(),
+            "rotationVectorAvailable" to false,
+            "rotationVectorName" to null,
+            "stepDetectorAvailable" to false,
+            "stepDetectorName" to null,
+            "activityRecognitionPermissionRequired" to activityPermissionRequired,
+            "activityRecognitionPermissionGranted" to
+                hasActivityRecognitionPermission(),
+            "firewallMutationSelfTestPassed" to false,
+            "diagnosticRunning" to false,
+            "nativeReady" to false,
+        )
+    }
+
     private fun requestGnssForegroundPermission(result: MethodChannel.Result) {
         val manager = locationManager
 
@@ -1241,6 +1382,9 @@ class MainActivity : FlutterActivity() {
         arCoreEnuDiagnostic?.cancelActiveSession(
             "ARCore-to-ENU diagnostic cancelled because the activity paused.",
         )
+        evaluationModeDiagnostic?.cancelActiveSession(
+            "Evaluation Mode diagnostic cancelled because the activity paused.",
+        )
 
         super.onPause()
     }
@@ -1268,6 +1412,9 @@ class MainActivity : FlutterActivity() {
         arCoreEnuDiagnostic?.cancelActiveSession(
             "ARCore-to-ENU diagnostic cancelled because the activity was destroyed.",
         )
+        evaluationModeDiagnostic?.cancelActiveSession(
+            "Evaluation Mode diagnostic cancelled because the activity was destroyed.",
+        )
 
         sensorTimingDiagnostic = null
         gnssTimingDiagnostic = null
@@ -1277,6 +1424,7 @@ class MainActivity : FlutterActivity() {
         baselinePdrDiagnostic = null
         arCoreTrackingDiagnostic = null
         arCoreEnuDiagnostic = null
+        evaluationModeDiagnostic = null
         locationManager = null
 
         takePendingPermissionResult()?.error(
@@ -1590,6 +1738,8 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/arcore_diagnostics"
         const val ARCORE_ENU_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/arcore_enu"
+        const val EVALUATION_MODE_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/evaluation_mode"
 
         const val METHOD_GET_SENSOR_CAPABILITY_INVENTORY =
             "getSensorCapabilityInventory"
@@ -1645,6 +1795,12 @@ class MainActivity : FlutterActivity() {
             "runArCoreEnuDiagnostic"
         const val METHOD_CANCEL_ARCORE_ENU_DIAGNOSTIC =
             "cancelArCoreEnuDiagnostic"
+        const val METHOD_GET_EVALUATION_MODE_PREFLIGHT =
+            "getEvaluationModePreflight"
+        const val METHOD_RUN_EVALUATION_MODE_DIAGNOSTIC =
+            "runEvaluationModeDiagnostic"
+        const val METHOD_CANCEL_EVALUATION_MODE_DIAGNOSTIC =
+            "cancelEvaluationModeDiagnostic"
 
         const val SNAPSHOT_KIND_GNSS_PREFLIGHT =
             "gnss_diagnostic_preflight"
@@ -1670,6 +1826,10 @@ class MainActivity : FlutterActivity() {
             "arcore_enu_preflight"
         const val SNAPSHOT_KIND_ARCORE_ENU_CANCELLATION =
             "arcore_enu_cancellation"
+        const val SNAPSHOT_KIND_EVALUATION_PREFLIGHT =
+            "evaluation_mode_preflight"
+        const val SNAPSHOT_KIND_EVALUATION_CANCELLATION =
+            "evaluation_mode_cancellation"
 
         const val HEADING_REQUESTED_SAMPLING_PERIOD_US = 20_000
 
@@ -1744,5 +1904,11 @@ class MainActivity : FlutterActivity() {
         const val ERROR_ARCORE_ENU_UNAVAILABLE = "arcore_enu_unavailable"
         const val ERROR_ARCORE_ENU_ANCHOR_REQUIRED =
             "arcore_enu_anchor_required"
+        const val ERROR_EVALUATION_UNAVAILABLE =
+            "evaluation_gps_unavailable"
+        const val ERROR_EVALUATION_ANCHOR_REQUIRED =
+            "evaluation_anchor_required"
+        const val ERROR_EVALUATION_ALREADY_RUNNING =
+            "evaluation_already_running"
     }
 }

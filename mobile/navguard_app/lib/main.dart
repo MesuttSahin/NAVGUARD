@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'navigation/arcore_enu.dart';
 import 'navigation/baseline_pdr.dart';
+import 'navigation/evaluation_mode.dart';
 import 'navigation/gnss_anchor.dart';
 import 'navigation/heading.dart';
 import 'navigation/step_event.dart';
@@ -33,6 +34,8 @@ enum _DiagnosticOperation {
   arCoreTracking,
   arCoreEnuPreflight,
   arCoreEnuDiagnostic,
+  evaluationModePreflight,
+  evaluationModeDiagnostic,
 }
 
 class _SensorOption {
@@ -186,6 +189,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     'io.github.mesuttsahin.navguard/arcore_enu',
   );
 
+  static const MethodChannel _evaluationModeChannel = MethodChannel(
+    'io.github.mesuttsahin.navguard/evaluation_mode',
+  );
+
   static const JsonEncoder _jsonEncoder = JsonEncoder.withIndent('  ');
 
   _DiagnosticOperation? _activeOperation;
@@ -219,6 +226,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   String _arCoreEnuAlignmentStatus = 'Not started';
   String _arCoreEnuStatus = 'Idle';
   bool _arCoreEnuCancellationRequestInFlight = false;
+  EvaluationModePreflight? _evaluationModePreflight;
+  EvaluationModeDiagnosticResult? _evaluationModeResult;
+  String _evaluationModeStatus = 'Idle';
+  bool _evaluationModeCancellationRequestInFlight = false;
   String? _formattedOutput;
   String? _errorMessage;
 
@@ -281,6 +292,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _isArCoreEnuDiagnosticLoading =>
       _activeOperation == _DiagnosticOperation.arCoreEnuDiagnostic;
 
+  bool get _isEvaluationModePreflightLoading =>
+      _activeOperation == _DiagnosticOperation.evaluationModePreflight;
+
+  bool get _isEvaluationModeDiagnosticLoading =>
+      _activeOperation == _DiagnosticOperation.evaluationModeDiagnostic;
+
   bool get _canRunHeadingDiagnostic =>
       !_isBusy &&
       _headingPreflight?.rotationVectorAvailable == true &&
@@ -299,6 +316,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _canRunArCoreEnuDiagnostic =>
       !_isBusy &&
       _arCoreEnuPreflight?.nativeReady == true &&
+      _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+      _gnssAnchor != null;
+
+  bool get _canRunEvaluationMode =>
+      !_isBusy &&
+      _evaluationModePreflight?.nativeReady == true &&
       _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
       _gnssAnchor != null;
 
@@ -629,6 +652,111 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
 
   String get _arCoreEnuMedianFrameIntervalLabel {
     final double? value = _arCoreEnuResult?.medianFrameDeltaMs;
+    return value == null ? 'Not available' : '${value.toStringAsFixed(3)} ms';
+  }
+
+  String get _evaluationGpsProviderLabel {
+    final EvaluationModePreflight? value = _evaluationModePreflight;
+    if (value == null) {
+      return 'Unknown';
+    }
+    if (!value.gpsProviderAvailable) {
+      return 'Unavailable';
+    }
+    return value.gpsProviderEnabled ? 'Enabled' : 'Disabled';
+  }
+
+  String get _evaluationLocationPermissionLabel {
+    final EvaluationModePreflight? value = _evaluationModePreflight;
+    if (value == null) {
+      return 'Unknown';
+    }
+    return value.fineLocationPermissionGranted ? 'Granted' : 'Not granted';
+  }
+
+  String get _evaluationRotationVectorLabel {
+    final EvaluationModePreflight? value = _evaluationModePreflight;
+    if (value == null) {
+      return 'Unknown';
+    }
+    return value.rotationVectorAvailable ? 'Available' : 'Unavailable';
+  }
+
+  String get _evaluationStepDetectorLabel {
+    final EvaluationModePreflight? value = _evaluationModePreflight;
+    if (value == null) {
+      return 'Unknown';
+    }
+    return value.stepDetectorAvailable ? 'Available' : 'Unavailable';
+  }
+
+  String get _evaluationActivityPermissionLabel {
+    final EvaluationModePreflight? value = _evaluationModePreflight;
+    if (value == null) {
+      return 'Unknown';
+    }
+    if (!value.activityRecognitionPermissionRequired) {
+      return 'Not required';
+    }
+    return value.activityRecognitionPermissionGranted
+        ? 'Granted'
+        : 'Not granted';
+  }
+
+  String get _evaluationAnchorLabel {
+    return _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+            _gnssAnchor != null
+        ? 'Locked'
+        : 'Required';
+  }
+
+  String get _evaluationFirewallSelfTestLabel {
+    final EvaluationModePreflight? value = _evaluationModePreflight;
+    if (value == null) {
+      return 'Not run';
+    }
+    return value.firewallMutationSelfTestPassed ? 'PASS' : 'FAIL';
+  }
+
+  String get _evaluationProtectedFixesLabel {
+    return _evaluationModeResult?.acceptedProtectedGtFixCount.toString() ??
+        'Not available';
+  }
+
+  String get _evaluationMatchedFixesLabel {
+    return _evaluationModeResult?.matchedGroundTruthFixCount.toString() ??
+        'Not available';
+  }
+
+  String get _evaluationIntegratedStepsLabel {
+    return _evaluationModeResult?.integratedStepCount.toString() ??
+        'Not available';
+  }
+
+  String get _evaluationFinalEastLabel {
+    return _formatMeters(_evaluationModeResult?.finalDeniedEastM);
+  }
+
+  String get _evaluationFinalNorthLabel {
+    return _formatMeters(_evaluationModeResult?.finalDeniedNorthM);
+  }
+
+  String get _evaluationMedianErrorLabel {
+    return _formatMeters(_evaluationModeResult?.medianHorizontalErrorM);
+  }
+
+  String get _evaluationP95ErrorLabel {
+    return _formatMeters(_evaluationModeResult?.p95HorizontalErrorM);
+  }
+
+  String get _evaluationFinalPreCorrectionErrorLabel {
+    return _formatMeters(
+      _evaluationModeResult?.finalDeniedPreCorrectionErrorM,
+    );
+  }
+
+  String get _evaluationMedianEstimatorAgeLabel {
+    final double? value = _evaluationModeResult?.medianEstimatorAgeAtGtMs;
     return value == null ? 'Not available' : '${value.toStringAsFixed(3)} ms';
   }
 
@@ -1593,6 +1721,186 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     }
   }
 
+  Future<void> _refreshEvaluationModePreflight() async {
+    if (_isBusy) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = _DiagnosticOperation.evaluationModePreflight;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+
+    EvaluationModePreflight? nextPreflight;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+    try {
+      final Object? rawSnapshot = await _evaluationModeChannel
+          .invokeMethod<Object?>('getEvaluationModePreflight');
+      final EvaluationModePreflight parsed =
+          EvaluationModePreflight.fromPlatform(rawSnapshot);
+      nextPreflight = parsed;
+      sanitizedLog = parsed.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(parsed.sanitizedMetadata);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextError = 'Evaluation Mode preflight failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'Evaluation Mode channel is unavailable on this platform.';
+    } on FormatException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'invalid_evaluation_mode_preflight',
+      };
+      nextError = 'Native Evaluation Mode preflight response was invalid.';
+    } catch (_) {
+      nextError = 'Unexpected error while refreshing Evaluation Mode preflight.';
+    }
+
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_EVALUATION_PREFLIGHT_BEGIN',
+      endMarker: 'NAVGUARD_EVALUATION_PREFLIGHT_END',
+      value: sanitizedLog,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _activeOperation = null;
+      _evaluationModePreflight = nextPreflight;
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _runEvaluationModeDiagnostic() async {
+    final GnssAnchor? anchor = _gnssAnchor;
+    if (!_canRunEvaluationMode || anchor == null) {
+      return;
+    }
+
+    setState(() {
+      _activeOperation = _DiagnosticOperation.evaluationModeDiagnostic;
+      _evaluationModeResult = null;
+      _evaluationModeStatus = 'Running';
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+
+    EvaluationModeDiagnosticResult? nextResult;
+    String? nextOutput;
+    String? nextError;
+    String nextStatus = 'Failed';
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+    try {
+      // The locked anchor is a pre-denial input. Its coordinates are never
+      // included in the sanitized log, returned result, or visible UI.
+      final Object? rawResult = await _evaluationModeChannel
+          .invokeMethod<Object?>('runEvaluationModeDiagnostic', <String, Object?>{
+            'latitudeDeg': anchor.latitudeDeg,
+            'longitudeDeg': anchor.longitudeDeg,
+            'altitudeEllipsoidM': anchor.altitudeEllipsoidM,
+          });
+      final EvaluationModeDiagnosticResult parsed =
+          EvaluationModeDiagnosticResult.fromPlatform(rawResult);
+      nextResult = parsed;
+      sanitizedLog = parsed.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(parsed.sanitizedMetadata);
+      nextStatus = 'Success';
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextStatus = error.code == 'evaluation_cancelled' ? 'Cancelled' : 'Failed';
+      nextError = 'Evaluation Mode diagnostic failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'Evaluation Mode channel is unavailable on this platform.';
+    } on FormatException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'invalid_evaluation_mode_response',
+      };
+      nextError = 'Native Evaluation Mode result was invalid.';
+    } catch (_) {
+      nextError = 'Unexpected error while running Evaluation Mode.';
+    }
+
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_EVALUATION_DIAGNOSTIC_BEGIN',
+      endMarker: 'NAVGUARD_EVALUATION_DIAGNOSTIC_END',
+      value: sanitizedLog,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _activeOperation = null;
+      _evaluationModeResult = nextResult;
+      _evaluationModeStatus = nextStatus;
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _cancelEvaluationModeDiagnostic() async {
+    if (!_isEvaluationModeDiagnosticLoading ||
+        _evaluationModeCancellationRequestInFlight) {
+      return;
+    }
+    setState(() {
+      _evaluationModeCancellationRequestInFlight = true;
+    });
+    try {
+      await _evaluationModeChannel.invokeMethod<Object?>(
+        'cancelEvaluationModeDiagnostic',
+      );
+    } on PlatformException catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Evaluation Mode cancellation failed (${error.code}).';
+        });
+      }
+    } on MissingPluginException {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Evaluation Mode channel is unavailable on this platform.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Unexpected error while cancelling Evaluation Mode.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _evaluationModeCancellationRequestInFlight = false;
+        });
+      }
+    }
+  }
+
   Future<void> _runDiagnosticRequest({
     required MethodChannel channel,
     required _DiagnosticOperation operation,
@@ -2510,6 +2818,127 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
               ],
               const Divider(height: 32),
               Text(
+                'Evaluation Mode + Ground Truth Firewall',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text('GPS provider: $_evaluationGpsProviderLabel'),
+              const SizedBox(height: 4),
+              Text('Location permission: $_evaluationLocationPermissionLabel'),
+              const SizedBox(height: 4),
+              Text('Rotation Vector: $_evaluationRotationVectorLabel'),
+              const SizedBox(height: 4),
+              Text('Step Detector: $_evaluationStepDetectorLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Physical Activity permission: '
+                '$_evaluationActivityPermissionLabel',
+              ),
+              const SizedBox(height: 4),
+              Text('GNSS Anchor: $_evaluationAnchorLabel'),
+              const SizedBox(height: 4),
+              Text('Firewall self-test: $_evaluationFirewallSelfTestLabel'),
+              const SizedBox(height: 4),
+              Text('Evaluation state: $_evaluationModeStatus'),
+              const SizedBox(height: 12),
+              const Text('Protected GNSS role: Ground Truth Only'),
+              const SizedBox(height: 4),
+              const Text('Denied estimator: Config A Baseline PDR'),
+              const SizedBox(height: 4),
+              const Text('Formal evaluation: 30 s'),
+              const SizedBox(height: 8),
+              const Text(
+                'Protected GNSS is physically active in Evaluation Mode.\n\n'
+                'It is isolated from the denied estimator and used only for post-estimation evaluation.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'GNSS correction: DISABLED\n'
+                'Ground Truth Firewall: ENABLED',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Lock the GNSS anchor at the physical start point before beginning Evaluation Mode.\n\n'
+                'After Evaluation Mode starts, protected GNSS remains active only as an evaluation reference.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text('Protected GT fixes: $_evaluationProtectedFixesLabel'),
+              const SizedBox(height: 4),
+              Text('Matched GT fixes: $_evaluationMatchedFixesLabel'),
+              const SizedBox(height: 4),
+              Text('Integrated steps: $_evaluationIntegratedStepsLabel'),
+              const SizedBox(height: 4),
+              Text('Final denied East: $_evaluationFinalEastLabel'),
+              const SizedBox(height: 4),
+              Text('Final denied North: $_evaluationFinalNorthLabel'),
+              const SizedBox(height: 4),
+              Text('Median horizontal error: $_evaluationMedianErrorLabel'),
+              const SizedBox(height: 4),
+              Text('P95 horizontal error: $_evaluationP95ErrorLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Final denied pre-correction error: '
+                '$_evaluationFinalPreCorrectionErrorLabel',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Median estimator age at GT: '
+                '$_evaluationMedianEstimatorAgeLabel',
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isBusy ? null : _refreshEvaluationModePreflight,
+                icon: _isEvaluationModePreflightLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(
+                  _isEvaluationModePreflightLoading
+                      ? 'Refreshing Evaluation Preflight...'
+                      : 'Refresh Evaluation Preflight',
+                ),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: _canRunEvaluationMode
+                    ? _runEvaluationModeDiagnostic
+                    : null,
+                icon: _isEvaluationModeDiagnosticLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.shield_outlined),
+                label: Text(
+                  _isEvaluationModeDiagnosticLoading
+                      ? 'Running Evaluation Mode...'
+                      : 'Run Evaluation Mode',
+                ),
+              ),
+              if (_isEvaluationModeDiagnosticLoading) ...<Widget>[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _evaluationModeCancellationRequestInFlight
+                      ? null
+                      : _cancelEvaluationModeDiagnostic,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: Text(
+                    _evaluationModeCancellationRequestInFlight
+                        ? 'Cancelling Evaluation Mode...'
+                        : 'Cancel Evaluation Mode',
+                  ),
+                ),
+              ],
+              const Divider(height: 32),
+              Text(
                 _isBusy ? _activeOperationLabel : 'Diagnostic Output',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
@@ -2576,6 +3005,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         return 'Refreshing ARCore-to-ENU preflight...';
       case _DiagnosticOperation.arCoreEnuDiagnostic:
         return 'Running ARCore-to-ENU diagnostic...';
+      case _DiagnosticOperation.evaluationModePreflight:
+        return 'Refreshing Evaluation Mode preflight...';
+      case _DiagnosticOperation.evaluationModeDiagnostic:
+        return 'Running Evaluation Mode...';
       case null:
         return 'Diagnostic Output';
     }
