@@ -20,6 +20,7 @@ class MainActivity : FlutterActivity() {
     private var arCoreTrackingDiagnostic: ArCoreTrackingDiagnostic? = null
     private var arCoreEnuDiagnostic: ArCoreEnuDiagnostic? = null
     private var evaluationModeDiagnostic: EvaluationModeDiagnostic? = null
+    private var navguardFusionDiagnostic: NavguardFusionDiagnostic? = null
     private var locationManager: LocationManager? = null
 
     private val permissionResultLock = Any()
@@ -93,6 +94,14 @@ class MainActivity : FlutterActivity() {
                 null
             }
 
+        navguardFusionDiagnostic =
+            sensorManager?.let { availableSensorManager ->
+                NavguardFusionDiagnostic(
+                    applicationContext = applicationContext,
+                    sensorManager = availableSensorManager,
+                )
+            }
+
         configureSensorChannel(flutterEngine, sensorManager)
         configureGnssChannel(flutterEngine)
         configureGnssAnchorChannel(flutterEngine)
@@ -102,6 +111,7 @@ class MainActivity : FlutterActivity() {
         configureArCoreChannel(flutterEngine)
         configureArCoreEnuChannel(flutterEngine)
         configureEvaluationModeChannel(flutterEngine)
+        configureNavguardFusionChannel(flutterEngine)
     }
 
     private fun configureSensorChannel(
@@ -1029,7 +1039,9 @@ class MainActivity : FlutterActivity() {
             headingFoundationDiagnostic?.isDiagnosticRunning() == true ||
             stepEventDiagnostic?.isDiagnosticRunning() == true ||
             baselinePdrDiagnostic?.isDiagnosticRunning() == true ||
-            arCoreEnuDiagnostic?.isDiagnosticRunning() == true
+            arCoreEnuDiagnostic?.isDiagnosticRunning() == true ||
+            evaluationModeDiagnostic?.isDiagnosticRunning() == true ||
+            navguardFusionDiagnostic?.isDiagnosticRunning() == true
 
     private fun createUnavailableEvaluationModePreflightSnapshot():
         Map<String, Any?> {
@@ -1052,6 +1064,123 @@ class MainActivity : FlutterActivity() {
             "nativeReady" to false,
         )
     }
+
+    private fun configureNavguardFusionChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            NAVGUARD_FUSION_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                METHOD_GET_NAVGUARD_FUSION_PREFLIGHT -> {
+                    result.success(
+                        navguardFusionDiagnostic?.createPreflightSnapshot()
+                            ?: createUnavailableNavguardFusionPreflightSnapshot(),
+                    )
+                }
+
+                METHOD_RUN_NAVGUARD_FUSION_DIAGNOSTIC -> {
+                    runNavguardFusionDiagnostic(call.arguments, result)
+                }
+
+                METHOD_CANCEL_NAVGUARD_FUSION_DIAGNOSTIC -> {
+                    val diagnostic = navguardFusionDiagnostic
+                    val cancellationRequested =
+                        diagnostic?.cancelActiveSession() == true
+                    result.success(
+                        linkedMapOf(
+                            "schemaVersion" to SCHEMA_VERSION,
+                            "snapshotKind" to SNAPSHOT_KIND_NAVGUARD_FUSION_CANCELLATION,
+                            "cancellationRequested" to cancellationRequested,
+                            "diagnosticRunning" to
+                                (diagnostic?.isDiagnosticRunning() == true),
+                        ),
+                    )
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun runNavguardFusionDiagnostic(
+        rawArguments: Any?,
+        result: MethodChannel.Result,
+    ) {
+        val diagnostic = navguardFusionDiagnostic
+        if (diagnostic == null) {
+            result.error(
+                ERROR_NAVGUARD_FUSION_UNAVAILABLE,
+                "NAVGUARD fusion diagnostics are unavailable.",
+                null,
+            )
+            return
+        }
+        if (isAnotherEvaluationExclusiveOperationRunning()) {
+            result.error(
+                ERROR_NAVGUARD_FUSION_ALREADY_RUNNING,
+                "Another mutually exclusive NAVGUARD operation is running.",
+                null,
+            )
+            return
+        }
+
+        val arguments = rawArguments as? Map<*, *>
+        val latitudeDeg = (arguments?.get("latitudeDeg") as? Number)?.toDouble()
+        val longitudeDeg = (arguments?.get("longitudeDeg") as? Number)?.toDouble()
+        val rawAltitude = arguments?.get("altitudeEllipsoidM")
+        val altitudeEllipsoidM = (rawAltitude as? Number)?.toDouble()
+        if (
+            latitudeDeg == null ||
+                !latitudeDeg.isFinite() ||
+                latitudeDeg !in -90.0..90.0 ||
+                longitudeDeg == null ||
+                !longitudeDeg.isFinite() ||
+                longitudeDeg !in -180.0..180.0 ||
+                (rawAltitude != null && altitudeEllipsoidM == null) ||
+                altitudeEllipsoidM?.isFinite() == false
+        ) {
+            result.error(
+                ERROR_NAVGUARD_FUSION_ANCHOR_REQUIRED,
+                "A valid locked Stage 3A GNSS anchor is required.",
+                null,
+            )
+            return
+        }
+
+        diagnostic.start(
+            anchorLatitudeDeg = latitudeDeg,
+            anchorLongitudeDeg = longitudeDeg,
+            anchorAltitudeEllipsoidM = altitudeEllipsoidM,
+            callback =
+                object : NavguardFusionDiagnostic.Callback {
+                    override fun onSuccess(summary: Map<String, Any?>) {
+                        result.success(summary)
+                    }
+
+                    override fun onError(code: String, message: String) {
+                        result.error(code, message, null)
+                    }
+                },
+        )
+    }
+
+    private fun createUnavailableNavguardFusionPreflightSnapshot():
+        Map<String, Any?> =
+        linkedMapOf(
+            "schemaVersion" to SCHEMA_VERSION,
+            "snapshotKind" to SNAPSHOT_KIND_NAVGUARD_FUSION_PREFLIGHT,
+            "arCoreSupported" to false,
+            "arCoreInstalled" to false,
+            "cameraPermissionGranted" to hasCameraPermission(),
+            "rotationVectorAvailable" to false,
+            "rotationVectorName" to null,
+            "stepDetectorAvailable" to false,
+            "stepDetectorName" to null,
+            "activityRecognitionPermissionGranted" to
+                hasActivityRecognitionPermission(),
+            "diagnosticRunning" to false,
+            "nativeReady" to false,
+        )
 
     private fun requestGnssForegroundPermission(result: MethodChannel.Result) {
         val manager = locationManager
@@ -1385,6 +1514,9 @@ class MainActivity : FlutterActivity() {
         evaluationModeDiagnostic?.cancelActiveSession(
             "Evaluation Mode diagnostic cancelled because the activity paused.",
         )
+        navguardFusionDiagnostic?.cancelActiveSession(
+            "NAVGUARD fusion diagnostic cancelled because the activity paused.",
+        )
 
         super.onPause()
     }
@@ -1415,6 +1547,9 @@ class MainActivity : FlutterActivity() {
         evaluationModeDiagnostic?.cancelActiveSession(
             "Evaluation Mode diagnostic cancelled because the activity was destroyed.",
         )
+        navguardFusionDiagnostic?.cancelActiveSession(
+            "NAVGUARD fusion diagnostic cancelled because the activity was destroyed.",
+        )
 
         sensorTimingDiagnostic = null
         gnssTimingDiagnostic = null
@@ -1425,6 +1560,7 @@ class MainActivity : FlutterActivity() {
         arCoreTrackingDiagnostic = null
         arCoreEnuDiagnostic = null
         evaluationModeDiagnostic = null
+        navguardFusionDiagnostic = null
         locationManager = null
 
         takePendingPermissionResult()?.error(
@@ -1740,6 +1876,8 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/arcore_enu"
         const val EVALUATION_MODE_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/evaluation_mode"
+        const val NAVGUARD_FUSION_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/navguard_fusion"
 
         const val METHOD_GET_SENSOR_CAPABILITY_INVENTORY =
             "getSensorCapabilityInventory"
@@ -1801,6 +1939,12 @@ class MainActivity : FlutterActivity() {
             "runEvaluationModeDiagnostic"
         const val METHOD_CANCEL_EVALUATION_MODE_DIAGNOSTIC =
             "cancelEvaluationModeDiagnostic"
+        const val METHOD_GET_NAVGUARD_FUSION_PREFLIGHT =
+            "getNavguardFusionPreflight"
+        const val METHOD_RUN_NAVGUARD_FUSION_DIAGNOSTIC =
+            "runNavguardFusionDiagnostic"
+        const val METHOD_CANCEL_NAVGUARD_FUSION_DIAGNOSTIC =
+            "cancelNavguardFusionDiagnostic"
 
         const val SNAPSHOT_KIND_GNSS_PREFLIGHT =
             "gnss_diagnostic_preflight"
@@ -1830,6 +1974,10 @@ class MainActivity : FlutterActivity() {
             "evaluation_mode_preflight"
         const val SNAPSHOT_KIND_EVALUATION_CANCELLATION =
             "evaluation_mode_cancellation"
+        const val SNAPSHOT_KIND_NAVGUARD_FUSION_PREFLIGHT =
+            "navguard_fusion_preflight"
+        const val SNAPSHOT_KIND_NAVGUARD_FUSION_CANCELLATION =
+            "navguard_fusion_cancellation"
 
         const val HEADING_REQUESTED_SAMPLING_PERIOD_US = 20_000
 
@@ -1910,5 +2058,11 @@ class MainActivity : FlutterActivity() {
             "evaluation_anchor_required"
         const val ERROR_EVALUATION_ALREADY_RUNNING =
             "evaluation_already_running"
+        const val ERROR_NAVGUARD_FUSION_UNAVAILABLE =
+            "navguard_fusion_arcore_unavailable"
+        const val ERROR_NAVGUARD_FUSION_ANCHOR_REQUIRED =
+            "navguard_fusion_anchor_required"
+        const val ERROR_NAVGUARD_FUSION_ALREADY_RUNNING =
+            "navguard_fusion_already_running"
     }
 }

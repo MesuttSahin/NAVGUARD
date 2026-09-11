@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,7 @@ import 'navigation/baseline_pdr.dart';
 import 'navigation/evaluation_mode.dart';
 import 'navigation/gnss_anchor.dart';
 import 'navigation/heading.dart';
+import 'navigation/navguard_fusion.dart';
 import 'navigation/step_event.dart';
 
 void main() {
@@ -36,6 +38,8 @@ enum _DiagnosticOperation {
   arCoreEnuDiagnostic,
   evaluationModePreflight,
   evaluationModeDiagnostic,
+  navguardFusionPreflight,
+  navguardFusionDiagnostic,
 }
 
 class _SensorOption {
@@ -193,6 +197,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     'io.github.mesuttsahin.navguard/evaluation_mode',
   );
 
+  static const MethodChannel _navguardFusionChannel = MethodChannel(
+    'io.github.mesuttsahin.navguard/navguard_fusion',
+  );
+
   static const JsonEncoder _jsonEncoder = JsonEncoder.withIndent('  ');
 
   _DiagnosticOperation? _activeOperation;
@@ -230,6 +238,11 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   EvaluationModeDiagnosticResult? _evaluationModeResult;
   String _evaluationModeStatus = 'Idle';
   bool _evaluationModeCancellationRequestInFlight = false;
+  NavguardFusionPreflight? _navguardFusionPreflight;
+  NavguardFusionDiagnosticResult? _navguardFusionResult;
+  String _navguardFusionAlignmentStatus = 'Not started';
+  String _navguardFusionStatus = 'Idle';
+  bool _navguardFusionCancellationRequestInFlight = false;
   String? _formattedOutput;
   String? _errorMessage;
 
@@ -298,6 +311,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _isEvaluationModeDiagnosticLoading =>
       _activeOperation == _DiagnosticOperation.evaluationModeDiagnostic;
 
+  bool get _isNavguardFusionPreflightLoading =>
+      _activeOperation == _DiagnosticOperation.navguardFusionPreflight;
+
+  bool get _isNavguardFusionDiagnosticLoading =>
+      _activeOperation == _DiagnosticOperation.navguardFusionDiagnostic;
+
   bool get _canRunHeadingDiagnostic =>
       !_isBusy &&
       _headingPreflight?.rotationVectorAvailable == true &&
@@ -322,6 +341,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _canRunEvaluationMode =>
       !_isBusy &&
       _evaluationModePreflight?.nativeReady == true &&
+      _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+      _gnssAnchor != null;
+
+  bool get _canRunNavguardFusion =>
+      !_isBusy &&
+      _navguardFusionPreflight?.nativeReady == true &&
       _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
       _gnssAnchor != null;
 
@@ -750,14 +775,74 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   }
 
   String get _evaluationFinalPreCorrectionErrorLabel {
-    return _formatMeters(
-      _evaluationModeResult?.finalDeniedPreCorrectionErrorM,
-    );
+    return _formatMeters(_evaluationModeResult?.finalDeniedPreCorrectionErrorM);
   }
 
   String get _evaluationMedianEstimatorAgeLabel {
     final double? value = _evaluationModeResult?.medianEstimatorAgeAtGtMs;
     return value == null ? 'Not available' : '${value.toStringAsFixed(3)} ms';
+  }
+
+  String get _navguardFusionArCoreLabel {
+    final NavguardFusionPreflight? value = _navguardFusionPreflight;
+    if (value == null) return 'Unknown';
+    if (!value.arCoreSupported) return 'Unsupported';
+    return value.arCoreInstalled ? 'Ready' : 'Not installed/current';
+  }
+
+  String get _navguardFusionCameraPermissionLabel {
+    final bool? value = _navguardFusionPreflight?.cameraPermissionGranted;
+    return value == null
+        ? 'Unknown'
+        : value
+        ? 'Granted'
+        : 'Not granted';
+  }
+
+  String get _navguardFusionRotationVectorLabel {
+    final bool? value = _navguardFusionPreflight?.rotationVectorAvailable;
+    return value == null
+        ? 'Unknown'
+        : value
+        ? 'Available'
+        : 'Unavailable';
+  }
+
+  String get _navguardFusionStepDetectorLabel {
+    final bool? value = _navguardFusionPreflight?.stepDetectorAvailable;
+    return value == null
+        ? 'Unknown'
+        : value
+        ? 'Available'
+        : 'Unavailable';
+  }
+
+  String get _navguardFusionActivityPermissionLabel {
+    final bool? value =
+        _navguardFusionPreflight?.activityRecognitionPermissionGranted;
+    return value == null
+        ? 'Unknown'
+        : value
+        ? 'Granted'
+        : 'Not granted';
+  }
+
+  String get _navguardFusionAnchorLabel {
+    return _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+            _gnssAnchor != null
+        ? 'Locked'
+        : 'Required';
+  }
+
+  String _formatNavguardQuality(NavguardQuality? value) {
+    return value?.wireValue ?? 'UNKNOWN';
+  }
+
+  String _formatNavguardStandardDeviation(double? variance, String unit) {
+    if (variance == null || !variance.isFinite || variance < 0) {
+      return 'Not available';
+    }
+    return '${math.sqrt(variance).toStringAsFixed(3)} $unit';
   }
 
   String _formatRadians(double? value) {
@@ -1766,7 +1851,8 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
       };
       nextError = 'Native Evaluation Mode preflight response was invalid.';
     } catch (_) {
-      nextError = 'Unexpected error while refreshing Evaluation Mode preflight.';
+      nextError =
+          'Unexpected error while refreshing Evaluation Mode preflight.';
     }
 
     _printSanitizedJsonBlock(
@@ -1811,11 +1897,14 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
       // The locked anchor is a pre-denial input. Its coordinates are never
       // included in the sanitized log, returned result, or visible UI.
       final Object? rawResult = await _evaluationModeChannel
-          .invokeMethod<Object?>('runEvaluationModeDiagnostic', <String, Object?>{
-            'latitudeDeg': anchor.latitudeDeg,
-            'longitudeDeg': anchor.longitudeDeg,
-            'altitudeEllipsoidM': anchor.altitudeEllipsoidM,
-          });
+          .invokeMethod<Object?>(
+            'runEvaluationModeDiagnostic',
+            <String, Object?>{
+              'latitudeDeg': anchor.latitudeDeg,
+              'longitudeDeg': anchor.longitudeDeg,
+              'altitudeEllipsoidM': anchor.altitudeEllipsoidM,
+            },
+          );
       final EvaluationModeDiagnosticResult parsed =
           EvaluationModeDiagnosticResult.fromPlatform(rawResult);
       nextResult = parsed;
@@ -1827,7 +1916,9 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         'success': false,
         'errorCategory': error.code,
       };
-      nextStatus = error.code == 'evaluation_cancelled' ? 'Cancelled' : 'Failed';
+      nextStatus = error.code == 'evaluation_cancelled'
+          ? 'Cancelled'
+          : 'Failed';
       nextError = 'Evaluation Mode diagnostic failed (${error.code}).';
     } on MissingPluginException {
       sanitizedLog = <String, Object?>{
@@ -1877,13 +1968,15 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     } on PlatformException catch (error) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Evaluation Mode cancellation failed (${error.code}).';
+          _errorMessage =
+              'Evaluation Mode cancellation failed (${error.code}).';
         });
       }
     } on MissingPluginException {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Evaluation Mode channel is unavailable on this platform.';
+          _errorMessage =
+              'Evaluation Mode channel is unavailable on this platform.';
         });
       }
     } catch (_) {
@@ -1896,6 +1989,191 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
       if (mounted) {
         setState(() {
           _evaluationModeCancellationRequestInFlight = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _refreshNavguardFusionPreflight() async {
+    if (_isBusy) return;
+    setState(() {
+      _activeOperation = _DiagnosticOperation.navguardFusionPreflight;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+
+    NavguardFusionPreflight? nextPreflight;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+    try {
+      final Object? rawSnapshot = await _navguardFusionChannel
+          .invokeMethod<Object?>('getNavguardFusionPreflight');
+      final NavguardFusionPreflight parsed =
+          NavguardFusionPreflight.fromPlatform(rawSnapshot);
+      nextPreflight = parsed;
+      sanitizedLog = parsed.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(parsed.sanitizedMetadata);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextError = 'NAVGUARD Fusion preflight failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'NAVGUARD Fusion channel is unavailable on this platform.';
+    } on FormatException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'invalid_navguard_fusion_preflight',
+      };
+      nextError = 'Native NAVGUARD Fusion preflight response was invalid.';
+    } catch (_) {
+      nextError =
+          'Unexpected error while refreshing NAVGUARD Fusion preflight.';
+    }
+
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_FUSION_PREFLIGHT_BEGIN',
+      endMarker: 'NAVGUARD_FUSION_PREFLIGHT_END',
+      value: sanitizedLog,
+    );
+    if (!mounted) return;
+    setState(() {
+      _activeOperation = null;
+      _navguardFusionPreflight = nextPreflight;
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _runNavguardFusionDiagnostic() async {
+    final GnssAnchor? anchor = _gnssAnchor;
+    if (!_canRunNavguardFusion || anchor == null) return;
+    setState(() {
+      _activeOperation = _DiagnosticOperation.navguardFusionDiagnostic;
+      _navguardFusionResult = null;
+      _navguardFusionAlignmentStatus = 'Aligning (2 s hold)';
+      _navguardFusionStatus = 'Running';
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+
+    NavguardFusionDiagnosticResult? nextResult;
+    String? nextOutput;
+    String? nextError;
+    String nextAlignmentStatus = 'Not completed';
+    String nextStatus = 'Failed';
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+    try {
+      // The locked anchor is used only as immutable pre-denial declination
+      // input. Coordinates never enter sanitized output or visible UI.
+      final Object? rawResult = await _navguardFusionChannel
+          .invokeMethod<Object?>(
+            'runNavguardFusionDiagnostic',
+            <String, Object?>{
+              'latitudeDeg': anchor.latitudeDeg,
+              'longitudeDeg': anchor.longitudeDeg,
+              'altitudeEllipsoidM': anchor.altitudeEllipsoidM,
+            },
+          );
+      final NavguardFusionDiagnosticResult parsed =
+          NavguardFusionDiagnosticResult.fromPlatform(rawResult);
+      nextResult = parsed;
+      sanitizedLog = parsed.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(parsed.sanitizedMetadata);
+      nextAlignmentStatus = parsed.alignmentCompleted ? 'Completed' : 'Failed';
+      nextStatus = 'Success';
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextStatus = error.code == 'navguard_fusion_cancelled'
+          ? 'Cancelled'
+          : 'Failed';
+      nextAlignmentStatus = nextStatus == 'Cancelled'
+          ? 'Cancelled'
+          : 'Not completed';
+      nextError = 'NAVGUARD Fusion diagnostic failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'NAVGUARD Fusion channel is unavailable on this platform.';
+    } on FormatException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'invalid_navguard_fusion_response',
+      };
+      nextError = 'Native NAVGUARD Fusion result was invalid.';
+    } catch (_) {
+      nextError = 'Unexpected error while running NAVGUARD Fusion.';
+    }
+
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_FUSION_DIAGNOSTIC_BEGIN',
+      endMarker: 'NAVGUARD_FUSION_DIAGNOSTIC_END',
+      value: sanitizedLog,
+    );
+    if (!mounted) return;
+    setState(() {
+      _activeOperation = null;
+      _navguardFusionResult = nextResult;
+      _navguardFusionAlignmentStatus = nextAlignmentStatus;
+      _navguardFusionStatus = nextStatus;
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _cancelNavguardFusionDiagnostic() async {
+    if (!_isNavguardFusionDiagnosticLoading ||
+        _navguardFusionCancellationRequestInFlight) {
+      return;
+    }
+    setState(() {
+      _navguardFusionCancellationRequestInFlight = true;
+    });
+    try {
+      await _navguardFusionChannel.invokeMethod<Object?>(
+        'cancelNavguardFusionDiagnostic',
+      );
+    } on PlatformException catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'NAVGUARD Fusion cancellation failed (${error.code}).';
+        });
+      }
+    } on MissingPluginException {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'NAVGUARD Fusion channel is unavailable on this platform.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Unexpected error while cancelling NAVGUARD Fusion.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _navguardFusionCancellationRequestInFlight = false;
         });
       }
     }
@@ -2939,6 +3217,139 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
               ],
               const Divider(height: 32),
               Text(
+                'NAVGUARD Fusion — Quality Engine + EKF',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text('ARCore readiness: $_navguardFusionArCoreLabel'),
+              const SizedBox(height: 4),
+              Text('Camera permission: $_navguardFusionCameraPermissionLabel'),
+              const SizedBox(height: 4),
+              Text('Rotation Vector: $_navguardFusionRotationVectorLabel'),
+              const SizedBox(height: 4),
+              Text('Step Detector: $_navguardFusionStepDetectorLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Activity permission: $_navguardFusionActivityPermissionLabel',
+              ),
+              const SizedBox(height: 4),
+              Text('GNSS Anchor: $_navguardFusionAnchorLabel'),
+              const SizedBox(height: 4),
+              Text('Alignment state: $_navguardFusionAlignmentStatus'),
+              const SizedBox(height: 4),
+              Text('Fusion state: $_navguardFusionStatus'),
+              const SizedBox(height: 12),
+              Text(
+                'Heading Quality: ${_formatNavguardQuality(_navguardFusionResult?.finalHeadingQuality)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'PDR Quality: ${_formatNavguardQuality(_navguardFusionResult?.finalPdrQuality)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'ARCore Quality: ${_formatNavguardQuality(_navguardFusionResult?.finalArcoreQuality)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Fusion Quality: ${_formatNavguardQuality(_navguardFusionResult?.finalFusionQuality)}',
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'PDR predictions: ${_navguardFusionResult?.pdrPredictionsApplied ?? 'Not available'}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'ARCore updates: ${_navguardFusionResult?.arcoreMeasurementsApplied ?? 'Not available'}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Heading updates: ${_navguardFusionResult?.headingMeasurementsApplied ?? 'Not available'}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Final fused East: ${_formatMeters(_navguardFusionResult?.finalFusedEastM)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Final fused North: ${_formatMeters(_navguardFusionResult?.finalFusedNorthM)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Final fused heading: ${_formatRadians(_navguardFusionResult?.finalFusedHeadingRad)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Final fused displacement: ${_formatMeters(_navguardFusionResult?.finalFusedHorizontalDisplacementM)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Final PDR displacement: ${_formatMeters(_navguardFusionResult?.finalPdrHorizontalDisplacementM)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Final ARCore displacement: ${_formatMeters(_navguardFusionResult?.finalArcoreHorizontalDisplacementM)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Final σE: ${_formatNavguardStandardDeviation(_navguardFusionResult?.finalVarianceEastM2, 'm')}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Final σN: ${_formatNavguardStandardDeviation(_navguardFusionResult?.finalVarianceNorthM2, 'm')}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Final σHeading: ${_formatNavguardStandardDeviation(_navguardFusionResult?.finalVarianceHeadingRad2, 'rad')}',
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Fusion accuracy: NOT VALIDATED\n'
+                'Quality thresholds: NOT VALIDATED\n'
+                'Noise parameters: NOT VALIDATED\n'
+                'Protected GNSS: NOT ACCESSED\n'
+                'GNSS recovery: NOT IMPLEMENTED',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isBusy ? null : _refreshNavguardFusionPreflight,
+                icon: _isNavguardFusionPreflightLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: const Text('Refresh NAVGUARD Fusion Preflight'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: _canRunNavguardFusion
+                    ? _runNavguardFusionDiagnostic
+                    : null,
+                icon: _isNavguardFusionDiagnosticLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.hub_outlined),
+                label: const Text('Run NAVGUARD Fusion Diagnostic'),
+              ),
+              if (_isNavguardFusionDiagnosticLoading) ...<Widget>[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _navguardFusionCancellationRequestInFlight
+                      ? null
+                      : _cancelNavguardFusionDiagnostic,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text('Cancel NAVGUARD Fusion Diagnostic'),
+                ),
+              ],
+              const Divider(height: 32),
+              Text(
                 _isBusy ? _activeOperationLabel : 'Diagnostic Output',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
@@ -3009,6 +3420,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         return 'Refreshing Evaluation Mode preflight...';
       case _DiagnosticOperation.evaluationModeDiagnostic:
         return 'Running Evaluation Mode...';
+      case _DiagnosticOperation.navguardFusionPreflight:
+        return 'Refreshing NAVGUARD Fusion preflight...';
+      case _DiagnosticOperation.navguardFusionDiagnostic:
+        return 'Running NAVGUARD Fusion diagnostic...';
       case null:
         return 'Diagnostic Output';
     }
