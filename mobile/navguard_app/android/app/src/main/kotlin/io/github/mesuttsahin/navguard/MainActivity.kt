@@ -21,6 +21,7 @@ class MainActivity : FlutterActivity() {
     private var arCoreEnuDiagnostic: ArCoreEnuDiagnostic? = null
     private var evaluationModeDiagnostic: EvaluationModeDiagnostic? = null
     private var navguardFusionDiagnostic: NavguardFusionDiagnostic? = null
+    private var fullNavguardFlowDiagnostic: FullNavguardFlowDiagnostic? = null
     private var locationManager: LocationManager? = null
 
     private val permissionResultLock = Any()
@@ -102,6 +103,17 @@ class MainActivity : FlutterActivity() {
                 )
             }
 
+        fullNavguardFlowDiagnostic =
+            if (sensorManager != null && availableLocationManager != null) {
+                FullNavguardFlowDiagnostic(
+                    applicationContext = applicationContext,
+                    locationManager = availableLocationManager,
+                    sensorManager = sensorManager,
+                )
+            } else {
+                null
+            }
+
         configureSensorChannel(flutterEngine, sensorManager)
         configureGnssChannel(flutterEngine)
         configureGnssAnchorChannel(flutterEngine)
@@ -112,6 +124,7 @@ class MainActivity : FlutterActivity() {
         configureArCoreEnuChannel(flutterEngine)
         configureEvaluationModeChannel(flutterEngine)
         configureNavguardFusionChannel(flutterEngine)
+        configureFullNavguardFlowChannel(flutterEngine)
     }
 
     private fun configureSensorChannel(
@@ -1041,7 +1054,8 @@ class MainActivity : FlutterActivity() {
             baselinePdrDiagnostic?.isDiagnosticRunning() == true ||
             arCoreEnuDiagnostic?.isDiagnosticRunning() == true ||
             evaluationModeDiagnostic?.isDiagnosticRunning() == true ||
-            navguardFusionDiagnostic?.isDiagnosticRunning() == true
+            navguardFusionDiagnostic?.isDiagnosticRunning() == true ||
+            fullNavguardFlowDiagnostic?.isDiagnosticRunning() == true
 
     private fun createUnavailableEvaluationModePreflightSnapshot():
         Map<String, Any?> {
@@ -1180,6 +1194,123 @@ class MainActivity : FlutterActivity() {
                 hasActivityRecognitionPermission(),
             "diagnosticRunning" to false,
             "nativeReady" to false,
+        )
+
+    private fun configureFullNavguardFlowChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            FULL_NAVGUARD_FLOW_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                METHOD_GET_FULL_NAVGUARD_FLOW_PREFLIGHT -> {
+                    result.success(
+                        fullNavguardFlowDiagnostic?.createPreflightSnapshot()
+                            ?: createUnavailableFullNavguardFlowPreflightSnapshot(),
+                    )
+                }
+
+                METHOD_RUN_FULL_NAVGUARD_FLOW_DIAGNOSTIC -> {
+                    runFullNavguardFlowDiagnostic(call.arguments, result)
+                }
+
+                METHOD_CANCEL_FULL_NAVGUARD_FLOW_DIAGNOSTIC -> {
+                    val diagnostic = fullNavguardFlowDiagnostic
+                    val cancellationRequested = diagnostic?.cancelActiveSession() == true
+                    result.success(
+                        linkedMapOf(
+                            "schemaVersion" to SCHEMA_VERSION,
+                            "snapshotKind" to SNAPSHOT_KIND_FULL_NAVGUARD_FLOW_CANCELLATION,
+                            "cancellationRequested" to cancellationRequested,
+                            "diagnosticRunning" to (diagnostic?.isDiagnosticRunning() == true),
+                        ),
+                    )
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun runFullNavguardFlowDiagnostic(
+        rawArguments: Any?,
+        result: MethodChannel.Result,
+    ) {
+        val diagnostic = fullNavguardFlowDiagnostic
+        if (diagnostic == null) {
+            result.error(
+                ERROR_FULL_NAVGUARD_FLOW_UNAVAILABLE,
+                "Full NAVGUARD flow diagnostics are unavailable.",
+                null,
+            )
+            return
+        }
+        if (isAnotherEvaluationExclusiveOperationRunning()) {
+            result.error(
+                ERROR_FULL_NAVGUARD_FLOW_ALREADY_RUNNING,
+                "Another mutually exclusive NAVGUARD operation is running.",
+                null,
+            )
+            return
+        }
+
+        val arguments = rawArguments as? Map<*, *>
+        val latitudeDeg = (arguments?.get("latitudeDeg") as? Number)?.toDouble()
+        val longitudeDeg = (arguments?.get("longitudeDeg") as? Number)?.toDouble()
+        val rawAltitude = arguments?.get("altitudeEllipsoidM")
+        val altitudeEllipsoidM = (rawAltitude as? Number)?.toDouble()
+        if (
+            latitudeDeg == null ||
+                !latitudeDeg.isFinite() ||
+                latitudeDeg !in -90.0..90.0 ||
+                longitudeDeg == null ||
+                !longitudeDeg.isFinite() ||
+                longitudeDeg !in -180.0..180.0 ||
+                (rawAltitude != null && altitudeEllipsoidM == null) ||
+                altitudeEllipsoidM?.isFinite() == false
+        ) {
+            result.error(
+                ERROR_FULL_NAVGUARD_FLOW_ANCHOR_REQUIRED,
+                "A valid locked Stage 3A GNSS anchor is required.",
+                null,
+            )
+            return
+        }
+
+        diagnostic.start(
+            anchorLatitudeDeg = latitudeDeg,
+            anchorLongitudeDeg = longitudeDeg,
+            anchorAltitudeEllipsoidM = altitudeEllipsoidM,
+            callback =
+                object : FullNavguardFlowDiagnostic.Callback {
+                    override fun onSuccess(summary: Map<String, Any?>) {
+                        result.success(summary)
+                    }
+
+                    override fun onError(code: String, message: String) {
+                        result.error(code, message, null)
+                    }
+                },
+        )
+    }
+
+    private fun createUnavailableFullNavguardFlowPreflightSnapshot(): Map<String, Any?> =
+        linkedMapOf(
+            "schemaVersion" to SCHEMA_VERSION,
+            "snapshotKind" to SNAPSHOT_KIND_FULL_NAVGUARD_FLOW_PREFLIGHT,
+            "gpsProviderAvailable" to false,
+            "gpsProviderEnabled" to false,
+            "fineLocationPermissionGranted" to hasFineLocationPermission(),
+            "rotationVectorAvailable" to false,
+            "rotationVectorName" to null,
+            "stepDetectorAvailable" to false,
+            "stepDetectorName" to null,
+            "activityRecognitionPermissionGranted" to hasActivityRecognitionPermission(),
+            "arCoreSupported" to false,
+            "arCoreInstalled" to false,
+            "cameraPermissionGranted" to hasCameraPermission(),
+            "diagnosticRunning" to false,
+            "nativeReady" to false,
+            "currentState" to "IDLE",
         )
 
     private fun requestGnssForegroundPermission(result: MethodChannel.Result) {
@@ -1517,6 +1648,9 @@ class MainActivity : FlutterActivity() {
         navguardFusionDiagnostic?.cancelActiveSession(
             "NAVGUARD fusion diagnostic cancelled because the activity paused.",
         )
+        fullNavguardFlowDiagnostic?.cancelActiveSession(
+            "Full NAVGUARD flow cancelled because the activity paused.",
+        )
 
         super.onPause()
     }
@@ -1550,6 +1684,9 @@ class MainActivity : FlutterActivity() {
         navguardFusionDiagnostic?.cancelActiveSession(
             "NAVGUARD fusion diagnostic cancelled because the activity was destroyed.",
         )
+        fullNavguardFlowDiagnostic?.cancelActiveSession(
+            "Full NAVGUARD flow cancelled because the activity was destroyed.",
+        )
 
         sensorTimingDiagnostic = null
         gnssTimingDiagnostic = null
@@ -1561,6 +1698,7 @@ class MainActivity : FlutterActivity() {
         arCoreEnuDiagnostic = null
         evaluationModeDiagnostic = null
         navguardFusionDiagnostic = null
+        fullNavguardFlowDiagnostic = null
         locationManager = null
 
         takePendingPermissionResult()?.error(
@@ -1878,6 +2016,8 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/evaluation_mode"
         const val NAVGUARD_FUSION_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/navguard_fusion"
+        const val FULL_NAVGUARD_FLOW_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/full_navguard_flow"
 
         const val METHOD_GET_SENSOR_CAPABILITY_INVENTORY =
             "getSensorCapabilityInventory"
@@ -1945,6 +2085,12 @@ class MainActivity : FlutterActivity() {
             "runNavguardFusionDiagnostic"
         const val METHOD_CANCEL_NAVGUARD_FUSION_DIAGNOSTIC =
             "cancelNavguardFusionDiagnostic"
+        const val METHOD_GET_FULL_NAVGUARD_FLOW_PREFLIGHT =
+            "getFullNavguardFlowPreflight"
+        const val METHOD_RUN_FULL_NAVGUARD_FLOW_DIAGNOSTIC =
+            "runFullNavguardFlowDiagnostic"
+        const val METHOD_CANCEL_FULL_NAVGUARD_FLOW_DIAGNOSTIC =
+            "cancelFullNavguardFlowDiagnostic"
 
         const val SNAPSHOT_KIND_GNSS_PREFLIGHT =
             "gnss_diagnostic_preflight"
@@ -1978,6 +2124,10 @@ class MainActivity : FlutterActivity() {
             "navguard_fusion_preflight"
         const val SNAPSHOT_KIND_NAVGUARD_FUSION_CANCELLATION =
             "navguard_fusion_cancellation"
+        const val SNAPSHOT_KIND_FULL_NAVGUARD_FLOW_PREFLIGHT =
+            "full_navguard_flow_preflight"
+        const val SNAPSHOT_KIND_FULL_NAVGUARD_FLOW_CANCELLATION =
+            "full_navguard_flow_cancellation"
 
         const val HEADING_REQUESTED_SAMPLING_PERIOD_US = 20_000
 
@@ -2064,5 +2214,11 @@ class MainActivity : FlutterActivity() {
             "navguard_fusion_anchor_required"
         const val ERROR_NAVGUARD_FUSION_ALREADY_RUNNING =
             "navguard_fusion_already_running"
+        const val ERROR_FULL_NAVGUARD_FLOW_UNAVAILABLE =
+            "full_navguard_flow_gps_unavailable"
+        const val ERROR_FULL_NAVGUARD_FLOW_ANCHOR_REQUIRED =
+            "full_navguard_flow_anchor_required"
+        const val ERROR_FULL_NAVGUARD_FLOW_ALREADY_RUNNING =
+            "full_navguard_flow_already_running"
     }
 }

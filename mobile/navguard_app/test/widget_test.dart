@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:navguard/main.dart';
 
@@ -26,7 +27,7 @@ void main() {
 
     expect(find.text('GNSS Runtime Timing Diagnostic'), findsOneWidget);
     expect(find.text('Precise location permission: Unknown'), findsOneWidget);
-    expect(find.text('GPS provider: Unknown'), findsNWidgets(3));
+    expect(find.text('GPS provider: Unknown'), findsNWidgets(4));
     expect(find.text('Location services: Unknown'), findsNWidgets(2));
     expect(find.text('Refresh GNSS Preflight'), findsOneWidget);
     expect(find.text('Request Precise Location Permission'), findsOneWidget);
@@ -54,7 +55,7 @@ void main() {
     expect(find.text('Acquire GNSS Anchor'), findsOneWidget);
 
     expect(find.text('Heading / True-North Reference'), findsOneWidget);
-    expect(find.text('Rotation Vector: Unknown'), findsNWidgets(5));
+    expect(find.text('Rotation Vector: Unknown'), findsNWidgets(6));
     expect(find.text('Anchor: Not locked'), findsOneWidget);
     expect(find.text('Heading diagnostic: Idle'), findsOneWidget);
     expect(find.text('Device forward axis: Top edge (+Y)'), findsOneWidget);
@@ -86,7 +87,7 @@ void main() {
     expect(find.text('Refresh Heading Preflight'), findsOneWidget);
     expect(find.text('Run Heading Diagnostic'), findsOneWidget);
     expect(find.text('Step-Event Foundation'), findsOneWidget);
-    expect(find.text('Step Detector: Unknown'), findsNWidgets(4));
+    expect(find.text('Step Detector: Unknown'), findsNWidgets(5));
     expect(
       find.text('Physical activity permission: Unknown'),
       findsNWidgets(2),
@@ -137,9 +138,9 @@ void main() {
     expect(find.text('Run ARCore Tracking Diagnostic'), findsOneWidget);
 
     expect(find.text('ARCore → ENU Foundation'), findsOneWidget);
-    expect(find.text('ARCore: Unknown'), findsOneWidget);
-    expect(find.text('Camera permission: Unknown'), findsNWidgets(2));
-    expect(find.text('GNSS Anchor: Required'), findsNWidgets(3));
+    expect(find.text('ARCore: Unknown'), findsNWidgets(2));
+    expect(find.text('Camera permission: Unknown'), findsNWidgets(3));
+    expect(find.text('GNSS Anchor: Required'), findsNWidgets(4));
     expect(find.text('Alignment: Not started'), findsOneWidget);
     expect(find.text('ARCore → ENU: Idle'), findsOneWidget);
     expect(find.text('Alignment hold: 2 s'), findsOneWidget);
@@ -175,7 +176,7 @@ void main() {
       find.text('Evaluation Mode + Ground Truth Firewall', skipOffstage: false),
       findsOneWidget,
     );
-    expect(find.text('Location permission: Unknown'), findsOneWidget);
+    expect(find.text('Location permission: Unknown'), findsNWidgets(2));
     expect(find.text('Physical Activity permission: Unknown'), findsOneWidget);
     expect(find.text('Firewall self-test: Not run'), findsOneWidget);
     expect(find.text('Evaluation state: Idle'), findsOneWidget);
@@ -264,6 +265,52 @@ void main() {
     );
     expect(
       find.text('Run NAVGUARD Fusion Diagnostic', skipOffstage: false),
+      findsOneWidget,
+    );
+
+    expect(
+      find.text(
+        'Full NAVGUARD Flow — GNSS Denial & Recovery',
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Native ready: Unknown'), findsOneWidget);
+    expect(
+      find.byKey(const Key('full-navguard-flow-live-state')),
+      findsOneWidget,
+    );
+    expect(find.text('IDLE'), findsOneWidget);
+    expect(
+      find.text('Normal GNSS accepted fixes: Not available'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Denied GNSS quarantined fixes: Not available'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Denied GNSS used by estimator: MUST BE 0'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Denial type: SOFTWARE-DEFINED'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Denied GNSS estimator access: BLOCKED'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Protected Ground Truth: NOT ACCESSED'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Refresh Full NAVGUARD Flow Preflight', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Run Full NAVGUARD Flow', skipOffstage: false),
       findsOneWidget,
     );
   });

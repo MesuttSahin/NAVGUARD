@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -7,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'navigation/arcore_enu.dart';
 import 'navigation/baseline_pdr.dart';
 import 'navigation/evaluation_mode.dart';
+import 'navigation/full_navguard_flow.dart';
 import 'navigation/gnss_anchor.dart';
 import 'navigation/heading.dart';
 import 'navigation/navguard_fusion.dart';
@@ -40,6 +42,8 @@ enum _DiagnosticOperation {
   evaluationModeDiagnostic,
   navguardFusionPreflight,
   navguardFusionDiagnostic,
+  fullNavguardFlowPreflight,
+  fullNavguardFlowDiagnostic,
 }
 
 class _SensorOption {
@@ -201,6 +205,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     'io.github.mesuttsahin.navguard/navguard_fusion',
   );
 
+  static const MethodChannel _fullNavguardFlowChannel = MethodChannel(
+    'io.github.mesuttsahin.navguard/full_navguard_flow',
+  );
+
   static const JsonEncoder _jsonEncoder = JsonEncoder.withIndent('  ');
 
   _DiagnosticOperation? _activeOperation;
@@ -243,6 +251,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   String _navguardFusionAlignmentStatus = 'Not started';
   String _navguardFusionStatus = 'Idle';
   bool _navguardFusionCancellationRequestInFlight = false;
+  FullNavguardFlowPreflight? _fullNavguardFlowPreflight;
+  FullNavguardFlowDiagnosticResult? _fullNavguardFlowResult;
+  FullNavguardFlowState _fullNavguardFlowState = FullNavguardFlowState.idle;
+  bool _fullNavguardFlowCancellationRequestInFlight = false;
+  bool _fullNavguardFlowPollInFlight = false;
+  Timer? _fullNavguardFlowStatePollTimer;
   String? _formattedOutput;
   String? _errorMessage;
 
@@ -317,6 +331,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _isNavguardFusionDiagnosticLoading =>
       _activeOperation == _DiagnosticOperation.navguardFusionDiagnostic;
 
+  bool get _isFullNavguardFlowPreflightLoading =>
+      _activeOperation == _DiagnosticOperation.fullNavguardFlowPreflight;
+
+  bool get _isFullNavguardFlowDiagnosticLoading =>
+      _activeOperation == _DiagnosticOperation.fullNavguardFlowDiagnostic;
+
   bool get _canRunHeadingDiagnostic =>
       !_isBusy &&
       _headingPreflight?.rotationVectorAvailable == true &&
@@ -347,6 +367,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _canRunNavguardFusion =>
       !_isBusy &&
       _navguardFusionPreflight?.nativeReady == true &&
+      _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+      _gnssAnchor != null;
+
+  bool get _canRunFullNavguardFlow =>
+      !_isBusy &&
+      _fullNavguardFlowPreflight?.nativeReady == true &&
       _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
       _gnssAnchor != null;
 
@@ -832,6 +858,32 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
             _gnssAnchor != null
         ? 'Locked'
         : 'Required';
+  }
+
+  String _fullFlowAvailabilityLabel(bool? value) {
+    if (value == null) return 'Unknown';
+    return value ? 'Ready' : 'Not ready';
+  }
+
+  String get _fullFlowGpsLabel {
+    final FullNavguardFlowPreflight? value = _fullNavguardFlowPreflight;
+    if (value == null) return 'Unknown';
+    if (!value.gpsProviderAvailable) return 'Unavailable';
+    return value.gpsProviderEnabled ? 'Enabled' : 'Disabled';
+  }
+
+  String get _fullFlowAnchorLabel {
+    return _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+            _gnssAnchor != null
+        ? 'Locked'
+        : 'Required';
+  }
+
+  String get _fullFlowArCoreLabel {
+    final FullNavguardFlowPreflight? value = _fullNavguardFlowPreflight;
+    if (value == null) return 'Unknown';
+    if (!value.arCoreSupported) return 'Unsupported';
+    return value.arCoreInstalled ? 'Ready' : 'Not installed/current';
   }
 
   String _formatNavguardQuality(NavguardQuality? value) {
@@ -2179,6 +2231,227 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     }
   }
 
+  Future<void> _refreshFullNavguardFlowPreflight() async {
+    if (_isBusy) return;
+    setState(() {
+      _activeOperation = _DiagnosticOperation.fullNavguardFlowPreflight;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+    FullNavguardFlowPreflight? nextPreflight;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+    try {
+      final Object? raw = await _fullNavguardFlowChannel.invokeMethod<Object?>(
+        'getFullNavguardFlowPreflight',
+      );
+      final FullNavguardFlowPreflight parsed =
+          FullNavguardFlowPreflight.fromPlatform(raw);
+      nextPreflight = parsed;
+      sanitizedLog = _fullFlowPreflightMetadata(parsed);
+      nextOutput = _jsonEncoder.convert(sanitizedLog);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextError = 'Full NAVGUARD Flow preflight failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'Full NAVGUARD Flow channel is unavailable.';
+    } on FormatException {
+      nextError = 'Native Full NAVGUARD Flow preflight response was invalid.';
+    } catch (_) {
+      nextError = 'Unexpected error while refreshing Full NAVGUARD Flow.';
+    }
+    _printSanitizedJsonBlock(
+      beginMarker: 'FULL_NAVGUARD_FLOW_PREFLIGHT_BEGIN',
+      endMarker: 'FULL_NAVGUARD_FLOW_PREFLIGHT_END',
+      value: sanitizedLog,
+    );
+    if (!mounted) return;
+    setState(() {
+      _activeOperation = null;
+      _fullNavguardFlowPreflight = nextPreflight;
+      if (nextPreflight != null) {
+        _fullNavguardFlowState = nextPreflight.currentState;
+      }
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Map<String, Object?> _fullFlowPreflightMetadata(
+    FullNavguardFlowPreflight value,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'snapshotKind': 'full_navguard_flow_preflight',
+      'gpsProviderAvailable': value.gpsProviderAvailable,
+      'gpsProviderEnabled': value.gpsProviderEnabled,
+      'fineLocationPermissionGranted': value.fineLocationPermissionGranted,
+      'rotationVectorAvailable': value.rotationVectorAvailable,
+      'stepDetectorAvailable': value.stepDetectorAvailable,
+      'activityRecognitionPermissionGranted':
+          value.activityRecognitionPermissionGranted,
+      'arCoreSupported': value.arCoreSupported,
+      'arCoreInstalled': value.arCoreInstalled,
+      'cameraPermissionGranted': value.cameraPermissionGranted,
+      'diagnosticRunning': value.diagnosticRunning,
+      'nativeReady': value.nativeReady,
+      'currentState': value.currentState.wireValue,
+    };
+  }
+
+  Future<void> _pollFullNavguardFlowState() async {
+    if (!_isFullNavguardFlowDiagnosticLoading ||
+        _fullNavguardFlowPollInFlight) {
+      return;
+    }
+    _fullNavguardFlowPollInFlight = true;
+    try {
+      final Object? raw = await _fullNavguardFlowChannel.invokeMethod<Object?>(
+        'getFullNavguardFlowPreflight',
+      );
+      final FullNavguardFlowPreflight parsed =
+          FullNavguardFlowPreflight.fromPlatform(raw);
+      if (mounted && _isFullNavguardFlowDiagnosticLoading) {
+        setState(() {
+          _fullNavguardFlowPreflight = parsed;
+          _fullNavguardFlowState = parsed.currentState;
+        });
+      }
+    } catch (_) {
+      // Polling is display-only. The authoritative run future reports errors.
+    } finally {
+      _fullNavguardFlowPollInFlight = false;
+    }
+  }
+
+  Future<void> _runFullNavguardFlowDiagnostic() async {
+    final GnssAnchor? anchor = _gnssAnchor;
+    if (!_canRunFullNavguardFlow || anchor == null) return;
+    setState(() {
+      _activeOperation = _DiagnosticOperation.fullNavguardFlowDiagnostic;
+      _fullNavguardFlowResult = null;
+      _fullNavguardFlowState = FullNavguardFlowState.acquiringGnss;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+    _fullNavguardFlowStatePollTimer?.cancel();
+    _fullNavguardFlowStatePollTimer = Timer.periodic(
+      const Duration(milliseconds: 400),
+      (_) => _pollFullNavguardFlowState(),
+    );
+
+    FullNavguardFlowDiagnosticResult? nextResult;
+    FullNavguardFlowState nextState = FullNavguardFlowState.failed;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+    try {
+      final Object? raw = await _fullNavguardFlowChannel.invokeMethod<Object?>(
+        'runFullNavguardFlowDiagnostic',
+        <String, Object?>{
+          'latitudeDeg': anchor.latitudeDeg,
+          'longitudeDeg': anchor.longitudeDeg,
+          'altitudeEllipsoidM': anchor.altitudeEllipsoidM,
+        },
+      );
+      final FullNavguardFlowDiagnosticResult parsed =
+          FullNavguardFlowDiagnosticResult.fromPlatform(raw);
+      nextResult = parsed;
+      nextState = parsed.finalState;
+      sanitizedLog = parsed.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(parsed.sanitizedMetadata);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextState = error.code == 'full_navguard_flow_cancelled'
+          ? FullNavguardFlowState.cancelled
+          : FullNavguardFlowState.failed;
+      nextError = 'Full NAVGUARD Flow failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'Full NAVGUARD Flow channel is unavailable.';
+    } on FormatException {
+      nextError = 'Native Full NAVGUARD Flow result was invalid.';
+    } catch (_) {
+      nextError = 'Unexpected error while running Full NAVGUARD Flow.';
+    } finally {
+      _fullNavguardFlowStatePollTimer?.cancel();
+      _fullNavguardFlowStatePollTimer = null;
+    }
+    _printSanitizedJsonBlock(
+      beginMarker: 'FULL_NAVGUARD_FLOW_DIAGNOSTIC_BEGIN',
+      endMarker: 'FULL_NAVGUARD_FLOW_DIAGNOSTIC_END',
+      value: sanitizedLog,
+    );
+    if (!mounted) return;
+    setState(() {
+      _activeOperation = null;
+      _fullNavguardFlowResult = nextResult;
+      _fullNavguardFlowState = nextState;
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _cancelFullNavguardFlowDiagnostic() async {
+    if (!_isFullNavguardFlowDiagnosticLoading ||
+        _fullNavguardFlowCancellationRequestInFlight) {
+      return;
+    }
+    setState(() {
+      _fullNavguardFlowCancellationRequestInFlight = true;
+    });
+    try {
+      await _fullNavguardFlowChannel.invokeMethod<Object?>(
+        'cancelFullNavguardFlowDiagnostic',
+      );
+    } on PlatformException catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'Full NAVGUARD Flow cancellation failed (${error.code}).';
+        });
+      }
+    } on MissingPluginException {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Full NAVGUARD Flow channel is unavailable.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Unexpected error while cancelling the full flow.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _fullNavguardFlowCancellationRequestInFlight = false;
+        });
+      }
+    }
+  }
+
   Future<void> _runDiagnosticRequest({
     required MethodChannel channel,
     required _DiagnosticOperation operation,
@@ -2334,6 +2607,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
       debugPrint(line);
     }
     debugPrint(endMarker);
+  }
+
+  @override
+  void dispose() {
+    _fullNavguardFlowStatePollTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -3350,6 +3629,143 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
               ],
               const Divider(height: 32),
               Text(
+                'Full NAVGUARD Flow — GNSS Denial & Recovery',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text('GPS provider: $_fullFlowGpsLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Location permission: ${_fullFlowAvailabilityLabel(_fullNavguardFlowPreflight?.fineLocationPermissionGranted)}',
+              ),
+              const SizedBox(height: 4),
+              Text('GNSS Anchor: $_fullFlowAnchorLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Rotation Vector: ${_fullFlowAvailabilityLabel(_fullNavguardFlowPreflight?.rotationVectorAvailable)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Step Detector: ${_fullFlowAvailabilityLabel(_fullNavguardFlowPreflight?.stepDetectorAvailable)}',
+              ),
+              const SizedBox(height: 4),
+              Text('ARCore: $_fullFlowArCoreLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Camera permission: ${_fullFlowAvailabilityLabel(_fullNavguardFlowPreflight?.cameraPermissionGranted)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Native ready: ${_fullFlowAvailabilityLabel(_fullNavguardFlowPreflight?.nativeReady)}',
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _fullNavguardFlowState.wireValue,
+                key: const Key('full-navguard-flow-live-state'),
+                style: Theme.of(context).textTheme.headlineSmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Normal GNSS accepted fixes: ${_fullNavguardFlowResult?.normalGnssAcceptedFixCount ?? 'Not available'}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Denied GNSS quarantined fixes: ${_fullNavguardFlowResult?.deniedGnssFixCount ?? 'Not available'}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Denied GNSS used by estimator: ${_fullNavguardFlowResult?.deniedGnssUsedByEstimatorCount ?? 'MUST BE 0'}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Denied PDR predictions: ${_fullNavguardFlowResult?.deniedPdrPredictionsApplied ?? 'Not available'}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Denied ARCore measurements: ${_fullNavguardFlowResult?.deniedArcoreMeasurementsApplied ?? 'Not available'}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Denied heading measurements: ${_fullNavguardFlowResult?.deniedHeadingMeasurementsApplied ?? 'Not available'}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Pre-recovery fused East: ${_formatMeters(_fullNavguardFlowResult?.preRecoveryDeniedEastM)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Pre-recovery fused North: ${_formatMeters(_fullNavguardFlowResult?.preRecoveryDeniedNorthM)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Recovery accepted fixes: ${_fullNavguardFlowResult?.recoveryAcceptedFixCount ?? 'Not available'}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Recovery correction distance: ${_formatMeters(_fullNavguardFlowResult?.recoveryCorrectionDistanceM)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Final recovered East: ${_formatMeters(_fullNavguardFlowResult?.finalRecoveredEastM)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Final recovered North: ${_formatMeters(_fullNavguardFlowResult?.finalRecoveredNorthM)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Final state: ${_fullNavguardFlowResult?.finalState.wireValue ?? _fullNavguardFlowState.wireValue}',
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Denial type: SOFTWARE-DEFINED\n'
+                'RF interference: NONE\n'
+                'Denied GNSS estimator access: BLOCKED\n'
+                'Recovery accuracy: NOT VALIDATED\n'
+                'Full-flow accuracy: NOT VALIDATED\n'
+                'Protected Ground Truth: NOT ACCESSED',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isBusy ? null : _refreshFullNavguardFlowPreflight,
+                icon: _isFullNavguardFlowPreflightLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: const Text('Refresh Full NAVGUARD Flow Preflight'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: _canRunFullNavguardFlow
+                    ? _runFullNavguardFlowDiagnostic
+                    : null,
+                icon: _isFullNavguardFlowDiagnosticLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.navigation_outlined),
+                label: const Text('Run Full NAVGUARD Flow'),
+              ),
+              if (_isFullNavguardFlowDiagnosticLoading) ...<Widget>[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _fullNavguardFlowCancellationRequestInFlight
+                      ? null
+                      : _cancelFullNavguardFlowDiagnostic,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text('Cancel Full NAVGUARD Flow'),
+                ),
+              ],
+              const Divider(height: 32),
+              Text(
                 _isBusy ? _activeOperationLabel : 'Diagnostic Output',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
@@ -3424,6 +3840,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         return 'Refreshing NAVGUARD Fusion preflight...';
       case _DiagnosticOperation.navguardFusionDiagnostic:
         return 'Running NAVGUARD Fusion diagnostic...';
+      case _DiagnosticOperation.fullNavguardFlowPreflight:
+        return 'Refreshing Full NAVGUARD Flow preflight...';
+      case _DiagnosticOperation.fullNavguardFlowDiagnostic:
+        return 'Running Full NAVGUARD Flow...';
       case null:
         return 'Diagnostic Output';
     }
