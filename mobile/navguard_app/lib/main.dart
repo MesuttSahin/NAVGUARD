@@ -12,6 +12,7 @@ import 'navigation/full_navguard_flow.dart';
 import 'navigation/gnss_anchor.dart';
 import 'navigation/heading.dart';
 import 'navigation/navguard_fusion.dart';
+import 'navigation/navguard_benchmark.dart';
 import 'navigation/step_event.dart';
 
 void main() {
@@ -44,6 +45,8 @@ enum _DiagnosticOperation {
   navguardFusionDiagnostic,
   fullNavguardFlowPreflight,
   fullNavguardFlowDiagnostic,
+  navguardBenchmarkPreflight,
+  navguardBenchmarkDiagnostic,
 }
 
 class _SensorOption {
@@ -209,6 +212,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     'io.github.mesuttsahin.navguard/full_navguard_flow',
   );
 
+  static const MethodChannel _navguardBenchmarkChannel = MethodChannel(
+    'io.github.mesuttsahin.navguard/navguard_benchmark',
+  );
+
   static const JsonEncoder _jsonEncoder = JsonEncoder.withIndent('  ');
 
   _DiagnosticOperation? _activeOperation;
@@ -257,6 +264,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool _fullNavguardFlowCancellationRequestInFlight = false;
   bool _fullNavguardFlowPollInFlight = false;
   Timer? _fullNavguardFlowStatePollTimer;
+  NavguardBenchmarkPreflight? _navguardBenchmarkPreflight;
+  NavguardBenchmarkDiagnosticResult? _navguardBenchmarkResult;
+  NavguardBenchmarkPhase _navguardBenchmarkPhase = NavguardBenchmarkPhase.idle;
+  bool _navguardBenchmarkCancellationRequestInFlight = false;
+  bool _navguardBenchmarkPollInFlight = false;
+  Timer? _navguardBenchmarkPollTimer;
   String? _formattedOutput;
   String? _errorMessage;
 
@@ -337,6 +350,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _isFullNavguardFlowDiagnosticLoading =>
       _activeOperation == _DiagnosticOperation.fullNavguardFlowDiagnostic;
 
+  bool get _isNavguardBenchmarkPreflightLoading =>
+      _activeOperation == _DiagnosticOperation.navguardBenchmarkPreflight;
+
+  bool get _isNavguardBenchmarkDiagnosticLoading =>
+      _activeOperation == _DiagnosticOperation.navguardBenchmarkDiagnostic;
+
   bool get _canRunHeadingDiagnostic =>
       !_isBusy &&
       _headingPreflight?.rotationVectorAvailable == true &&
@@ -373,6 +392,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _canRunFullNavguardFlow =>
       !_isBusy &&
       _fullNavguardFlowPreflight?.nativeReady == true &&
+      _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+      _gnssAnchor != null;
+
+  bool get _canRunNavguardBenchmark =>
+      !_isBusy &&
+      _navguardBenchmarkPreflight?.nativeReady == true &&
       _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
       _gnssAnchor != null;
 
@@ -884,6 +909,30 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     if (value == null) return 'Unknown';
     if (!value.arCoreSupported) return 'Unsupported';
     return value.arCoreInstalled ? 'Ready' : 'Not installed/current';
+  }
+
+  String get _benchmarkGpsLabel {
+    final NavguardBenchmarkPreflight? value = _navguardBenchmarkPreflight;
+    if (value == null) return 'Unknown';
+    if (!value.gpsProviderAvailable) return 'Unavailable';
+    return value.gpsProviderEnabled ? 'Enabled' : 'Disabled';
+  }
+
+  String get _benchmarkAnchorLabel {
+    return _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+            _gnssAnchor != null
+        ? 'Locked'
+        : 'Required';
+  }
+
+  String _formatBenchmarkError(double? value) {
+    return value == null ? 'Not available' : value.toStringAsFixed(3);
+  }
+
+  String get _benchmarkImprovementLabel {
+    final double? value =
+        _navguardBenchmarkResult?.dVsAMedianImprovementPercent;
+    return value == null ? 'Not available' : '${value.toStringAsFixed(1)}%';
   }
 
   String _formatNavguardQuality(NavguardQuality? value) {
@@ -2452,6 +2501,227 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     }
   }
 
+  Future<void> _refreshNavguardBenchmarkPreflight() async {
+    if (_isBusy) return;
+    setState(() {
+      _activeOperation = _DiagnosticOperation.navguardBenchmarkPreflight;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+    NavguardBenchmarkPreflight? nextPreflight;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+    try {
+      final Object? raw = await _navguardBenchmarkChannel.invokeMethod<Object?>(
+        'getNavguardBenchmarkPreflight',
+      );
+      final NavguardBenchmarkPreflight parsed =
+          NavguardBenchmarkPreflight.fromPlatform(raw);
+      nextPreflight = parsed;
+      sanitizedLog = _benchmarkPreflightMetadata(parsed);
+      nextOutput = _jsonEncoder.convert(sanitizedLog);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextError = 'NAVGUARD Benchmark preflight failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'NAVGUARD Benchmark channel is unavailable.';
+    } on FormatException {
+      nextError = 'Native NAVGUARD Benchmark preflight response was invalid.';
+    } catch (_) {
+      nextError = 'Unexpected error while refreshing benchmark preflight.';
+    }
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_BENCHMARK_PREFLIGHT_BEGIN',
+      endMarker: 'NAVGUARD_BENCHMARK_PREFLIGHT_END',
+      value: sanitizedLog,
+    );
+    if (!mounted) return;
+    setState(() {
+      _activeOperation = null;
+      _navguardBenchmarkPreflight = nextPreflight;
+      if (nextPreflight != null) {
+        _navguardBenchmarkPhase = nextPreflight.currentPhase;
+      }
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Map<String, Object?> _benchmarkPreflightMetadata(
+    NavguardBenchmarkPreflight value,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'snapshotKind': 'navguard_benchmark_preflight',
+      'gpsProviderAvailable': value.gpsProviderAvailable,
+      'gpsProviderEnabled': value.gpsProviderEnabled,
+      'fineLocationPermissionGranted': value.fineLocationPermissionGranted,
+      'rotationVectorAvailable': value.rotationVectorAvailable,
+      'stepDetectorAvailable': value.stepDetectorAvailable,
+      'activityRecognitionPermissionGranted':
+          value.activityRecognitionPermissionGranted,
+      'arCoreSupported': value.arCoreSupported,
+      'arCoreInstalled': value.arCoreInstalled,
+      'cameraPermissionGranted': value.cameraPermissionGranted,
+      'diagnosticRunning': value.diagnosticRunning,
+      'nativeReady': value.nativeReady,
+      'currentPhase': value.currentPhase.wireValue,
+    };
+  }
+
+  Future<void> _pollNavguardBenchmarkPhase() async {
+    if (!_isNavguardBenchmarkDiagnosticLoading ||
+        _navguardBenchmarkPollInFlight) {
+      return;
+    }
+    _navguardBenchmarkPollInFlight = true;
+    try {
+      final Object? raw = await _navguardBenchmarkChannel.invokeMethod<Object?>(
+        'getNavguardBenchmarkPreflight',
+      );
+      final NavguardBenchmarkPreflight parsed =
+          NavguardBenchmarkPreflight.fromPlatform(raw);
+      if (mounted && _isNavguardBenchmarkDiagnosticLoading) {
+        setState(() {
+          _navguardBenchmarkPreflight = parsed;
+          _navguardBenchmarkPhase = parsed.currentPhase;
+        });
+      }
+    } catch (_) {
+      // Polling is display-only. The authoritative run future reports errors.
+    } finally {
+      _navguardBenchmarkPollInFlight = false;
+    }
+  }
+
+  Future<void> _runNavguardBenchmarkDiagnostic() async {
+    final GnssAnchor? anchor = _gnssAnchor;
+    if (!_canRunNavguardBenchmark || anchor == null) return;
+    setState(() {
+      _activeOperation = _DiagnosticOperation.navguardBenchmarkDiagnostic;
+      _navguardBenchmarkResult = null;
+      _navguardBenchmarkPhase = NavguardBenchmarkPhase.preparing;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+    _navguardBenchmarkPollTimer?.cancel();
+    _navguardBenchmarkPollTimer = Timer.periodic(
+      const Duration(milliseconds: 400),
+      (_) => _pollNavguardBenchmarkPhase(),
+    );
+
+    NavguardBenchmarkDiagnosticResult? nextResult;
+    NavguardBenchmarkPhase nextPhase = NavguardBenchmarkPhase.failed;
+    String? nextOutput;
+    String? nextError;
+    Map<String, Object?> sanitizedLog = <String, Object?>{
+      'success': false,
+      'errorCategory': 'unknown_error',
+    };
+    try {
+      final Object? raw = await _navguardBenchmarkChannel.invokeMethod<Object?>(
+        'runNavguardBenchmarkDiagnostic',
+        <String, Object?>{
+          'latitudeDeg': anchor.latitudeDeg,
+          'longitudeDeg': anchor.longitudeDeg,
+          'altitudeEllipsoidM': anchor.altitudeEllipsoidM,
+        },
+      );
+      final NavguardBenchmarkDiagnosticResult parsed =
+          NavguardBenchmarkDiagnosticResult.fromPlatform(raw);
+      nextResult = parsed;
+      nextPhase = NavguardBenchmarkPhase.complete;
+      sanitizedLog = parsed.sanitizedMetadata;
+      nextOutput = _jsonEncoder.convert(parsed.sanitizedMetadata);
+    } on PlatformException catch (error) {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': error.code,
+      };
+      nextPhase = error.code == 'navguard_benchmark_cancelled'
+          ? NavguardBenchmarkPhase.cancelled
+          : NavguardBenchmarkPhase.failed;
+      nextError = 'NAVGUARD Benchmark failed (${error.code}).';
+    } on MissingPluginException {
+      sanitizedLog = <String, Object?>{
+        'success': false,
+        'errorCategory': 'channel_unavailable',
+      };
+      nextError = 'NAVGUARD Benchmark channel is unavailable.';
+    } on FormatException {
+      nextError = 'Native NAVGUARD Benchmark result was invalid.';
+    } catch (_) {
+      nextError = 'Unexpected error while running NAVGUARD Benchmark.';
+    } finally {
+      _navguardBenchmarkPollTimer?.cancel();
+      _navguardBenchmarkPollTimer = null;
+    }
+    _printSanitizedJsonBlock(
+      beginMarker: 'NAVGUARD_BENCHMARK_BEGIN',
+      endMarker: 'NAVGUARD_BENCHMARK_END',
+      value: sanitizedLog,
+    );
+    if (!mounted) return;
+    setState(() {
+      _activeOperation = null;
+      _navguardBenchmarkResult = nextResult;
+      _navguardBenchmarkPhase = nextPhase;
+      _formattedOutput = nextOutput;
+      _errorMessage = nextError;
+    });
+  }
+
+  Future<void> _cancelNavguardBenchmarkDiagnostic() async {
+    if (!_isNavguardBenchmarkDiagnosticLoading ||
+        _navguardBenchmarkCancellationRequestInFlight) {
+      return;
+    }
+    setState(() {
+      _navguardBenchmarkCancellationRequestInFlight = true;
+    });
+    try {
+      await _navguardBenchmarkChannel.invokeMethod<Object?>(
+        'cancelNavguardBenchmarkDiagnostic',
+      );
+    } on PlatformException catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'NAVGUARD Benchmark cancellation failed (${error.code}).';
+        });
+      }
+    } on MissingPluginException {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'NAVGUARD Benchmark channel is unavailable.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Unexpected error while cancelling the benchmark.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _navguardBenchmarkCancellationRequestInFlight = false;
+        });
+      }
+    }
+  }
+
   Future<void> _runDiagnosticRequest({
     required MethodChannel channel,
     required _DiagnosticOperation operation,
@@ -2609,9 +2879,78 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     debugPrint(endMarker);
   }
 
+  Widget _buildBenchmarkMetricsTable() {
+    TableRow metricRow(String label, NavguardBenchmarkConfig config) {
+      final NavguardBenchmarkConfigMetrics? metrics =
+          _navguardBenchmarkResult?.configMetrics[config];
+      return TableRow(
+        children: <Widget>[
+          Padding(padding: const EdgeInsets.all(4), child: Text(label)),
+          Padding(
+            padding: const EdgeInsets.all(4),
+            child: Text(_formatBenchmarkError(metrics?.medianHorizontalErrorM)),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(4),
+            child: Text(_formatBenchmarkError(metrics?.meanHorizontalErrorM)),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(4),
+            child: Text(_formatBenchmarkError(metrics?.p95HorizontalErrorM)),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(4),
+            child: Text(
+              _formatBenchmarkError(
+                metrics?.finalPreCorrectionHorizontalErrorM,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    const TextStyle headerStyle = TextStyle(fontWeight: FontWeight.bold);
+    return Table(
+      border: TableBorder.all(color: Colors.grey),
+      columnWidths: const <int, TableColumnWidth>{0: FixedColumnWidth(52)},
+      children: <TableRow>[
+        const TableRow(
+          children: <Widget>[
+            Padding(
+              padding: EdgeInsets.all(4),
+              child: Text('Config', style: headerStyle),
+            ),
+            Padding(
+              padding: EdgeInsets.all(4),
+              child: Text('Median', style: headerStyle),
+            ),
+            Padding(
+              padding: EdgeInsets.all(4),
+              child: Text('Mean', style: headerStyle),
+            ),
+            Padding(
+              padding: EdgeInsets.all(4),
+              child: Text('P95', style: headerStyle),
+            ),
+            Padding(
+              padding: EdgeInsets.all(4),
+              child: Text('Final', style: headerStyle),
+            ),
+          ],
+        ),
+        metricRow('A', NavguardBenchmarkConfig.a),
+        metricRow('B', NavguardBenchmarkConfig.b),
+        metricRow('C', NavguardBenchmarkConfig.c),
+        metricRow('D', NavguardBenchmarkConfig.d),
+      ],
+    );
+  }
+
   @override
   void dispose() {
     _fullNavguardFlowStatePollTimer?.cancel();
+    _navguardBenchmarkPollTimer?.cancel();
     super.dispose();
   }
 
@@ -3766,6 +4105,107 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
               ],
               const Divider(height: 32),
               Text(
+                'NAVGUARD Benchmark — Config A/B/C/D',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text('GPS provider: $_benchmarkGpsLabel'),
+              const SizedBox(height: 4),
+              Text('GNSS Anchor: $_benchmarkAnchorLabel'),
+              const SizedBox(height: 4),
+              Text(
+                'Location permission: ${_fullFlowAvailabilityLabel(_navguardBenchmarkPreflight?.fineLocationPermissionGranted)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Rotation Vector: ${_fullFlowAvailabilityLabel(_navguardBenchmarkPreflight?.rotationVectorAvailable)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Step Detector: ${_fullFlowAvailabilityLabel(_navguardBenchmarkPreflight?.stepDetectorAvailable)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'ARCore ready: ${_fullFlowAvailabilityLabel(_navguardBenchmarkPreflight?.arCoreInstalled)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Native ready: ${_fullFlowAvailabilityLabel(_navguardBenchmarkPreflight?.nativeReady)}',
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _navguardBenchmarkPhase.displayLabel,
+                key: const Key('navguard-benchmark-live-phase'),
+                style: Theme.of(context).textTheme.headlineSmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Matched denied window: 30 s',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              _buildBenchmarkMetricsTable(),
+              const SizedBox(height: 12),
+              Text('D vs A improvement: $_benchmarkImprovementLabel'),
+              const SizedBox(height: 4),
+              const Text('Target: >=20%'),
+              const SizedBox(height: 4),
+              Text(
+                'Target met: ${_navguardBenchmarkResult == null ? 'Not available' : (_navguardBenchmarkResult!.dVsATargetMet ? 'YES' : 'NO')}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Protected GT reported accuracy median: ${_formatMeters(_navguardBenchmarkResult?.protectedGtReportedAccuracyMedianM)}',
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Protected GNSS: EVALUATION ONLY\n'
+                'Estimator access: BLOCKED\n'
+                'GT correction: NONE\n'
+                'Results: SESSION-SPECIFIC\n'
+                'Accuracy validation: NOT FINAL',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isBusy ? null : _refreshNavguardBenchmarkPreflight,
+                icon: _isNavguardBenchmarkPreflightLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: const Text('Refresh Benchmark Preflight'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: _canRunNavguardBenchmark
+                    ? _runNavguardBenchmarkDiagnostic
+                    : null,
+                icon: _isNavguardBenchmarkDiagnosticLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.analytics_outlined),
+                label: const Text('Run A/B/C/D Benchmark'),
+              ),
+              if (_isNavguardBenchmarkDiagnosticLoading) ...<Widget>[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _navguardBenchmarkCancellationRequestInFlight
+                      ? null
+                      : _cancelNavguardBenchmarkDiagnostic,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text('Cancel Benchmark'),
+                ),
+              ],
+              const Divider(height: 32),
+              Text(
                 _isBusy ? _activeOperationLabel : 'Diagnostic Output',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
@@ -3844,6 +4284,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         return 'Refreshing Full NAVGUARD Flow preflight...';
       case _DiagnosticOperation.fullNavguardFlowDiagnostic:
         return 'Running Full NAVGUARD Flow...';
+      case _DiagnosticOperation.navguardBenchmarkPreflight:
+        return 'Refreshing NAVGUARD Benchmark preflight...';
+      case _DiagnosticOperation.navguardBenchmarkDiagnostic:
+        return 'Running matched A/B/C/D benchmark...';
       case null:
         return 'Diagnostic Output';
     }

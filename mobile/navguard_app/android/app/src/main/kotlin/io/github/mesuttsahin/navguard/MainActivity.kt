@@ -22,6 +22,7 @@ class MainActivity : FlutterActivity() {
     private var evaluationModeDiagnostic: EvaluationModeDiagnostic? = null
     private var navguardFusionDiagnostic: NavguardFusionDiagnostic? = null
     private var fullNavguardFlowDiagnostic: FullNavguardFlowDiagnostic? = null
+    private var navguardBenchmarkDiagnostic: NavguardBenchmarkDiagnostic? = null
     private var locationManager: LocationManager? = null
 
     private val permissionResultLock = Any()
@@ -114,6 +115,17 @@ class MainActivity : FlutterActivity() {
                 null
             }
 
+        navguardBenchmarkDiagnostic =
+            if (sensorManager != null && availableLocationManager != null) {
+                NavguardBenchmarkDiagnostic(
+                    applicationContext = applicationContext,
+                    locationManager = availableLocationManager,
+                    sensorManager = sensorManager,
+                )
+            } else {
+                null
+            }
+
         configureSensorChannel(flutterEngine, sensorManager)
         configureGnssChannel(flutterEngine)
         configureGnssAnchorChannel(flutterEngine)
@@ -125,6 +137,7 @@ class MainActivity : FlutterActivity() {
         configureEvaluationModeChannel(flutterEngine)
         configureNavguardFusionChannel(flutterEngine)
         configureFullNavguardFlowChannel(flutterEngine)
+        configureNavguardBenchmarkChannel(flutterEngine)
     }
 
     private fun configureSensorChannel(
@@ -1055,7 +1068,8 @@ class MainActivity : FlutterActivity() {
             arCoreEnuDiagnostic?.isDiagnosticRunning() == true ||
             evaluationModeDiagnostic?.isDiagnosticRunning() == true ||
             navguardFusionDiagnostic?.isDiagnosticRunning() == true ||
-            fullNavguardFlowDiagnostic?.isDiagnosticRunning() == true
+            fullNavguardFlowDiagnostic?.isDiagnosticRunning() == true ||
+            navguardBenchmarkDiagnostic?.isDiagnosticRunning() == true
 
     private fun createUnavailableEvaluationModePreflightSnapshot():
         Map<String, Any?> {
@@ -1311,6 +1325,123 @@ class MainActivity : FlutterActivity() {
             "diagnosticRunning" to false,
             "nativeReady" to false,
             "currentState" to "IDLE",
+        )
+
+    private fun configureNavguardBenchmarkChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            NAVGUARD_BENCHMARK_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                METHOD_GET_NAVGUARD_BENCHMARK_PREFLIGHT -> {
+                    result.success(
+                        navguardBenchmarkDiagnostic?.createPreflightSnapshot()
+                            ?: createUnavailableNavguardBenchmarkPreflightSnapshot(),
+                    )
+                }
+
+                METHOD_RUN_NAVGUARD_BENCHMARK_DIAGNOSTIC -> {
+                    runNavguardBenchmarkDiagnostic(call.arguments, result)
+                }
+
+                METHOD_CANCEL_NAVGUARD_BENCHMARK_DIAGNOSTIC -> {
+                    val diagnostic = navguardBenchmarkDiagnostic
+                    val cancellationRequested = diagnostic?.cancelActiveSession() == true
+                    result.success(
+                        linkedMapOf(
+                            "schemaVersion" to SCHEMA_VERSION,
+                            "snapshotKind" to SNAPSHOT_KIND_NAVGUARD_BENCHMARK_CANCELLATION,
+                            "cancellationRequested" to cancellationRequested,
+                            "diagnosticRunning" to (diagnostic?.isDiagnosticRunning() == true),
+                        ),
+                    )
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun runNavguardBenchmarkDiagnostic(
+        rawArguments: Any?,
+        result: MethodChannel.Result,
+    ) {
+        val diagnostic = navguardBenchmarkDiagnostic
+        if (diagnostic == null) {
+            result.error(
+                ERROR_NAVGUARD_BENCHMARK_UNAVAILABLE,
+                "NAVGUARD benchmark diagnostics are unavailable.",
+                null,
+            )
+            return
+        }
+        if (isAnotherEvaluationExclusiveOperationRunning()) {
+            result.error(
+                ERROR_NAVGUARD_BENCHMARK_ALREADY_RUNNING,
+                "Another mutually exclusive NAVGUARD operation is running.",
+                null,
+            )
+            return
+        }
+
+        val arguments = rawArguments as? Map<*, *>
+        val latitudeDeg = (arguments?.get("latitudeDeg") as? Number)?.toDouble()
+        val longitudeDeg = (arguments?.get("longitudeDeg") as? Number)?.toDouble()
+        val rawAltitude = arguments?.get("altitudeEllipsoidM")
+        val altitudeEllipsoidM = (rawAltitude as? Number)?.toDouble()
+        if (
+            latitudeDeg == null ||
+                !latitudeDeg.isFinite() ||
+                latitudeDeg !in -90.0..90.0 ||
+                longitudeDeg == null ||
+                !longitudeDeg.isFinite() ||
+                longitudeDeg !in -180.0..180.0 ||
+                (rawAltitude != null && altitudeEllipsoidM == null) ||
+                altitudeEllipsoidM?.isFinite() == false
+        ) {
+            result.error(
+                ERROR_NAVGUARD_BENCHMARK_ANCHOR_REQUIRED,
+                "A valid locked Stage 3A GNSS anchor is required.",
+                null,
+            )
+            return
+        }
+
+        diagnostic.start(
+            anchorLatitudeDeg = latitudeDeg,
+            anchorLongitudeDeg = longitudeDeg,
+            anchorAltitudeEllipsoidM = altitudeEllipsoidM,
+            callback =
+                object : NavguardBenchmarkDiagnostic.Callback {
+                    override fun onSuccess(summary: Map<String, Any?>) {
+                        result.success(summary)
+                    }
+
+                    override fun onError(code: String, message: String) {
+                        result.error(code, message, null)
+                    }
+                },
+        )
+    }
+
+    private fun createUnavailableNavguardBenchmarkPreflightSnapshot(): Map<String, Any?> =
+        linkedMapOf(
+            "schemaVersion" to SCHEMA_VERSION,
+            "snapshotKind" to SNAPSHOT_KIND_NAVGUARD_BENCHMARK_PREFLIGHT,
+            "gpsProviderAvailable" to false,
+            "gpsProviderEnabled" to false,
+            "fineLocationPermissionGranted" to hasFineLocationPermission(),
+            "rotationVectorAvailable" to false,
+            "rotationVectorName" to null,
+            "stepDetectorAvailable" to false,
+            "stepDetectorName" to null,
+            "activityRecognitionPermissionGranted" to hasActivityRecognitionPermission(),
+            "arCoreSupported" to false,
+            "arCoreInstalled" to false,
+            "cameraPermissionGranted" to hasCameraPermission(),
+            "diagnosticRunning" to false,
+            "nativeReady" to false,
+            "currentPhase" to "IDLE",
         )
 
     private fun requestGnssForegroundPermission(result: MethodChannel.Result) {
@@ -1651,6 +1782,9 @@ class MainActivity : FlutterActivity() {
         fullNavguardFlowDiagnostic?.cancelActiveSession(
             "Full NAVGUARD flow cancelled because the activity paused.",
         )
+        navguardBenchmarkDiagnostic?.cancelActiveSession(
+            "NAVGUARD benchmark cancelled because the activity paused.",
+        )
 
         super.onPause()
     }
@@ -1687,6 +1821,9 @@ class MainActivity : FlutterActivity() {
         fullNavguardFlowDiagnostic?.cancelActiveSession(
             "Full NAVGUARD flow cancelled because the activity was destroyed.",
         )
+        navguardBenchmarkDiagnostic?.cancelActiveSession(
+            "NAVGUARD benchmark cancelled because the activity was destroyed.",
+        )
 
         sensorTimingDiagnostic = null
         gnssTimingDiagnostic = null
@@ -1699,6 +1836,7 @@ class MainActivity : FlutterActivity() {
         evaluationModeDiagnostic = null
         navguardFusionDiagnostic = null
         fullNavguardFlowDiagnostic = null
+        navguardBenchmarkDiagnostic = null
         locationManager = null
 
         takePendingPermissionResult()?.error(
@@ -2018,6 +2156,8 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/navguard_fusion"
         const val FULL_NAVGUARD_FLOW_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/full_navguard_flow"
+        const val NAVGUARD_BENCHMARK_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/navguard_benchmark"
 
         const val METHOD_GET_SENSOR_CAPABILITY_INVENTORY =
             "getSensorCapabilityInventory"
@@ -2091,6 +2231,12 @@ class MainActivity : FlutterActivity() {
             "runFullNavguardFlowDiagnostic"
         const val METHOD_CANCEL_FULL_NAVGUARD_FLOW_DIAGNOSTIC =
             "cancelFullNavguardFlowDiagnostic"
+        const val METHOD_GET_NAVGUARD_BENCHMARK_PREFLIGHT =
+            "getNavguardBenchmarkPreflight"
+        const val METHOD_RUN_NAVGUARD_BENCHMARK_DIAGNOSTIC =
+            "runNavguardBenchmarkDiagnostic"
+        const val METHOD_CANCEL_NAVGUARD_BENCHMARK_DIAGNOSTIC =
+            "cancelNavguardBenchmarkDiagnostic"
 
         const val SNAPSHOT_KIND_GNSS_PREFLIGHT =
             "gnss_diagnostic_preflight"
@@ -2128,6 +2274,10 @@ class MainActivity : FlutterActivity() {
             "full_navguard_flow_preflight"
         const val SNAPSHOT_KIND_FULL_NAVGUARD_FLOW_CANCELLATION =
             "full_navguard_flow_cancellation"
+        const val SNAPSHOT_KIND_NAVGUARD_BENCHMARK_PREFLIGHT =
+            "navguard_benchmark_preflight"
+        const val SNAPSHOT_KIND_NAVGUARD_BENCHMARK_CANCELLATION =
+            "navguard_benchmark_cancellation"
 
         const val HEADING_REQUESTED_SAMPLING_PERIOD_US = 20_000
 
@@ -2220,5 +2370,11 @@ class MainActivity : FlutterActivity() {
             "full_navguard_flow_anchor_required"
         const val ERROR_FULL_NAVGUARD_FLOW_ALREADY_RUNNING =
             "full_navguard_flow_already_running"
+        const val ERROR_NAVGUARD_BENCHMARK_UNAVAILABLE =
+            "navguard_benchmark_gps_unavailable"
+        const val ERROR_NAVGUARD_BENCHMARK_ANCHOR_REQUIRED =
+            "navguard_benchmark_anchor_required"
+        const val ERROR_NAVGUARD_BENCHMARK_ALREADY_RUNNING =
+            "navguard_benchmark_already_running"
     }
 }

@@ -27,7 +27,7 @@ void main() {
 
     expect(find.text('GNSS Runtime Timing Diagnostic'), findsOneWidget);
     expect(find.text('Precise location permission: Unknown'), findsOneWidget);
-    expect(find.text('GPS provider: Unknown'), findsNWidgets(4));
+    expect(find.text('GPS provider: Unknown'), findsNWidgets(5));
     expect(find.text('Location services: Unknown'), findsNWidgets(2));
     expect(find.text('Refresh GNSS Preflight'), findsOneWidget);
     expect(find.text('Request Precise Location Permission'), findsOneWidget);
@@ -55,7 +55,7 @@ void main() {
     expect(find.text('Acquire GNSS Anchor'), findsOneWidget);
 
     expect(find.text('Heading / True-North Reference'), findsOneWidget);
-    expect(find.text('Rotation Vector: Unknown'), findsNWidgets(6));
+    expect(find.text('Rotation Vector: Unknown'), findsNWidgets(7));
     expect(find.text('Anchor: Not locked'), findsOneWidget);
     expect(find.text('Heading diagnostic: Idle'), findsOneWidget);
     expect(find.text('Device forward axis: Top edge (+Y)'), findsOneWidget);
@@ -87,7 +87,7 @@ void main() {
     expect(find.text('Refresh Heading Preflight'), findsOneWidget);
     expect(find.text('Run Heading Diagnostic'), findsOneWidget);
     expect(find.text('Step-Event Foundation'), findsOneWidget);
-    expect(find.text('Step Detector: Unknown'), findsNWidgets(5));
+    expect(find.text('Step Detector: Unknown'), findsNWidgets(6));
     expect(
       find.text('Physical activity permission: Unknown'),
       findsNWidgets(2),
@@ -140,7 +140,7 @@ void main() {
     expect(find.text('ARCore → ENU Foundation'), findsOneWidget);
     expect(find.text('ARCore: Unknown'), findsNWidgets(2));
     expect(find.text('Camera permission: Unknown'), findsNWidgets(3));
-    expect(find.text('GNSS Anchor: Required'), findsNWidgets(4));
+    expect(find.text('GNSS Anchor: Required'), findsNWidgets(5));
     expect(find.text('Alignment: Not started'), findsOneWidget);
     expect(find.text('ARCore → ENU: Idle'), findsOneWidget);
     expect(find.text('Alignment hold: 2 s'), findsOneWidget);
@@ -176,7 +176,7 @@ void main() {
       find.text('Evaluation Mode + Ground Truth Firewall', skipOffstage: false),
       findsOneWidget,
     );
-    expect(find.text('Location permission: Unknown'), findsNWidgets(2));
+    expect(find.text('Location permission: Unknown'), findsNWidgets(3));
     expect(find.text('Physical Activity permission: Unknown'), findsOneWidget);
     expect(find.text('Firewall self-test: Not run'), findsOneWidget);
     expect(find.text('Evaluation state: Idle'), findsOneWidget);
@@ -275,7 +275,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Native ready: Unknown'), findsOneWidget);
+    expect(find.text('Native ready: Unknown'), findsNWidgets(2));
     expect(
       find.byKey(const Key('full-navguard-flow-live-state')),
       findsOneWidget,
@@ -311,6 +311,51 @@ void main() {
     );
     expect(
       find.text('Run Full NAVGUARD Flow', skipOffstage: false),
+      findsOneWidget,
+    );
+
+    expect(
+      find.text('NAVGUARD Benchmark — Config A/B/C/D', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('navguard-benchmark-live-phase')),
+      findsOneWidget,
+    );
+    final Text benchmarkPhase = tester.widget<Text>(
+      find.byKey(const Key('navguard-benchmark-live-phase')),
+    );
+    expect(benchmarkPhase.data, 'Idle');
+    expect(find.text('Matched denied window: 30 s'), findsOneWidget);
+    expect(find.text('Config'), findsOneWidget);
+    expect(find.text('Median'), findsOneWidget);
+    expect(find.text('Mean'), findsOneWidget);
+    expect(find.text('P95'), findsOneWidget);
+    expect(find.text('Final'), findsOneWidget);
+    expect(find.text('D vs A improvement: Not available'), findsOneWidget);
+    expect(find.text('Target: >=20%'), findsOneWidget);
+    expect(find.text('Target met: Not available'), findsOneWidget);
+    expect(
+      find.text('Protected GT reported accuracy median: Not available'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Protected GNSS: EVALUATION ONLY'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Estimator access: BLOCKED'), findsOneWidget);
+    expect(find.textContaining('GT correction: NONE'), findsOneWidget);
+    expect(find.textContaining('Results: SESSION-SPECIFIC'), findsOneWidget);
+    expect(
+      find.textContaining('Accuracy validation: NOT FINAL'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Refresh Benchmark Preflight', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Run A/B/C/D Benchmark', skipOffstage: false),
       findsOneWidget,
     );
   });
