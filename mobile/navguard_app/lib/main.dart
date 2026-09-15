@@ -5,6 +5,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'demo/live_navguard_demo.dart';
+import 'demo/live_navguard_map_screen.dart';
 import 'navigation/arcore_enu.dart';
 import 'navigation/baseline_pdr.dart';
 import 'navigation/evaluation_mode.dart';
@@ -144,7 +146,14 @@ const List<_SensorOption> _sensorOptions = <_SensorOption>[
 ];
 
 class NavguardApp extends StatelessWidget {
-  const NavguardApp({super.key});
+  const NavguardApp({
+    this.liveDemoPlatform = const MethodChannelLiveNavguardPlatform(),
+    this.enableLiveMapTiles = true,
+    super.key,
+  });
+
+  final LiveNavguardPlatform liveDemoPlatform;
+  final bool enableLiveMapTiles;
 
   @override
   Widget build(BuildContext context) {
@@ -155,13 +164,23 @@ class NavguardApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
       ),
-      home: const SensorDiagnosticsPage(),
+      home: SensorDiagnosticsPage(
+        liveDemoPlatform: liveDemoPlatform,
+        enableLiveMapTiles: enableLiveMapTiles,
+      ),
     );
   }
 }
 
 class SensorDiagnosticsPage extends StatefulWidget {
-  const SensorDiagnosticsPage({super.key});
+  const SensorDiagnosticsPage({
+    this.liveDemoPlatform = const MethodChannelLiveNavguardPlatform(),
+    this.enableLiveMapTiles = true,
+    super.key,
+  });
+
+  final LiveNavguardPlatform liveDemoPlatform;
+  final bool enableLiveMapTiles;
 
   @override
   State<SensorDiagnosticsPage> createState() => _SensorDiagnosticsPageState();
@@ -2954,6 +2973,28 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     super.dispose();
   }
 
+  Future<void> _openLiveNavguardDemo() async {
+    final GnssAnchor? anchor =
+        _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked
+        ? _gnssAnchor
+        : null;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => LiveNavguardMapScreen(
+          anchor: anchor == null
+              ? null
+              : LiveNavguardAnchor(
+                  latitudeDeg: anchor.latitudeDeg,
+                  longitudeDeg: anchor.longitudeDeg,
+                  altitudeEllipsoidM: anchor.altitudeEllipsoidM,
+                ),
+          platform: widget.liveDemoPlatform,
+          enableMapTiles: widget.enableLiveMapTiles,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -2964,6 +3005,21 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
+              FilledButton.icon(
+                key: const Key('open-live-navguard-demo'),
+                onPressed: _isBusy ? null : _openLiveNavguardDemo,
+                icon: const Icon(Icons.map),
+                label: const Text('Open NAVGUARD Live Map Demo'),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+                        _gnssAnchor != null
+                    ? 'Live demo anchor: Locked'
+                    : 'Live demo anchor: Lock the Stage 3A GNSS anchor before starting',
+                textAlign: TextAlign.center,
+              ),
+              const Divider(height: 32),
               Text(
                 'Sensor Inventory',
                 style: Theme.of(context).textTheme.titleMedium,

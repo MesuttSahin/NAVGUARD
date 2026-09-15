@@ -2301,7 +2301,7 @@ The five sessions are frozen as the current evaluation set. ARCore sigma, step s
 
 Privacy passed: `rawGnssCoordinatesReturned = false`, `rawProtectedGroundTruthReturned = false`, `rawSensorSamplesReturned = false`, `rawArcorePosesReturned = false`, `rawTrajectoryReturned = false`, `rawTimestampsReturned = false`, `cameraImagesReturned = false`, and `persistenceUsed = false`. Raw benchmark data is not added to the repository.
 
-Stage 9B — Live Map NAVGUARD Demo is next and is **NOT IMPLEMENTED**. Its planned scope is current GNSS map position, software-defined denial, real-time NAVGUARD estimate, estimated route polyline, fusion/source status, controlled recovery, and a visually demonstrable mobile application.
+Stage 9B — Live Map NAVGUARD Demo is now **IMPLEMENTED AND PHYSICALLY VERIFIED** for its defined integration scope, as recorded in Section 67. This does not change the Stage 9A benchmark conclusion. Stage 9C — Final UI / Documentation / Demo Packaging / Final Project Closure is next and is not complete.
 
 ### Türkçe
 
@@ -2348,17 +2348,209 @@ Beş oturum mevcut değerlendirme seti olarak dondurulmuştur. ARCore sigma, ad�
 
 Gizlilik geçti: `rawGnssCoordinatesReturned = false`, `rawProtectedGroundTruthReturned = false`, `rawSensorSamplesReturned = false`, `rawArcorePosesReturned = false`, `rawTrajectoryReturned = false`, `rawTimestampsReturned = false`, `cameraImagesReturned = false` ve `persistenceUsed = false`. Ham benchmark verisi repository'ye eklenmez.
 
-Aşama 9B — Canlı Harita NAVGUARD Demosu sıradadır ve **UYGULANMAMIŞTIR**. Planlanan kapsam; haritada güncel GNSS konumu, yazılım-tanımlı kesinti, gerçek zamanlı NAVGUARD tahmini, tahmini rota polyline'ı, füzyon/kaynak durumu, kontrollü recovery ve görsel olarak gösterilebilir mobil uygulamadır.
+Aşama 9B — Canlı Harita NAVGUARD Demosu, Bölüm 67'de kaydedildiği üzere tanımlı entegrasyon kapsamında artık **UYGULANDI VE FİZİKSEL OLARAK DOĞRULANDI**. Bu, Stage 9A benchmark sonucunu değiştirmez. Sıradaki Aşama 9C — Nihai UI / Dokümantasyon / Demo Paketleme / Nihai Proje Kapanışı tamamlanmamıştır.
 
 ---
 
-# 67. Current Document Status (Mevcut Doküman Durumu)
+# 67. Stage 9B Live Map NAVGUARD Demo Evidence (Aşama 9B Canlı Harita NAVGUARD Demosu Kanıtı)
+
+### English
+
+Stage 9B — Live Map NAVGUARD Demo is **IMPLEMENTED**, statically validated, and physically verified for its defined integration scope on the tested Xiaomi Redmi Note 9 Pro. Final validation passed with `flutter analyze`, 260/260 tests, `flutter build apk --debug`, and `git diff --check`. Ten implementation/dependency paths comprise the Stage 9B source scope; no frozen diagnostic class was modified.
+
+The display stack is `flutter_map 8.3.2` plus `latlong2 0.10.1`, using OpenStreetMap raster tiles with visible `© OpenStreetMap contributors` attribution and configured application identification. `android.permission.INTERNET` was added because it was absent. No Google Maps SDK, Mapbox, proprietary map API, bulk tile download, area prefetch, or offline-region scraper is used.
+
+Estimator and map responsibilities remain separated:
+
+```text
+Sensors + ARCore + Quality Engine + EKF
+                 ↓
+           local ENU estimate
+                 ↓
+        display map projection
+                 ↓
+               map
+```
+
+The map is not estimator input. A tile or network failure does not mutate the local ENU state, source quality, EKF, denial controller, or recovery gate.
+
+The physically exercised user flow was:
+
+```text
+GNSS Anchor
+↓
+Start Live Demo
+↓
+GNSS ACTIVE
+↓
+NAVGUARD READY
+↓
+Start GNSS Denial
+↓
+GNSS DENIED — NAVGUARD ACTIVE
+↓
+live estimated position + route
+↓
+Recover GNSS
+↓
+RECOVERY PENDING
+↓
+3 fresh valid GNSS fixes
+↓
+GNSS RECOVERED
+```
+
+Denial duration is interactive, not fixed at 30 seconds. Denial is software-defined: no RF interference, jammer, or GNSS spoofing is used. The physical `GPS_PROVIDER` listener may remain active, but every denied fix is quarantined before estimator access.
+
+The initial no-anchor physical check exposed an invalid fake `0,0` map center. The fix removed that fallback and added an explicit `GNSS Anchor Required` state. `Start Live Demo` is blocked without an anchor, and `Return to Prepare GNSS Anchor` uses the existing Stage 3A workflow rather than duplicating anchor acquisition. The no-anchor path passed physical verification. With a valid anchor, OpenStreetMap and attribution rendered, the map centered around the operational anchor/GNSS area, Follow and Start controls rendered, `NAVGUARD READY` was reached, manual denial began, the estimated route was visible, and recovery visualization worked.
+
+The first complete live physical walk verified manual denial, map motion, route visualization, recovery, and the denied-GNSS firewall; an example observation was accepted/quarantined/denied-used `4 / 41 / 0`. It also exposed a live PDR regression that remains part of the evidence:
+
+```text
+Updates H/PDR/AR: 2070 / 0 / 1212
+Late H/Step/AR:   0 / 56 / 0
+```
+
+Fifty-six step events were received, zero PDR predictions were applied, and all 56 were classified late. The visible route was therefore predominantly ARCore-driven, not a full Config D route.
+
+The initial 250 ms global reorder watermark was increased to 1,000 ms with 5,000 ms heading-history retention. Synthetic tests passed, but two independent approximately 20-manual-step physical retests failed:
+
+| Retest | Received / Applied / Pending | No-heading / Late / Duplicate | Mean callback latency | Maximum callback latency |
+| ------ | ---------------------------- | ----------------------------- | --------------------- | ------------------------ |
+| 1 | 17 / 0 / 0 | 0 / 17 / 0 | 6602.6 ms | 10498.8 ms |
+| 2 | 14 / 0 / 0 | 0 / 14 / 0 | 7113.4 ms | 10565.1 ms |
+
+This physically demonstrated that `TYPE_STEP_DETECTOR` callbacks on the tested device may arrive approximately 6–7 seconds late on average and approximately 10.6 seconds late at the observed maximum. Android immediate callback delivery is not assumed. An 11+ second global reorder window was rejected because it would make the live map visibly lag the user.
+
+The final implementation uses `FIXED_LAG_HISTORY_MS = 12000` with a maximum of 4,096 sanitized in-memory events/checkpoints. Normal heading and ARCore processing and approximately 5 Hz map emission remain low-latency; there is no 12-second global display delay. A delayed step retains its original `SensorEvent.timestamp`, is inserted into the retained historical sequence, and replays the checkpointed estimator forward in exact timestamp order with `HEADING → STEP → ARCORE_POSITION → insertion sequence` priority. Every step selects the greatest valid `T_heading <= T_step`; future heading and interpolation remain prohibited. Callback receipt time is used only for latency measurement. Events older than the retained history are rejected as genuinely late. Duplicate protection and the applied + no-heading + late + duplicate + pending = received invariant remain enforced. The live registration requests `maxReportLatencyUs = 0`, while fixed-lag replay remains required.
+
+Only the corrected current operational estimate is streamed after replay. Previously emitted Flutter route points are not rewritten; subsequent visualization continues from the corrected state. No denied GNSS measurement enters replay history, and only already-converted ARCore relative ENU inputs need to be retained.
+
+The final targeted physical retest consisted of approximately 20 manual straight steps followed by approximately 16–17 seconds stationary. The observed result was:
+
+```text
+Updates H/PDR/AR:                 1934 / 16 / 1135
+Steps received/applied/pending:   16 / 16 / 0
+No-heading/late/duplicate:        0 / 0 / 0
+Step latency last/max/mean:       4999.8 / 10149.9 / 6493.4 ms
+Late heading/step/AR:             0 / 0 / 0
+Final H/PDR/AR/Fusion quality:    USABLE / USABLE / GOOD / GOOD
+Denied GNSS quarantined/used:     38 / 0
+Recovery state:                   GNSS RECOVERED
+Recovery correction distance:     5.73 m
+```
+
+All 16 Android detector events were incorporated once through fixed-lag replay. This validates delayed-event handling, not step-detection accuracy: approximately 20 manual steps produced 16 detector events. The 5.73 m recovery correction is only the distance from the final pre-recovery NAVGUARD estimate to the accepted recovered operational GNSS position. It is not ground-truth error or NAVGUARD accuracy.
+
+The physically displayed route followed the general direction of the approximately straight walk and demonstrated visually coherent relative motion, with minor geometric deviations. This does not establish metre-level route accuracy. Initial or recovered absolute handset-GNSS position may differ from the user's apparent real-world map location by tens of metres in some urban sessions. No projection defect or single cause was established; handset-GNSS uncertainty, urban multipath, and reference uncertainty remain possible limitations. Absolute GNSS alignment and map-position accuracy are not survey-grade and remain **NOT VALIDATED**.
+
+Privacy boundaries remain active: the live local ENU route is ephemeral, `routePersisted = false`, and `routeUploaded = false`. Raw sensor streams, raw ARCore poses, raw timestamps, and anchor coordinates are not exposed to Flutter, logged, or persisted. Stage 9B physically verified live map integration, software-defined denial, the denied-GNSS firewall, active live heading/PDR/ARCore/Config D fusion, recovery, and fixed-lag detected-event handling. Live-demo accuracy, absolute-GNSS accuracy, step-detection accuracy, step length, heading accuracy, ARCore position accuracy, noise parameters, and quality thresholds remain **NOT VALIDATED**.
+
+Stage 9A remains unchanged: Config D was better than A in 2/5 sessions and worse in 3/5; the >=20% target was not met, and median paired D-vs-A improvement remained approximately -1.14%. Stage 9B visualization does not replace that benchmark. Stage 9C — Final UI / Documentation / Demo Packaging / Final Project Closure is next and is not complete.
+
+### Türkçe
+
+Aşama 9B — Canlı Harita NAVGUARD Demosu test edilen Xiaomi Redmi Note 9 Pro üzerindeki tanımlı entegrasyon kapsamında **UYGULANDI**, statik olarak doğrulandı ve fiziksel olarak doğrulandı. Nihai doğrulama `flutter analyze`, 260/260 test, `flutter build apk --debug` ve `git diff --check` ile geçti. Stage 9B kaynak kapsamı on uygulama/bağımlılık yolundan oluşur; dondurulmuş tanı sınıfları değiştirilmedi.
+
+Gösterim stack'i `flutter_map 8.3.2` ile `latlong2 0.10.1` kullanır; görünür `© OpenStreetMap contributors` atfı ve yapılandırılmış uygulama kimliğiyle OpenStreetMap raster tile'larını gösterir. Eksik olduğu için `android.permission.INTERNET` eklendi. Google Maps SDK, Mapbox, proprietary harita API'si, toplu tile indirme, alan prefetch'i veya çevrimdışı bölge kazıyıcısı kullanılmaz.
+
+Tahmin motoru ile harita sorumlulukları ayrı kalır:
+
+```text
+Sensörler + ARCore + Quality Engine + EKF
+                 ↓
+             yerel ENU tahmini
+                 ↓
+          gösterim harita projeksiyonu
+                 ↓
+                 harita
+```
+
+Harita tahmin motoru girdisi değildir. Tile veya ağ arızası yerel ENU durumunu, kaynak kalitesini, EKF'yi, kesinti denetleyicisini veya recovery gate'ini değiştirmez.
+
+Fiziksel olarak çalıştırılan kullanıcı akışı şuydu:
+
+```text
+GNSS Anchor
+↓
+Start Live Demo
+↓
+GNSS ACTIVE
+↓
+NAVGUARD READY
+↓
+Start GNSS Denial
+↓
+GNSS DENIED — NAVGUARD ACTIVE
+↓
+canlı tahmini konum + rota
+↓
+Recover GNSS
+↓
+RECOVERY PENDING
+↓
+3 taze geçerli GNSS fix'i
+↓
+GNSS RECOVERED
+```
+
+Kesinti süresi 30 saniyeye sabit değil, etkileşimlidir. Kesinti yazılım-tanımlıdır; RF paraziti, jammer veya GNSS spoofing kullanılmaz. Fiziksel `GPS_PROVIDER` dinleyicisi etkin kalabilir ancak her kesinti fix'i tahmin motoru erişiminden önce karantinaya alınır.
+
+İlk anchor-yok fiziksel kontrolü geçersiz sahte `0,0` harita merkezini açığa çıkardı. Düzeltme bu fallback'i kaldırdı ve açık `GNSS Anchor Required` durumu ekledi. Anchor olmadan `Start Live Demo` engellenir; `Return to Prepare GNSS Anchor`, edinimi yinelemek yerine mevcut Stage 3A akışını kullanır. Anchor-yok yolu fiziksel doğrulamayı geçti. Geçerli anchor ile OpenStreetMap ve atıf gösterildi, harita operasyonel anchor/GNSS bölgesi çevresinde merkezlendi, Follow ve Start denetimleri gösterildi, `NAVGUARD READY` durumuna ulaşıldı, manuel kesinti başlatıldı, tahmini rota görüldü ve recovery görselleştirmesi çalıştı.
+
+İlk tam canlı fiziksel yürüyüş manuel kesintiyi, harita hareketini, rota görselleştirmesini, recovery'yi ve kesinti-GNSS firewall'unu doğruladı; örnek kabul/karantina/kullanılan gözlemi `4 / 41 / 0` idi. Aynı test kanıtın parçası olarak korunan canlı PDR regresyonunu da açığa çıkardı:
+
+```text
+Heading/PDR/AR güncellemeleri: 2070 / 0 / 1212
+Geç heading/adım/AR:           0 / 56 / 0
+```
+
+Elli altı adım olayı alındı, sıfır PDR prediction uygulandı ve 56'nın tamamı geç olarak sınıflandırıldı. Görünür rota bu nedenle tam Yapılandırma D rotası değil, ağırlıklı olarak ARCore güdümlüydü.
+
+İlk 250 ms global reorder watermark'ı, 5.000 ms heading-geçmişi saklamayla 1.000 ms'ye çıkarıldı. Sentetik testler geçti ancak yaklaşık 20 manuel adımlı iki bağımsız fiziksel yeniden test başarısız oldu:
+
+| Yeniden test | Alınan / Uygulanan / Bekleyen | Heading-yok / Geç / Duplicate | Ortalama callback gecikmesi | Maksimum callback gecikmesi |
+| ------------ | ----------------------------- | ----------------------------- | -------------------------- | ------------------------- |
+| 1 | 17 / 0 / 0 | 0 / 17 / 0 | 6.602,6 ms | 10.498,8 ms |
+| 2 | 14 / 0 / 0 | 0 / 14 / 0 | 7.113,4 ms | 10.565,1 ms |
+
+Bu sonuç test edilen cihazdaki `TYPE_STEP_DETECTOR` callback'lerinin ortalama yaklaşık 6–7 saniye, gözlenen maksimumda yaklaşık 10,6 saniye gecikebildiğini fiziksel olarak gösterdi. Android'in anında callback teslimi varsayılmaz. Canlı haritanın kullanıcıdan görünür biçimde geri kalmasına neden olacağı için 11+ saniyelik global reorder penceresi reddedildi.
+
+Nihai uygulama, en fazla 4.096 sanitize edilmiş bellek-içi olay/checkpoint ile `FIXED_LAG_HISTORY_MS = 12000` kullanır. Normal heading ve ARCore işleme ile yaklaşık 5 Hz harita yayını düşük-gecikmeli kalır; global 12 saniyelik gösterim gecikmesi yoktur. Gecikmiş adım özgün `SensorEvent.timestamp` değerini korur, saklanan tarihsel diziye eklenir ve checkpoint'li tahmin motorunu `HEADING → STEP → ARCORE_POSITION → insertion sequence` önceliğiyle kesin zaman damgası sırasında ileri replay eder. Her adım en büyük geçerli `T_heading <= T_step` değerini seçer; gelecek heading ve interpolasyon yasak kalır. Callback-alım zamanı yalnızca gecikme ölçümünde kullanılır. Saklanan geçmişten eski olaylar gerçekten geç olarak reddedilir. Duplicate koruması ile uygulanan + heading-yok + geç + duplicate + bekleyen = alınan değişmezi korunur. Canlı kayıt `maxReportLatencyUs = 0` ister; fixed-lag replay yine de gereklidir.
+
+Replay sonrasında yalnızca düzeltilmiş güncel operasyonel tahmin yayınlanır. Önceden yayınlanan Flutter rota noktaları yeniden yazılmaz; sonraki görselleştirme düzeltilmiş durumdan devam eder. Replay geçmişine kesinti-GNSS ölçümü girmez; yalnızca önceden dönüştürülmüş ARCore göreli ENU girdilerinin saklanması yeterlidir.
+
+Nihai hedefli fiziksel yeniden test, yaklaşık 20 manuel düz adım ve ardından yaklaşık 16–17 saniye sabit duruştan oluştu. Gözlenen sonuç şuydu:
+
+```text
+Heading/PDR/AR güncellemeleri:     1934 / 16 / 1135
+Alınan/uygulanan/bekleyen adımlar: 16 / 16 / 0
+Heading-yok/geç/duplicate:         0 / 0 / 0
+Adım gecikmesi son/maks/ortalama:  4999,8 / 10149,9 / 6493,4 ms
+Geç heading/adım/AR:               0 / 0 / 0
+Nihai H/PDR/AR/Füzyon kalitesi:    USABLE / USABLE / GOOD / GOOD
+Karantina/kullanılan kesinti GNSS: 38 / 0
+Recovery durumu:                   GNSS RECOVERED
+Recovery correction mesafesi:      5,73 m
+```
+
+Android detector olaylarının 16/16'sı fixed-lag replay ile bir kez uygulandı. Bu, adım-algılama doğruluğunu değil gecikmiş-olay işlemeyi doğrular: yaklaşık 20 manuel adım 16 detector olayı üretti. 5,73 m recovery correction yalnızca recovery-öncesi son NAVGUARD tahmininden kabul edilen recovered operasyonel GNSS konumuna olan mesafedir. Ground-truth hata veya NAVGUARD doğruluğu değildir.
+
+Fiziksel olarak gösterilen rota yaklaşık düz yürüyüşün genel yönünü izledi ve küçük geometrik sapmalarla görsel olarak tutarlı göreli hareket gösterdi. Bu, metre-düzeyi rota doğruluğu oluşturmaz. İlk veya recovered mutlak telefon-GNSS konumu bazı kentsel oturumlarda kullanıcının görünen gerçek-dünya harita konumundan onlarca metre farklı olabilir. Projeksiyon hatası veya tek bir neden kanıtlanmadı; telefon-GNSS belirsizliği, kentsel multipath ve referans belirsizliği olası sınırlamalar olarak kalır. Mutlak GNSS hizalaması ve harita-konum doğruluğu survey-grade değildir ve **DOĞRULANMAMIŞTIR**.
+
+Gizlilik sınırları etkin kalır: canlı yerel ENU rota geçicidir, `routePersisted = false` ve `routeUploaded = false` değerindedir. Ham sensör akışları, ham ARCore pozları, ham zaman damgaları ve anchor koordinatları Flutter'a açılmaz, loglanmaz veya kalıcılaştırılmaz. Stage 9B; canlı harita entegrasyonunu, yazılım-tanımlı kesintiyi, kesinti-GNSS firewall'unu, fiziksel olarak etkin canlı heading/PDR/ARCore/Yapılandırma D füzyonunu, recovery'yi ve fixed-lag algılanan-olay işlemeyi fiziksel olarak doğruladı. Canlı-demo doğruluğu, mutlak-GNSS doğruluğu, adım-algılama doğruluğu, adım uzunluğu, heading doğruluğu, ARCore konum doğruluğu, gürültü parametreleri ve kalite eşikleri **DOĞRULANMAMIŞTIR**.
+
+Stage 9A değişmez: Yapılandırma D, A'dan 2/5 oturumda iyi, 3/5 oturumda kötüydü; >=%20 hedefi karşılanmadı ve eşleştirilmiş D-ve-A medyan iyileştirmesi yaklaşık -%1,14 olarak kaldı. Stage 9B görselleştirmesi bu benchmark'ın yerine geçmez. Sıradaki Aşama 9C — Nihai UI / Dokümantasyon / Demo Paketleme / Nihai Proje Kapanışı tamamlanmamıştır.
+
+---
+
+# 68. Current Document Status (Mevcut Doküman Durumu)
 
 ### English
 
 **Document Status:** Protocol Completed — Partial Execution
 
-**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A–2D runtime diagnostics, Stage 3A–5 navigation foundations, Stage 6 Evaluation Mode / Ground Truth Firewall verification, Stage 7 Config D Quality Engine + EKF fusion verification, Stage 8 full-flow verification, and five valid Stage 9A matched benchmark sessions are complete for their defined scopes. The full device capability audit is not complete.
+**Physical Device Audit Status:** PARTIAL — Static capability review, Flutter bootstrap execution, Stage 2A–2D runtime diagnostics, Stage 3A–5 navigation foundations, Stage 6 Evaluation Mode / Ground Truth Firewall verification, Stage 7 Config D Quality Engine + EKF fusion verification, Stage 8 full-flow verification, five valid Stage 9A matched benchmark sessions, and Stage 9B live-map/fixed-lag replay verification are complete for their defined scopes. The full device capability audit is not complete.
 
 **Stage 2A Runtime Sensor Inventory Evidence:** VERIFIED on the tested Xiaomi Redmi Note 9 Pro. SensorManager runtime access, the Flutter–Kotlin diagnostic bridge, and runtime sensor metadata retrieval were verified. The inventory returned 14 requested records: 13 default sensors available and `TYPE_PRESSURE` unavailable. This is capability metadata evidence, not sensor-performance evidence.
 
@@ -2386,9 +2578,11 @@ Aşama 9B — Canlı Harita NAVGUARD Demosu sıradadır ve **UYGULANMAMIŞTIR**.
 
 **Stage 9A Matched A/B/C/D Benchmark Evidence:** VERIFIED for the defined matched-session scope on the same tested device. Static validation passed with 230/230 tests. Five of five physical sessions were valid; each Config matched 149 protected-GT observations in total. Capture-once/replay-many, identical denial origin, causal no-future matching, the Ground Truth Firewall, mutation/removal invariance, aggregate-only privacy, and retention of all positive and negative outcomes passed. Config D outperformed A in 2/5 sessions, underperformed A in 3/5, and met the predefined >=20% target in 0/5. Median paired D-vs-A improvement was approximately -1.14% and mean approximately -11.11%. D outperformed C in 4/5. The target was not met; benchmark and protected-GT accuracy remain not validated.
 
-**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, complete sensor timing/multi-rate procedures, full-flow and recovery accuracy, fusion accuracy, Quality Engine threshold validity, EKF noise-parameter validity, covariance calibration, PDR accuracy, step-detection accuracy, step-length accuracy, heading absolute accuracy, true-north absolute accuracy, geomagnetic-model freshness, protected-GNSS ground-truth accuracy, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, same-location anchor repeatability, ARCore position/distance/scale/rotation/drift/vertical/absolute accuracy, ENU-alignment accuracy, physically induced ARCore tracking loss and fallback/recovery handling, long-duration navigation behavior, independent post-tuning validation, full multi-source clock strategy, and other required device/runtime checks remain pending. Body heading and handset-to-body calibration are not implemented. Evaluation Mode, software-defined denial, the Ground Truth Firewall, Config D Quality Engine, EKF / Sensor Fusion, denied-GNSS quarantine, fresh-fix recovery, the full state-machine flow, and the Stage 9A matched benchmark are implemented; Motion AI and Stage 9B live-map demonstration are not implemented. The >=20% target was measured and not met; no validated navigation-accuracy claim has been established.
+**Stage 9B Live Map NAVGUARD Demo Evidence:** VERIFIED for the defined live integration scope on the same tested device. Static validation passed with 260/260 tests. OpenStreetMap rendering/attribution, map-estimator isolation, explicit no-anchor handling, interactive software-defined denial, live heading/PDR/ARCore/Config D fusion, route visualization, the denied-GNSS firewall, and recovery passed physical checks. The initial `56 / 0 / 56` received/applied/late result and both failed 1,000 ms physical retests remain recorded. The final bounded 12,000 ms fixed-lag replay retest incorporated 16/16 detected events with zero late steps; denied-GNSS estimator use remained zero and recovery completed. This verifies integration and delayed-event handling, not navigation or step-detection accuracy.
 
-**Documentation Synchronization:** Stage 9A benchmark implementation and five-session evidence synchronized on 2026-09-14. Six implementation/test paths and four documentation paths remain unstaged; the controlled combined 10-path staging gate is pending.
+**Outstanding Evidence:** Sensor signal quality, noise, bias, calibration, complete sensor timing/multi-rate procedures, full-flow and recovery accuracy, live-map accuracy, fusion accuracy, Quality Engine threshold validity, EKF noise-parameter validity, covariance calibration, PDR accuracy, step-detection accuracy, step-length accuracy, heading absolute accuracy, true-north absolute accuracy, geomagnetic-model freshness, protected-GNSS ground-truth accuracy, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, same-location anchor repeatability, ARCore position/distance/scale/rotation/drift/vertical/absolute accuracy, ENU-alignment accuracy, physically induced ARCore tracking loss and fallback/recovery handling, long-duration navigation behavior, independent post-tuning validation, full multi-source clock strategy, and other required device/runtime checks remain pending. Body heading and handset-to-body calibration are not implemented. Evaluation Mode, software-defined denial, the Ground Truth Firewall, Config D Quality Engine, EKF / Sensor Fusion, denied-GNSS quarantine, fresh-fix recovery, the full state-machine flow, the Stage 9A matched benchmark, and the Stage 9B live-map demonstration are implemented; Motion AI is not implemented. The >=20% Stage 9A target was measured and not met; no validated navigation-accuracy claim has been established.
+
+**Documentation Synchronization:** Stage 9B live-map implementation, negative and positive physical findings, and fixed-lag replay evidence synchronized on 2026-09-15. Ten implementation/dependency paths and four documentation paths remain unstaged; the controlled combined 14-path staging gate is pending.
 
 **Device Baseline Status:** NOT FROZEN
 
@@ -2402,7 +2596,7 @@ Aşama 9B — Canlı Harita NAVGUARD Demosu sıradadır ve **UYGULANMAMIŞTIR**.
 
 **Doküman Durumu:** Protokol Tamamlandı — Kısmi Uygulama
 
-**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A–2D çalışma zamanı tanıları, Stage 3A–5 navigasyon temelleri, Stage 6 Değerlendirme Modu / Ground Truth Firewall doğrulaması, Stage 7 Yapılandırma D Quality Engine + EKF füzyon doğrulaması, Stage 8 tam-akış doğrulaması ve beş geçerli Stage 9A eşleştirilmiş benchmark oturumu tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
+**Fiziksel Cihaz Denetim Durumu:** KISMİ — Statik yetenek incelemesi, Flutter bootstrap çalıştırması, Stage 2A–2D çalışma zamanı tanıları, Stage 3A–5 navigasyon temelleri, Stage 6 Değerlendirme Modu / Ground Truth Firewall doğrulaması, Stage 7 Yapılandırma D Quality Engine + EKF füzyon doğrulaması, Stage 8 tam-akış doğrulaması, beş geçerli Stage 9A eşleştirilmiş benchmark oturumu ve Stage 9B canlı-harita/fixed-lag replay doğrulaması tanımlı kapsamlarında tamamlandı. Tam cihaz yetenek denetimi tamamlanmadı.
 
 **Stage 2A Çalışma Zamanı Sensör Envanteri Kanıtı:** Test edilen Xiaomi Redmi Note 9 Pro üzerinde DOĞRULANDI. SensorManager çalışma zamanı erişimi, Flutter–Kotlin tanı köprüsü ve çalışma zamanı sensör metadata alımı doğrulandı. Envanter 14 istenen kayıt döndürdü: 13 varsayılan sensör kullanılabilirdi ve `TYPE_PRESSURE` kullanılamıyordu. Bu yetenek metadata kanıtıdır; sensör performansı kanıtı değildir.
 
@@ -2430,9 +2624,11 @@ Aşama 9B — Canlı Harita NAVGUARD Demosu sıradadır ve **UYGULANMAMIŞTIR**.
 
 **Stage 9A Eşleştirilmiş A/B/C/D Benchmark Kanıtı:** Aynı test cihazındaki tanımlı eşleştirilmiş-oturum kapsamında DOĞRULANDI. Statik doğrulama 230/230 testle geçti. Beş fiziksel oturumun 5/5'i geçerliydi; her Yapılandırma toplam 149 korumalı-GT gözlemiyle eşleşti. Bir-kez-yakala/çok-kez-replay, aynı kesinti başlangıcı, geleceği kullanmayan nedensel eşleştirme, Ground Truth Güvenlik Duvarı, mutasyon/kaldırma değişmezliği, yalnızca aggregate gizlilik ve bütün olumlu/olumsuz sonuçların korunması geçti. Yapılandırma D, A'yı 2/5 oturumda geçti, 3/5 oturumda geride kaldı ve önceden tanımlanan >=%20 hedefini 0/5 oturumda karşıladı. Eşleştirilmiş D-ve-A iyileştirmesinin medyanı yaklaşık -%1,14, ortalaması yaklaşık -%11,11 idi. D, C'yi 4/5 oturumda geçti. Hedef karşılanmadı; benchmark ve korumalı-GT doğruluğu doğrulanmamıştır.
 
-**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam sensör zamanlama/çoklu hız prosedürleri, tam-akış ve recovery doğruluğu, füzyon doğruluğu, Quality Engine eşik geçerliliği, EKF gürültü-parametresi geçerliliği, kovaryans kalibrasyonu, PDR doğruluğu, adım-algılama doğruluğu, adım-uzunluğu doğruluğu, heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, geomanyetik model güncelliği, korumalı-GNSS ground-truth doğruluğu, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu, aynı-konum anchor tekrarlanabilirliği, ARCore konum/mesafe/ölçek/dönüş/sürüklenme/dikey/mutlak doğruluğu, ENU-hizalama doğruluğu, fiziksel olarak oluşturulmuş ARCore tracking kaybı ve fallback/recovery yönetimi, uzun-süreli navigasyon davranışı, tuning-sonrası bağımsız doğrulama, tam çok-kaynaklı saat stratejisi ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. Body heading ve telefon-vücut kalibrasyonu uygulanmamıştır. Değerlendirme Modu, yazılım-tanımlı kesinti, Ground Truth Firewall, Yapılandırma D Quality Engine, EKF / Sensör Füzyonu, kesinti-GNSS karantinası, taze-fix recovery, tam durum-makinesi akışı ve Stage 9A eşleştirilmiş benchmark uygulanmıştır; Motion AI ve Stage 9B canlı-harita demosu uygulanmamıştır. >=%20 hedefi ölçülmüş ve karşılanmamıştır; doğrulanmış navigasyon-doğruluğu iddiası oluşturulmamıştır.
+**Stage 9B Canlı Harita NAVGUARD Demosu Kanıtı:** Aynı test cihazındaki tanımlı canlı entegrasyon kapsamında DOĞRULANDI. Statik doğrulama 260/260 testle geçti. OpenStreetMap gösterimi/atfı, harita-tahmin-motoru izolasyonu, açık anchor-yok yönetimi, etkileşimli yazılım-tanımlı kesinti, canlı heading/PDR/ARCore/Yapılandırma D füzyonu, rota görselleştirmesi, kesinti-GNSS firewall'u ve recovery fiziksel kontrolleri geçti. İlk `56 / 0 / 56` alınan/uygulanan/geç sonucu ve başarısız iki 1.000 ms fiziksel yeniden test kaydedilmiş durumda kalır. Nihai sınırlı 12.000 ms fixed-lag replay yeniden testi algılanan 16/16 olayı sıfır geç adımla uyguladı; kesinti-GNSS tahmin motoru kullanımı sıfır kaldı ve recovery tamamlandı. Bu entegrasyonu ve gecikmiş-olay işlemeyi doğrular; navigasyon veya adım-algılama doğruluğunu doğrulamaz.
 
-**Dokümantasyon Senkronizasyonu:** Stage 9A benchmark uygulaması ve beş oturumlu kanıt 2026-09-14 tarihinde senkronize edildi. Altı uygulama/test yolu ve dört dokümantasyon yolu unstaged durumdadır; kontrollü birleşik 10-yolluk staging kapısı beklemektedir.
+**Bekleyen Kanıt:** Sensör sinyal kalitesi, gürültü, bias, kalibrasyon, tam sensör zamanlama/çoklu hız prosedürleri, tam-akış ve recovery doğruluğu, canlı-harita doğruluğu, füzyon doğruluğu, Quality Engine eşik geçerliliği, EKF gürültü-parametresi geçerliliği, kovaryans kalibrasyonu, PDR doğruluğu, adım-algılama doğruluğu, adım-uzunluğu doğruluğu, heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, geomanyetik model güncelliği, korumalı-GNSS ground-truth doğruluğu, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu, aynı-konum anchor tekrarlanabilirliği, ARCore konum/mesafe/ölçek/dönüş/sürüklenme/dikey/mutlak doğruluğu, ENU-hizalama doğruluğu, fiziksel olarak oluşturulmuş ARCore tracking kaybı ve fallback/recovery yönetimi, uzun-süreli navigasyon davranışı, tuning-sonrası bağımsız doğrulama, tam çok-kaynaklı saat stratejisi ve diğer gerekli cihaz/çalışma zamanı kontrolleri beklemektedir. Body heading ve telefon-vücut kalibrasyonu uygulanmamıştır. Değerlendirme Modu, yazılım-tanımlı kesinti, Ground Truth Firewall, Yapılandırma D Quality Engine, EKF / Sensör Füzyonu, kesinti-GNSS karantinası, taze-fix recovery, tam durum-makinesi akışı, Stage 9A eşleştirilmiş benchmark ve Stage 9B canlı-harita demosu uygulanmıştır; Motion AI uygulanmamıştır. Stage 9A >=%20 hedefi ölçülmüş ve karşılanmamıştır; doğrulanmış navigasyon-doğruluğu iddiası oluşturulmamıştır.
+
+**Dokümantasyon Senkronizasyonu:** Stage 9B canlı-harita uygulaması, olumsuz/olumlu fiziksel bulguları ve fixed-lag replay kanıtı 2026-09-15 tarihinde senkronize edildi. On uygulama/bağımlılık yolu ve dört dokümantasyon yolu unstaged durumdadır; kontrollü birleşik 14-yolluk staging kapısı beklemektedir.
 
 **Cihaz Baseline Durumu:** SABİTLENMEDİ
 

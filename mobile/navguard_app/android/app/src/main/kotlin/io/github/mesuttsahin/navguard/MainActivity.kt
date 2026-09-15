@@ -8,6 +8,7 @@ import android.location.LocationManager
 import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
@@ -23,9 +24,12 @@ class MainActivity : FlutterActivity() {
     private var navguardFusionDiagnostic: NavguardFusionDiagnostic? = null
     private var fullNavguardFlowDiagnostic: FullNavguardFlowDiagnostic? = null
     private var navguardBenchmarkDiagnostic: NavguardBenchmarkDiagnostic? = null
+    private var liveNavguardDemoController: LiveNavguardDemoController? = null
     private var locationManager: LocationManager? = null
 
     private val permissionResultLock = Any()
+    private val standaloneOperationLock = Any()
+    private var standaloneOperationRunning = false
     private var pendingGnssPermissionResult: MethodChannel.Result? = null
     private var pendingStepPermissionResult: MethodChannel.Result? = null
     private var pendingArCoreCameraPermissionResult: MethodChannel.Result? = null
@@ -126,6 +130,17 @@ class MainActivity : FlutterActivity() {
                 null
             }
 
+        liveNavguardDemoController =
+            if (sensorManager != null && availableLocationManager != null) {
+                LiveNavguardDemoController(
+                    applicationContext = applicationContext,
+                    locationManager = availableLocationManager,
+                    sensorManager = sensorManager,
+                )
+            } else {
+                null
+            }
+
         configureSensorChannel(flutterEngine, sensorManager)
         configureGnssChannel(flutterEngine)
         configureGnssAnchorChannel(flutterEngine)
@@ -138,6 +153,7 @@ class MainActivity : FlutterActivity() {
         configureNavguardFusionChannel(flutterEngine)
         configureFullNavguardFlowChannel(flutterEngine)
         configureNavguardBenchmarkChannel(flutterEngine)
+        configureLiveNavguardDemoChannels(flutterEngine)
     }
 
     private fun configureSensorChannel(
@@ -148,6 +164,9 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             SENSOR_CHANNEL_NAME,
         ).setMethodCallHandler { call, result ->
+            if (call.method == METHOD_RUN_SENSOR_TIMING_DIAGNOSTIC && rejectIfLiveDemoRunning(result)) {
+                return@setMethodCallHandler
+            }
             when (call.method) {
                 METHOD_GET_SENSOR_CAPABILITY_INVENTORY -> {
                     if (sensorManager == null) {
@@ -189,6 +208,9 @@ class MainActivity : FlutterActivity() {
                                 call.arguments as? Map<*, *>
                             )?.get("sensorKey") as? String
 
+                        if (!reserveStandaloneOperation(result)) {
+                            return@setMethodCallHandler
+                        }
                         diagnostic.start(
                             sensorKey = sensorKey,
                             callback =
@@ -196,6 +218,7 @@ class MainActivity : FlutterActivity() {
                                     override fun onSuccess(
                                         summary: Map<String, Any?>,
                                     ) {
+                                        releaseStandaloneOperation()
                                         result.success(summary)
                                     }
 
@@ -203,6 +226,7 @@ class MainActivity : FlutterActivity() {
                                         code: String,
                                         message: String,
                                     ) {
+                                        releaseStandaloneOperation()
                                         result.error(
                                             code,
                                             message,
@@ -224,6 +248,9 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             GNSS_CHANNEL_NAME,
         ).setMethodCallHandler { call, result ->
+            if (call.method == METHOD_RUN_GNSS_TIMING_DIAGNOSTIC && rejectIfLiveDemoRunning(result)) {
+                return@setMethodCallHandler
+            }
             when (call.method) {
                 METHOD_GET_GNSS_DIAGNOSTIC_PREFLIGHT -> {
                     val manager = locationManager
@@ -257,6 +284,9 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             GNSS_ANCHOR_CHANNEL_NAME,
         ).setMethodCallHandler { call, result ->
+            if (call.method == METHOD_ACQUIRE_GNSS_ANCHOR && rejectIfLiveDemoRunning(result)) {
+                return@setMethodCallHandler
+            }
             when (call.method) {
                 METHOD_GET_GNSS_ANCHOR_PREFLIGHT -> {
                     val manager = locationManager
@@ -315,6 +345,9 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             HEADING_FOUNDATION_CHANNEL_NAME,
         ).setMethodCallHandler { call, result ->
+            if (call.method == METHOD_RUN_HEADING_FOUNDATION_DIAGNOSTIC && rejectIfLiveDemoRunning(result)) {
+                return@setMethodCallHandler
+            }
             when (call.method) {
                 METHOD_GET_HEADING_FOUNDATION_PREFLIGHT -> {
                     val diagnostic = headingFoundationDiagnostic
@@ -434,6 +467,9 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             STEP_EVENT_CHANNEL_NAME,
         ).setMethodCallHandler { call, result ->
+            if (call.method == METHOD_RUN_STEP_EVENT_DIAGNOSTIC && rejectIfLiveDemoRunning(result)) {
+                return@setMethodCallHandler
+            }
             when (call.method) {
                 METHOD_GET_STEP_EVENT_PREFLIGHT -> {
                     val diagnostic = stepEventDiagnostic
@@ -599,6 +635,9 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             BASELINE_PDR_CHANNEL_NAME,
         ).setMethodCallHandler { call, result ->
+            if (call.method == METHOD_RUN_BASELINE_PDR_DIAGNOSTIC && rejectIfLiveDemoRunning(result)) {
+                return@setMethodCallHandler
+            }
             when (call.method) {
                 METHOD_GET_BASELINE_PDR_PREFLIGHT -> {
                     val diagnostic = baselinePdrDiagnostic
@@ -722,6 +761,9 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             ARCORE_CHANNEL_NAME,
         ).setMethodCallHandler { call, result ->
+            if (call.method == METHOD_RUN_ARCORE_TRACKING_DIAGNOSTIC && rejectIfLiveDemoRunning(result)) {
+                return@setMethodCallHandler
+            }
             when (call.method) {
                 METHOD_GET_ARCORE_DIAGNOSTIC_PREFLIGHT -> {
                     val diagnostic = arCoreTrackingDiagnostic
@@ -852,6 +894,9 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             ARCORE_ENU_CHANNEL_NAME,
         ).setMethodCallHandler { call, result ->
+            if (call.method == METHOD_RUN_ARCORE_ENU_DIAGNOSTIC && rejectIfLiveDemoRunning(result)) {
+                return@setMethodCallHandler
+            }
             when (call.method) {
                 METHOD_GET_ARCORE_ENU_PREFLIGHT -> {
                     result.success(
@@ -930,6 +975,7 @@ class MainActivity : FlutterActivity() {
             return
         }
 
+        if (!reserveStandaloneOperation(result)) return
         diagnostic.start(
             anchorLatitudeDeg = latitudeDeg,
             anchorLongitudeDeg = longitudeDeg,
@@ -937,10 +983,12 @@ class MainActivity : FlutterActivity() {
             callback =
                 object : ArCoreEnuDiagnostic.Callback {
                     override fun onSuccess(summary: Map<String, Any?>) {
+                        releaseStandaloneOperation()
                         result.success(summary)
                     }
 
                     override fun onError(code: String, message: String) {
+                        releaseStandaloneOperation()
                         result.error(code, message, null)
                     }
                 },
@@ -1061,7 +1109,12 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun isAnotherEvaluationExclusiveOperationRunning(): Boolean =
-        gnssAnchorAcquisition?.isAcquisitionRunning() == true ||
+        isLegacyExclusiveOperationRunning() ||
+            liveNavguardDemoController?.isDemoRunning() == true
+
+    private fun isLegacyExclusiveOperationRunning(): Boolean =
+        isStandaloneOperationRunning() ||
+            gnssAnchorAcquisition?.isAcquisitionRunning() == true ||
             headingFoundationDiagnostic?.isDiagnosticRunning() == true ||
             stepEventDiagnostic?.isDiagnosticRunning() == true ||
             baselinePdrDiagnostic?.isDiagnosticRunning() == true ||
@@ -1070,6 +1123,28 @@ class MainActivity : FlutterActivity() {
             navguardFusionDiagnostic?.isDiagnosticRunning() == true ||
             fullNavguardFlowDiagnostic?.isDiagnosticRunning() == true ||
             navguardBenchmarkDiagnostic?.isDiagnosticRunning() == true
+
+    private fun isStandaloneOperationRunning(): Boolean =
+        synchronized(standaloneOperationLock) { standaloneOperationRunning }
+
+    private fun reserveStandaloneOperation(result: MethodChannel.Result): Boolean =
+        synchronized(standaloneOperationLock) {
+            if (standaloneOperationRunning) {
+                result.error(
+                    ERROR_LIVE_NAVGUARD_DEMO_ALREADY_RUNNING,
+                    "Another mutually exclusive runtime operation is running.",
+                    null,
+                )
+                false
+            } else {
+                standaloneOperationRunning = true
+                true
+            }
+        }
+
+    private fun releaseStandaloneOperation() {
+        synchronized(standaloneOperationLock) { standaloneOperationRunning = false }
+    }
 
     private fun createUnavailableEvaluationModePreflightSnapshot():
         Map<String, Any?> {
@@ -1444,6 +1519,131 @@ class MainActivity : FlutterActivity() {
             "currentPhase" to "IDLE",
         )
 
+    private fun configureLiveNavguardDemoChannels(flutterEngine: FlutterEngine) {
+        val controller = liveNavguardDemoController
+        EventChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            LIVE_NAVGUARD_DEMO_EVENT_CHANNEL_NAME,
+        ).setStreamHandler(
+            object : EventChannel.StreamHandler {
+                override fun onListen(
+                    arguments: Any?,
+                    events: EventChannel.EventSink?,
+                ) {
+                    controller?.setEventSink(events)
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    controller?.setEventSink(null)
+                    controller?.stop(reason = "Live event stream closed.")
+                }
+            },
+        )
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            LIVE_NAVGUARD_DEMO_METHOD_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            if (controller == null) {
+                result.error(
+                    ERROR_LIVE_NAVGUARD_DEMO_UNAVAILABLE,
+                    "Live NAVGUARD demo services are unavailable.",
+                    null,
+                )
+                return@setMethodCallHandler
+            }
+            when (call.method) {
+                METHOD_GET_LIVE_NAVGUARD_DEMO_PREFLIGHT -> {
+                    val anchor = parseLiveAnchor(call.arguments)
+                    result.success(
+                        controller.createPreflightSnapshot(anchorAvailable = anchor != null),
+                    )
+                }
+
+                METHOD_START_LIVE_NAVGUARD_DEMO -> {
+                    if (isLegacyExclusiveOperationRunning()) {
+                        result.error(
+                            ERROR_LIVE_NAVGUARD_DEMO_ALREADY_RUNNING,
+                            "Another mutually exclusive NAVGUARD operation is running.",
+                            null,
+                        )
+                        return@setMethodCallHandler
+                    }
+                    val anchor = parseLiveAnchor(call.arguments)
+                    if (anchor == null) {
+                        result.error(
+                            ERROR_LIVE_NAVGUARD_DEMO_ANCHOR_REQUIRED,
+                            "A valid locked Stage 3A GNSS anchor is required.",
+                            null,
+                        )
+                        return@setMethodCallHandler
+                    }
+                    controller.start(
+                        anchorLatitudeDeg = anchor.latitudeDeg,
+                        anchorLongitudeDeg = anchor.longitudeDeg,
+                        anchorAltitudeEllipsoidM = anchor.altitudeEllipsoidM,
+                        callback = liveCommandCallback(result),
+                    )
+                }
+
+                METHOD_BEGIN_LIVE_GNSS_DENIAL -> {
+                    controller.beginDenial(liveCommandCallback(result))
+                }
+
+                METHOD_REQUEST_LIVE_GNSS_RECOVERY -> {
+                    controller.requestRecovery(liveCommandCallback(result))
+                }
+
+                METHOD_STOP_LIVE_NAVGUARD_DEMO -> {
+                    controller.stop(callback = liveCommandCallback(result))
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun rejectIfLiveDemoRunning(result: MethodChannel.Result): Boolean {
+        if (liveNavguardDemoController?.isDemoRunning() != true) return false
+        result.error(
+            ERROR_LIVE_NAVGUARD_DEMO_ALREADY_RUNNING,
+            "The live NAVGUARD demo is running; diagnostics are mutually exclusive.",
+            null,
+        )
+        return true
+    }
+
+    private fun liveCommandCallback(result: MethodChannel.Result):
+        LiveNavguardDemoController.CommandCallback =
+        object : LiveNavguardDemoController.CommandCallback {
+            override fun onSuccess(snapshot: Map<String, Any?>) {
+                result.success(snapshot)
+            }
+
+            override fun onError(
+                code: String,
+                message: String,
+            ) {
+                result.error(code, message, null)
+            }
+        }
+
+    private fun parseLiveAnchor(rawArguments: Any?): LiveAnchorArguments? {
+        val arguments = rawArguments as? Map<*, *> ?: return null
+        if (arguments["anchorAvailable"] != true) return null
+        val latitudeDeg = (arguments["latitudeDeg"] as? Number)?.toDouble() ?: return null
+        val longitudeDeg = (arguments["longitudeDeg"] as? Number)?.toDouble() ?: return null
+        val rawAltitude = arguments["altitudeEllipsoidM"]
+        val altitudeEllipsoidM = (rawAltitude as? Number)?.toDouble()
+        if (
+            !latitudeDeg.isFinite() || latitudeDeg !in -90.0..90.0 ||
+                !longitudeDeg.isFinite() || longitudeDeg !in -180.0..180.0 ||
+                (rawAltitude != null && altitudeEllipsoidM == null) ||
+                altitudeEllipsoidM?.isFinite() == false
+        ) return null
+        return LiveAnchorArguments(latitudeDeg, longitudeDeg, altitudeEllipsoidM)
+    }
+
     private fun requestGnssForegroundPermission(result: MethodChannel.Result) {
         val manager = locationManager
 
@@ -1570,13 +1770,16 @@ class MainActivity : FlutterActivity() {
             return
         }
 
+        if (!reserveStandaloneOperation(result)) return
         diagnostic.start(
             object : GnssTimingDiagnostic.Callback {
                 override fun onSuccess(summary: Map<String, Any?>) {
+                    releaseStandaloneOperation()
                     result.success(summary)
                 }
 
                 override fun onError(code: String, message: String) {
+                    releaseStandaloneOperation()
                     result.error(code, message, null)
                 }
             },
@@ -1785,6 +1988,9 @@ class MainActivity : FlutterActivity() {
         navguardBenchmarkDiagnostic?.cancelActiveSession(
             "NAVGUARD benchmark cancelled because the activity paused.",
         )
+        liveNavguardDemoController?.stop(
+            reason = "Live NAVGUARD demo stopped because the activity paused.",
+        )
 
         super.onPause()
     }
@@ -1824,6 +2030,9 @@ class MainActivity : FlutterActivity() {
         navguardBenchmarkDiagnostic?.cancelActiveSession(
             "NAVGUARD benchmark cancelled because the activity was destroyed.",
         )
+        liveNavguardDemoController?.stop(
+            reason = "Live NAVGUARD demo stopped because the activity was destroyed.",
+        )
 
         sensorTimingDiagnostic = null
         gnssTimingDiagnostic = null
@@ -1837,6 +2046,7 @@ class MainActivity : FlutterActivity() {
         navguardFusionDiagnostic = null
         fullNavguardFlowDiagnostic = null
         navguardBenchmarkDiagnostic = null
+        liveNavguardDemoController = null
         locationManager = null
 
         takePendingPermissionResult()?.error(
@@ -2131,6 +2341,12 @@ class MainActivity : FlutterActivity() {
         val canRunFormalDiagnostic: Boolean,
     )
 
+    private data class LiveAnchorArguments(
+        val latitudeDeg: Double,
+        val longitudeDeg: Double,
+        val altitudeEllipsoidM: Double?,
+    )
+
     private companion object {
         const val SCHEMA_VERSION = 1
 
@@ -2158,6 +2374,10 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/full_navguard_flow"
         const val NAVGUARD_BENCHMARK_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/navguard_benchmark"
+        const val LIVE_NAVGUARD_DEMO_METHOD_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/live_navguard_demo"
+        const val LIVE_NAVGUARD_DEMO_EVENT_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/live_navguard_demo/events"
 
         const val METHOD_GET_SENSOR_CAPABILITY_INVENTORY =
             "getSensorCapabilityInventory"
@@ -2237,6 +2457,16 @@ class MainActivity : FlutterActivity() {
             "runNavguardBenchmarkDiagnostic"
         const val METHOD_CANCEL_NAVGUARD_BENCHMARK_DIAGNOSTIC =
             "cancelNavguardBenchmarkDiagnostic"
+        const val METHOD_GET_LIVE_NAVGUARD_DEMO_PREFLIGHT =
+            "getLiveNavguardDemoPreflight"
+        const val METHOD_START_LIVE_NAVGUARD_DEMO =
+            "startLiveNavguardDemo"
+        const val METHOD_BEGIN_LIVE_GNSS_DENIAL =
+            "beginLiveGnssDenial"
+        const val METHOD_REQUEST_LIVE_GNSS_RECOVERY =
+            "requestLiveGnssRecovery"
+        const val METHOD_STOP_LIVE_NAVGUARD_DEMO =
+            "stopLiveNavguardDemo"
 
         const val SNAPSHOT_KIND_GNSS_PREFLIGHT =
             "gnss_diagnostic_preflight"
@@ -2376,5 +2606,11 @@ class MainActivity : FlutterActivity() {
             "navguard_benchmark_anchor_required"
         const val ERROR_NAVGUARD_BENCHMARK_ALREADY_RUNNING =
             "navguard_benchmark_already_running"
+        const val ERROR_LIVE_NAVGUARD_DEMO_UNAVAILABLE =
+            "live_navguard_demo_unavailable"
+        const val ERROR_LIVE_NAVGUARD_DEMO_ALREADY_RUNNING =
+            "live_navguard_demo_already_running"
+        const val ERROR_LIVE_NAVGUARD_DEMO_ANCHOR_REQUIRED =
+            "live_navguard_demo_anchor_required"
     }
 }

@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:navguard/demo/live_navguard_demo.dart';
 import 'package:navguard/main.dart';
 
 void main() {
@@ -9,6 +12,7 @@ void main() {
     await tester.pumpWidget(const NavguardApp());
 
     expect(find.text('NAVGUARD Runtime Diagnostics'), findsOneWidget);
+    expect(find.text('Open NAVGUARD Live Map Demo'), findsOneWidget);
     expect(
       find.text(
         'Inventory: capability metadata only — no live sensor sampling.',
@@ -359,4 +363,130 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('opens explicit no-anchor preparation UI without real services', (
+    WidgetTester tester,
+  ) async {
+    final _WidgetFakeLivePlatform platform = _WidgetFakeLivePlatform();
+    await tester.pumpWidget(
+      NavguardApp(liveDemoPlatform: platform, enableLiveMapTiles: false),
+    );
+
+    await tester.tap(find.text('Open NAVGUARD Live Map Demo'));
+    await tester.pumpAndSettle();
+    expect(find.text('NAVGUARD Live Map Demo'), findsOneWidget);
+    expect(find.text('GNSS Anchor Required'), findsOneWidget);
+    expect(
+      find.text('Lock a GNSS anchor before starting the live navigation demo.'),
+      findsOneWidget,
+    );
+    expect(find.text('Return to Prepare GNSS Anchor'), findsOneWidget);
+    expect(find.text('Start Live Demo'), findsNothing);
+    expect(find.byKey(const Key('live-navguard-map')), findsNothing);
+    expect(platform.preflightCallCount, 0);
+    expect(platform.startCallCount, 0);
+    expect(platform.realServicesUsed, isFalse);
+
+    await tester.tap(find.text('Return to Prepare GNSS Anchor'));
+    await tester.pumpAndSettle();
+    expect(find.text('NAVGUARD Runtime Diagnostics'), findsOneWidget);
+    expect(find.text('GNSS Anchor / Local Reference'), findsOneWidget);
+    expect(find.text('Acquire GNSS Anchor'), findsOneWidget);
+  });
+}
+
+class _WidgetFakeLivePlatform implements LiveNavguardPlatform {
+  final StreamController<Object?> _events =
+      StreamController<Object?>.broadcast();
+  bool realServicesUsed = false;
+  int preflightCallCount = 0;
+  int startCallCount = 0;
+
+  @override
+  Stream<Object?> get events => _events.stream;
+
+  @override
+  Future<LiveNavguardPreflight> getPreflight(LiveNavguardAnchor anchor) async {
+    preflightCallCount++;
+    return LiveNavguardPreflight.fromMap(<String, Object?>{
+      'schemaVersion': 1,
+      'gpsProviderAvailable': true,
+      'gpsProviderEnabled': true,
+      'fineLocationPermissionGranted': true,
+      'rotationVectorAvailable': true,
+      'stepDetectorAvailable': true,
+      'activityRecognitionPermissionGranted': true,
+      'arCoreSupported': true,
+      'arCoreInstalled': true,
+      'cameraPermissionGranted': true,
+      'anchorAvailable': true,
+      'nativeReady': true,
+      'demoRunning': false,
+    });
+  }
+
+  @override
+  Future<void> start(LiveNavguardAnchor anchor) async {
+    startCallCount++;
+    emitState('PREPARING');
+  }
+
+  @override
+  Future<void> beginDenial() async => emitState('NAVGUARD_ACTIVE');
+
+  @override
+  Future<void> requestRecovery() async => emitState('RECOVERY_PENDING');
+
+  @override
+  Future<void> stop() async => emitState('STOPPED');
+
+  void emitState(String state) {
+    _events.add(<String, Object?>{
+      'schemaVersion': 1,
+      'kind': 'state',
+      'state': state,
+    });
+  }
+
+  void emitPosition() {
+    _events.add(<String, Object?>{
+      'schemaVersion': 1,
+      'kind': 'position',
+      'sequence': 1,
+      'state': 'NAVGUARD_ACTIVE',
+      'navigationSource': 'NAVGUARD',
+      'eastM': 1.0,
+      'northM': 2.0,
+      'headingRad': 0.5,
+      'displacementM': 2.24,
+      'headingQuality': 'GOOD',
+      'pdrQuality': 'USABLE',
+      'arCoreQuality': 'GOOD',
+      'fusionQuality': 'GOOD',
+      'headingUpdateCount': 1,
+      'pdrPredictionCount': 1,
+      'pdrPredictionsApplied': 1,
+      'arCoreUpdateCount': 1,
+      'receivedStepEventCount': 1,
+      'stepEventsRejectedNoCausalHeading': 0,
+      'duplicateStepEventCount': 0,
+      'pendingStepEventCount': 0,
+      'historicalStepReplayCount': 1,
+      'fixedLagReplayCount': 1,
+      'fixedLagHistoryEventCount': 25,
+      'fixedLagHistoryWindowMs': 12000,
+      'fixedLagHistoryBounded': true,
+      'stepCounterInvariantHolds': true,
+      'stepCallbackLatencyLastMs': 450.0,
+      'stepCallbackLatencyMaxMs': 450.0,
+      'stepCallbackLatencyMeanMs': 450.0,
+      'normalGnssAcceptedFixCount': 3,
+      'deniedGnssQuarantinedFixCount': 4,
+      'deniedGnssUsedByEstimatorCount': 0,
+      'lateHeadingEventCount': 0,
+      'lateStepEventCount': 0,
+      'lateArcoreEventCount': 0,
+      'recoveryGoodFixCount': 0,
+    });
+  }
 }
