@@ -31,6 +31,7 @@ class _LiveNavguardMapScreenState extends State<LiveNavguardMapScreen>
   LiveNavguardState _state = LiveNavguardState.idle;
   LiveNavguardPreflight? _preflight;
   LiveNavguardPosition? _latestPosition;
+  LiveFusionMode _fusionMode = LiveFusionMode.navguardV1;
   String? _error;
   bool _commandPending = false;
   bool _follow = true;
@@ -151,7 +152,7 @@ class _LiveNavguardMapScreenState extends State<LiveNavguardMapScreen>
       if (!preflight.nativeReady) {
         throw StateError(_preflightFailure(preflight));
       }
-      await widget.platform.start(anchor);
+      await widget.platform.start(anchor, _fusionMode);
       if (!mounted) return;
       setState(() => _preflight = preflight);
     } catch (error) {
@@ -525,6 +526,10 @@ class _LiveNavguardMapScreenState extends State<LiveNavguardMapScreen>
             if (position != null) ...<Widget>[
               const SizedBox(height: 6),
               Text(
+                'Fusion mode: ${position.fusionMode.displayName}',
+                key: const Key('live-fusion-mode-status'),
+              ),
+              Text(
                 'Source ${position.navigationSource.wireName} · '
                 'E ${position.eastM.toStringAsFixed(2)} m · '
                 'N ${position.northM.toStringAsFixed(2)} m · '
@@ -582,6 +587,31 @@ class _LiveNavguardMapScreenState extends State<LiveNavguardMapScreen>
                 '${position.lateStepEventCount} / '
                 '${position.lateArcoreEventCount}',
               ),
+              if (position.fusionMode == LiveFusionMode.adaptiveV2) ...<Widget>[
+                Text(
+                  'Adaptive stride/heading offset: '
+                  '${position.strideEstimateM?.toStringAsFixed(3) ?? '—'} m / '
+                  '${position.walkingHeadingOffsetDeg?.toStringAsFixed(2) ?? '—'}°',
+                  key: const Key('live-v2-calibration-status'),
+                ),
+                Text(
+                  'Stationary: ${position.stationaryDetected == true ? 'YES' : 'NO'} · '
+                  'entries/duration: ${position.stationaryEntryCount} / ${position.stationaryDurationMs} ms · '
+                  'AR sigma/NIS/disagreement: '
+                  '${position.adaptiveArcoreSigmaM?.toStringAsFixed(2) ?? '—'} / '
+                  '${position.arcoreNisLast?.toStringAsFixed(2) ?? '—'}→${position.arcorePostRobustNisLast?.toStringAsFixed(2) ?? '—'} / '
+                  '${position.sourceDisagreementM?.toStringAsFixed(2) ?? '—'} m',
+                  key: const Key('live-v2-adaptive-status'),
+                ),
+                Text(
+                  'Stationary candidates/blockers step-heading-AR: '
+                  '${position.stationaryCandidateCount} / '
+                  '${position.stationaryBlockedRecentStepCount}-'
+                  '${position.stationaryBlockedHeadingMotionCount}-'
+                  '${position.stationaryBlockedArcoreMotionCount}',
+                  key: const Key('live-v2-stationary-diagnostics'),
+                ),
+              ],
             ],
             if (_error case final String error) ...<Widget>[
               const SizedBox(height: 4),
@@ -608,6 +638,34 @@ class _LiveNavguardMapScreenState extends State<LiveNavguardMapScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
+              if (!_state.isRunning) ...<Widget>[
+                DropdownButtonFormField<LiveFusionMode>(
+                  key: const Key('live-fusion-mode-selector'),
+                  initialValue: _fusionMode,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Fusion Mode',
+                    isDense: true,
+                  ),
+                  items: LiveFusionMode.values
+                      .map(
+                        (LiveFusionMode mode) =>
+                            DropdownMenuItem<LiveFusionMode>(
+                              value: mode,
+                              child: Text(mode.displayName),
+                            ),
+                      )
+                      .toList(growable: false),
+                  onChanged: busy
+                      ? null
+                      : (LiveFusionMode? value) {
+                          if (value != null) {
+                            setState(() => _fusionMode = value);
+                          }
+                        },
+                ),
+                const SizedBox(height: 6),
+              ],
               if (_state == LiveNavguardState.navguardReady)
                 FilledButton.icon(
                   onPressed: busy ? null : _beginDenial,

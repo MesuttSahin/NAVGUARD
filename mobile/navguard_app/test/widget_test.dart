@@ -279,7 +279,31 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Native ready: Unknown'), findsNWidgets(2));
+    expect(find.text('Native ready: Unknown'), findsNWidgets(3));
+    expect(
+      find.textContaining(
+        'final 12-second processing phase',
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
+    final Finder scenarioSelector = find.byKey(
+      const Key('accuracy-v2-development-scenario'),
+      skipOffstage: false,
+    );
+    final DropdownButton<String> scenarioDropdown = tester
+        .widget<DropdownButton<String>>(
+          find.descendant(
+            of: scenarioSelector,
+            matching: find.byType(DropdownButton<String>),
+          ),
+        );
+    expect(
+      scenarioDropdown.items!.map(
+        (DropdownMenuItem<String> item) => item.value,
+      ),
+      orderedEquals(<String>['STRAIGHT', 'L_TURN', 'MIXED']),
+    );
     expect(
       find.byKey(const Key('full-navguard-flow-live-state')),
       findsOneWidget,
@@ -426,7 +450,10 @@ class _WidgetFakeLivePlatform implements LiveNavguardPlatform {
   }
 
   @override
-  Future<void> start(LiveNavguardAnchor anchor) async {
+  Future<void> start(
+    LiveNavguardAnchor anchor, [
+    LiveFusionMode fusionMode = LiveFusionMode.navguardV1,
+  ]) async {
     startCallCount++;
     emitState('PREPARING');
   }

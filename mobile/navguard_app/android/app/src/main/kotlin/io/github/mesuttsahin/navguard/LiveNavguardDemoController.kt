@@ -116,6 +116,9 @@ class LiveNavguardDemoController(
             "arcorePositionAccuracyValidated" to false,
             "noiseParametersValidated" to false,
             "qualityThresholdsValidated" to false,
+            "availableFusionModes" to listOf(CONFIG_D1_ID, NavguardAdaptiveFusionV2.CONFIG_ID),
+            "defaultFusionMode" to CONFIG_D1_ID,
+            "adaptiveModeExperimental" to true,
         )
     }
 
@@ -123,6 +126,7 @@ class LiveNavguardDemoController(
         anchorLatitudeDeg: Double,
         anchorLongitudeDeg: Double,
         anchorAltitudeEllipsoidM: Double?,
+        fusionModeId: String = CONFIG_D1_ID,
         callback: CommandCallback,
     ) {
         if (!isValidAnchor(anchorLatitudeDeg, anchorLongitudeDeg, anchorAltitudeEllipsoidM)) {
@@ -151,7 +155,12 @@ class LiveNavguardDemoController(
                     System.currentTimeMillis(),
                 ).declination.toDouble(),
             )
-        val session = LiveSession(anchor, declination, rotation, step)
+        val fusionMode = FusionMode.fromId(fusionModeId)
+        if (fusionMode == null) {
+            postError(callback, ERROR_INVALID_STATE, "Unknown live NAVGUARD fusion mode.")
+            return
+        }
+        val session = LiveSession(anchor, declination, rotation, step, fusionMode)
         synchronized(activeSessionLock) {
             if (activeSession != null) {
                 postError(callback, ERROR_ALREADY_RUNNING, "A live NAVGUARD demo is already running.")
@@ -247,6 +256,7 @@ class LiveNavguardDemoController(
         private val declinationRad: Double,
         private val rotationVector: Sensor,
         private val stepDetector: Sensor,
+        private val fusionMode: FusionMode,
     ) : SensorEventListener, LocationListener {
         private val terminal = AtomicBoolean(false)
         private val workerThread = HandlerThread(WORKER_THREAD_NAME)
@@ -255,6 +265,7 @@ class LiveNavguardDemoController(
         private val pendingEvents = PriorityQueue(INTERNAL_EVENT_COMPARATOR)
         private val eventHistory = mutableListOf<HistoryEntry>()
         private val seenStepEventTimestamps = mutableSetOf<Long>()
+        private val gnssStabilizationCandidates = mutableListOf<AdaptiveGnssOriginCandidate>()
 
         private var worker: Handler? = null
         private var arWorker: Handler? = null
@@ -273,6 +284,8 @@ class LiveNavguardDemoController(
         private var denialOrigin: EnuFix? = null
         private var frozenEnuFromInitialDevice: DoubleArray? = null
         private var ekf: EkfState? = null
+        private var adaptiveFusion: NavguardAdaptiveFusionV2? = null
+        private var stableGnssOrigin: AdaptiveStableGnssOrigin? = null
         private var committedWatermarkNs = -1L
         private var historyStartTimestampNs = -1L
         private var historyBaseWatermarkNs = -1L
@@ -383,12 +396,34 @@ class LiveNavguardDemoController(
                 postError(callback, ERROR_INVALID_STATE, "GNSS denial requires NAVGUARD_READY state.")
                 return
             }
-            val gnss = latestOperationalGnss
+            val latestGnss = latestOperationalGnss
             val rotation = latestRotation
-            if (gnss == null || rotation == null || qualityMultiplier(rotation.quality) == null || !arTrackingReady) {
+            val robustOrigin =
+                if (fusionMode == FusionMode.ADAPTIVE_V2) {
+                    NavguardAdaptiveFusionV2.computeStableGnssOrigin(
+                        gnssStabilizationCandidates,
+                        SystemClock.elapsedRealtimeNanos(),
+                    )
+                } else {
+                    null
+                }
+            val gnss =
+                if (fusionMode == FusionMode.ADAPTIVE_V2 && robustOrigin != null) {
+                    EnuFix(
+                        generationNs = gnssStabilizationCandidates.maxOfOrNull { it.timestampNs } ?: SystemClock.elapsedRealtimeNanos(),
+                        eastM = robustOrigin.eastM,
+                        northM = robustOrigin.northM,
+                    )
+                } else {
+                    latestGnss
+                }
+            if (gnss == null || rotation == null || qualityMultiplier(rotation.quality) == null || !arTrackingReady ||
+                (fusionMode == FusionMode.ADAPTIVE_V2 && robustOrigin == null)
+            ) {
                 postError(callback, ERROR_NOT_READY, "GNSS, true-north heading, and ARCore alignment must all be ready.")
                 return
             }
+            stableGnssOrigin = robustOrigin
             denialStartPending = true
             val posted =
                 arWorker?.post {
@@ -431,10 +466,23 @@ class LiveNavguardDemoController(
                 return
             }
             denialOrigin = gnss.copy()
-            ekf = EkfState.initial(gnss.eastM, gnss.northM, rotation.trueHeadingRad)
+            if (fusionMode == FusionMode.ADAPTIVE_V2) {
+                adaptiveFusion =
+                    NavguardAdaptiveFusionV2(
+                        gnss.eastM,
+                        gnss.northM,
+                        rotation.trueHeadingRad,
+                        NavguardCalibrationProfileStore.read(),
+                    )
+                ekf = null
+            } else {
+                ekf = EkfState.initial(gnss.eastM, gnss.northM, rotation.trueHeadingRad)
+                adaptiveFusion = null
+            }
             pendingEvents.clear()
             eventHistory.clear()
             seenStepEventTimestamps.clear()
+            gnssStabilizationCandidates.clear()
             committedWatermarkNs = -1L
             historyStartTimestampNs = SystemClock.elapsedRealtimeNanos()
             historyBaseWatermarkNs = historyStartTimestampNs
@@ -453,7 +501,14 @@ class LiveNavguardDemoController(
             historicalStepReplayCount = 0L
             fixedLagReplayCount = 0L
             historyBaseSnapshot = captureEstimatorSnapshot()
-            transition(DemoState.NAVGUARD_ACTIVE, "GNSS denied; NAVGUARD navigation is active.")
+            transition(
+                DemoState.NAVGUARD_ACTIVE,
+                if (fusionMode == FusionMode.ADAPTIVE_V2) {
+                    "GNSS denied; experimental adaptive NAVGUARD v2 navigation is active."
+                } else {
+                    "GNSS denied; NAVGUARD v1 navigation is active."
+                },
+            )
             emitPosition(force = true)
             postSuccess(callback, commandSnapshot(state))
         }
@@ -591,6 +646,23 @@ class LiveNavguardDemoController(
                 generation > 0L && location.hasAccuracy() && location.accuracy.isFinite() &&
                     location.accuracy >= 0.0f && location.accuracy <= MAX_OPERATIONAL_GNSS_ACCURACY_M
             val enu = if (valid) Wgs84EnuConverter.toHorizontalEnu(anchor, location) else null
+            if (enu != null && location.accuracy > 0.0f && !isMockLocation(location) &&
+                (state == DemoState.PREPARING || state == DemoState.GNSS_ACTIVE || state == DemoState.NAVGUARD_READY)
+            ) {
+                gnssStabilizationCandidates.add(
+                    AdaptiveGnssOriginCandidate(
+                        timestampNs = generation,
+                        eastM = enu.eastM,
+                        northM = enu.northM,
+                        reportedAccuracyM = location.accuracy.toDouble(),
+                    ),
+                )
+                val cutoff = generation - NavguardAdaptiveFusionV2.GNSS_STABILIZATION_WINDOW_MS * 1_000_000L
+                gnssStabilizationCandidates.removeAll { it.timestampNs <= cutoff }
+                while (gnssStabilizationCandidates.size > MAX_GNSS_STABILIZATION_CANDIDATES) {
+                    gnssStabilizationCandidates.removeAt(0)
+                }
+            }
             when (state) {
                 DemoState.PREPARING -> {
                     if (enu == null) {
@@ -648,11 +720,16 @@ class LiveNavguardDemoController(
             accuracyM: Double,
         ) {
             flushReorderBuffer(Long.MAX_VALUE)
-            val filter = ekf ?: return
-            val preEast = filter.x[0]
-            val preNorth = filter.x[1]
+            val adaptive = adaptiveFusion
+            val filter = ekf
+            val preEast = adaptive?.eastM ?: filter?.x?.get(0) ?: return
+            val preNorth = adaptive?.northM ?: filter?.x?.get(1) ?: return
             val correction = hypot(recovered.eastM - preEast, recovered.northM - preNorth)
-            filter.resetPosition(recovered.eastM, recovered.northM, accuracyM)
+            if (adaptive != null) {
+                adaptive.resetPosition(recovered.eastM, recovered.northM, accuracyM)
+            } else {
+                checkNotNull(filter).resetPosition(recovered.eastM, recovered.northM, accuracyM)
+            }
             recoveryCorrectionM = correction
             latestOperationalGnss = recovered
             pendingEvents.clear()
@@ -806,9 +883,15 @@ class LiveNavguardDemoController(
         }
 
         private fun updateReadyState() {
+            val stableOriginReady =
+                fusionMode == FusionMode.V1 ||
+                    NavguardAdaptiveFusionV2.computeStableGnssOrigin(
+                        gnssStabilizationCandidates,
+                        SystemClock.elapsedRealtimeNanos(),
+                    ) != null
             if ((state == DemoState.GNSS_ACTIVE || state == DemoState.NAVGUARD_READY) &&
                 latestOperationalGnss != null && arTrackingReady &&
-                latestRotation?.let { qualityMultiplier(it.quality) } != null
+                latestRotation?.let { qualityMultiplier(it.quality) } != null && stableOriginReady
             ) {
                 if (state != DemoState.NAVGUARD_READY) {
                     transition(DemoState.NAVGUARD_READY, "NAVGUARD is ready; GNSS denial may begin.")
@@ -874,7 +957,23 @@ class LiveNavguardDemoController(
         }
 
         private fun applyEventMutation(event: InternalEvent) {
-            val filter = ekf ?: error("Missing live estimator state.")
+            if (fusionMode == FusionMode.ADAPTIVE_V2) {
+                applyAdaptiveEventMutation(event)
+            } else {
+                applyV1EventMutation(event)
+            }
+            fusionQuality =
+                classifyFusionQuality(
+                    headingQuality,
+                    pdrQuality,
+                    arCoreQuality,
+                    pdrPredictionCount + arCoreUpdateCount > 0,
+                    headingUpdateCount + pdrPredictionCount + arCoreUpdateCount > 0,
+                )
+        }
+
+        private fun applyV1EventMutation(event: InternalEvent) {
+            val filter = ekf ?: error("Missing live v1 estimator state.")
             when (event) {
                 is HeadingEvent -> {
                     headingQuality = event.quality
@@ -912,14 +1011,45 @@ class LiveNavguardDemoController(
                     }
                 }
             }
-            fusionQuality =
-                classifyFusionQuality(
-                    headingQuality,
-                    pdrQuality,
-                    arCoreQuality,
-                    pdrPredictionCount + arCoreUpdateCount > 0,
-                    headingUpdateCount + pdrPredictionCount + arCoreUpdateCount > 0,
-                )
+        }
+
+        private fun applyAdaptiveEventMutation(event: InternalEvent) {
+            val filter = adaptiveFusion ?: error("Missing live v2 estimator state.")
+            when (event) {
+                is HeadingEvent -> {
+                    headingQuality = event.quality
+                    latestCausalHeading = HeadingSample(event.timestampNs, event.headingRad, event.quality)
+                    if (filter.updateHeading(event.timestampNs, event.headingRad, event.quality.toAdaptive())) {
+                        headingUpdateCount += 1L
+                    }
+                }
+                is StepEvent -> {
+                    val heading = latestCausalHeading?.takeIf { it.timestampNs <= event.timestampNs }
+                    if (heading == null) {
+                        pdrQuality = Quality.UNAVAILABLE
+                        stepEventsRejectedNoCausalHeading += 1L
+                    } else {
+                        val quality = classifyPdrQuality(heading.quality, event.timestampNs - heading.timestampNs)
+                        pdrQuality = quality
+                        if (qualityMultiplier(quality) != null && filter.predictStep(event.timestampNs, quality.toAdaptive())) {
+                            pdrPredictionCount += 1L
+                        } else {
+                            stepEventsRejectedNoCausalHeading += 1L
+                        }
+                    }
+                }
+                is ArcoreEvent -> {
+                    arCoreQuality = event.quality
+                    val result =
+                        filter.updateArcore(
+                            event.timestampNs,
+                            event.eastM,
+                            event.northM,
+                            event.quality.toAdaptive(),
+                        )
+                    if (result.accepted) arCoreUpdateCount += 1L
+                }
+            }
         }
 
         // Only the corrected current estimate is emitted; prior Flutter route points are not rewritten.
@@ -952,10 +1082,19 @@ class LiveNavguardDemoController(
         }
 
         private fun captureEstimatorSnapshot(): EstimatorSnapshot? {
-            val filter = ekf ?: return null
+            val adaptive = adaptiveFusion
+            val filter = ekf
+            if (fusionMode == FusionMode.ADAPTIVE_V2 && adaptive == null) return null
+            if (fusionMode == FusionMode.V1 && filter == null) return null
             return EstimatorSnapshot(
-                x = filter.x.copyOf(),
-                p = filter.p.copyOf(),
+                x =
+                    if (adaptive != null) {
+                        doubleArrayOf(adaptive.eastM, adaptive.northM, adaptive.headingRad)
+                    } else {
+                        checkNotNull(filter).x.copyOf()
+                    },
+                p = filter?.p?.copyOf() ?: DoubleArray(9),
+                adaptiveSnapshot = adaptive?.snapshot(),
                 headingQuality = headingQuality,
                 pdrQuality = pdrQuality,
                 arCoreQuality = arCoreQuality,
@@ -969,7 +1108,16 @@ class LiveNavguardDemoController(
         }
 
         private fun restoreEstimatorSnapshot(snapshot: EstimatorSnapshot) {
-            ekf = EkfState(snapshot.x.copyOf(), snapshot.p.copyOf())
+            if (fusionMode == FusionMode.ADAPTIVE_V2) {
+                val adaptiveSnapshot = checkNotNull(snapshot.adaptiveSnapshot)
+                val filter = adaptiveFusion ?: NavguardAdaptiveFusionV2(snapshot.x[0], snapshot.x[1], snapshot.x[2])
+                filter.restore(adaptiveSnapshot)
+                adaptiveFusion = filter
+                ekf = null
+            } else {
+                ekf = EkfState(snapshot.x.copyOf(), snapshot.p.copyOf())
+                adaptiveFusion = null
+            }
             headingQuality = snapshot.headingQuality
             pdrQuality = snapshot.pdrQuality
             arCoreQuality = snapshot.arCoreQuality
@@ -1026,7 +1174,11 @@ class LiveNavguardDemoController(
             force: Boolean = false,
             sourceOverride: String? = null,
         ) {
-            val filter = ekf ?: return
+            val adaptive = adaptiveFusion
+            val filter = ekf
+            val east = adaptive?.eastM ?: filter?.x?.get(0) ?: return
+            val north = adaptive?.northM ?: filter?.x?.get(1) ?: return
+            val heading = adaptive?.headingRad ?: filter?.x?.get(2) ?: return
             val now = SystemClock.elapsedRealtimeNanos()
             if (!force && now - lastStreamEmitNs < STREAM_PERIOD_NS) return
             lastStreamEmitNs = now
@@ -1034,10 +1186,10 @@ class LiveNavguardDemoController(
             emit(
                 positionEvent(
                     source = sourceOverride ?: navigationSource(state),
-                    eastM = filter.x[0],
-                    northM = filter.x[1],
-                    headingRad = filter.x[2],
-                    displacementM = hypot(filter.x[0], filter.x[1]),
+                    eastM = east,
+                    northM = north,
+                    headingRad = heading,
+                    displacementM = hypot(east, north),
                 ),
             )
         }
@@ -1050,7 +1202,7 @@ class LiveNavguardDemoController(
             displacementM: Double,
         ): Map<String, Any?> {
             val pendingStepEventCount = pendingStepEventCount()
-            return linkedMapOf(
+            val snapshot = linkedMapOf<String, Any?>(
                 "schemaVersion" to SCHEMA_VERSION,
                 "kind" to "position",
                 "sequence" to streamSequence,
@@ -1096,7 +1248,12 @@ class LiveNavguardDemoController(
                 "lateArcoreEventCount" to lateArcoreEventCount,
                 "recoveryGoodFixCount" to recoveryGoodFixes,
                 "recoveryCorrectionM" to recoveryCorrectionM,
+                "fusionMode" to fusionMode.id,
+                "adaptiveMode" to (fusionMode == FusionMode.ADAPTIVE_V2),
             )
+            stableGnssOrigin?.toSanitizedMap()?.let(snapshot::putAll)
+            adaptiveFusion?.diagnostics()?.let(snapshot::putAll)
+            return snapshot
         }
 
         private fun emitRecoveryProgress() {
@@ -1184,6 +1341,8 @@ class LiveNavguardDemoController(
             latestOperationalGnss = null
             latestArPose = null
             ekf = null
+            adaptiveFusion = null
+            stableGnssOrigin = null
             denialOrigin = null
             worker?.removeCallbacksAndMessages(null)
             arWorker?.removeCallbacksAndMessages(null)
@@ -1263,6 +1422,16 @@ class LiveNavguardDemoController(
             get() = this != IDLE && this != STOPPED && this != ERROR
     }
 
+    private enum class FusionMode(val id: String) {
+        V1(CONFIG_D1_ID),
+        ADAPTIVE_V2(NavguardAdaptiveFusionV2.CONFIG_ID),
+        ;
+
+        companion object {
+            fun fromId(id: String): FusionMode? = entries.firstOrNull { it.id == id }
+        }
+    }
+
     private enum class Quality {
         GOOD,
         USABLE,
@@ -1305,6 +1474,7 @@ class LiveNavguardDemoController(
     private data class EstimatorSnapshot(
         val x: DoubleArray,
         val p: DoubleArray,
+        val adaptiveSnapshot: NavguardAdaptiveFusionV2.Snapshot?,
         val headingQuality: Quality,
         val pdrQuality: Quality,
         val arCoreQuality: Quality,
@@ -1599,6 +1769,7 @@ class LiveNavguardDemoController(
         const val STREAM_PERIOD_NS = 200_000_000L
         const val FIXED_LAG_HISTORY_NS = 12_000_000_000L
         const val MAX_FIXED_LAG_HISTORY_EVENTS = 4096
+        const val MAX_GNSS_STABILIZATION_CANDIDATES = 32
         const val WORKER_THREAD_NAME = "NAVGUARD-Live-Worker"
         const val AR_THREAD_NAME = "NAVGUARD-Live-ARCore"
         const val STEP_LENGTH_M = 0.75
@@ -1606,6 +1777,7 @@ class LiveNavguardDemoController(
         val BASE_STEP_HEADING_PROCESS_SIGMA_RAD = Math.toRadians(5.0)
         val BASE_HEADING_MEASUREMENT_SIGMA_RAD = Math.toRadians(15.0)
         const val BASE_ARCORE_POSITION_SIGMA_M = 0.35
+        const val CONFIG_D1_ID = "config_d_navguard_ekf_v1"
         const val TWO_PI = 2.0 * PI
         const val WGS84_SEMI_MAJOR_AXIS_M = 6_378_137.0
         const val WGS84_ECCENTRICITY_SQUARED = 6.69437999014e-3
@@ -1719,6 +1891,24 @@ class LiveNavguardDemoController(
                 Quality.USABLE -> 2.0
                 Quality.DEGRADED -> 6.0
                 else -> null
+            }
+
+        fun Quality.toAdaptive(): AdaptiveSourceQuality =
+            when (this) {
+                Quality.GOOD -> AdaptiveSourceQuality.GOOD
+                Quality.USABLE -> AdaptiveSourceQuality.USABLE
+                Quality.DEGRADED -> AdaptiveSourceQuality.DEGRADED
+                Quality.UNRELIABLE -> AdaptiveSourceQuality.UNRELIABLE
+                Quality.UNAVAILABLE -> AdaptiveSourceQuality.UNAVAILABLE
+                Quality.UNKNOWN -> AdaptiveSourceQuality.UNKNOWN
+            }
+
+        fun isMockLocation(location: Location): Boolean =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                location.isMock
+            } else {
+                @Suppress("DEPRECATION")
+                location.isFromMockProvider
             }
 
         fun normalizeHeading(angle: Double): Double {

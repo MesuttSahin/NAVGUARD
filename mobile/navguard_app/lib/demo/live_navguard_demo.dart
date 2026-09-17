@@ -49,6 +49,24 @@ enum LiveNavigationSource {
   }
 }
 
+enum LiveFusionMode {
+  navguardV1('config_d_navguard_ekf_v1', 'NAVGUARD v1'),
+  adaptiveV2('config_d_v2_adaptive_navguard', 'NAVGUARD v2 (Adaptive)');
+
+  const LiveFusionMode(this.wireName, this.displayName);
+
+  final String wireName;
+  final String displayName;
+
+  static LiveFusionMode parse(Object? value) {
+    if (value == null) return LiveFusionMode.navguardV1;
+    return values.firstWhere(
+      (LiveFusionMode mode) => mode.wireName == value,
+      orElse: () => throw const FormatException('Unknown live fusion mode.'),
+    );
+  }
+}
+
 enum LiveQuality {
   good('GOOD'),
   usable('USABLE'),
@@ -182,10 +200,26 @@ class LiveNavguardPosition {
     required this.lateStepEventCount,
     required this.lateArcoreEventCount,
     required this.recoveryGoodFixCount,
+    required this.fusionMode,
     this.stepCallbackLatencyLastMs,
     this.stepCallbackLatencyMaxMs,
     this.stepCallbackLatencyMeanMs,
     this.recoveryCorrectionM,
+    this.strideEstimateM,
+    this.walkingHeadingOffsetDeg,
+    this.stationaryDetected,
+    required this.stationaryEntryCount,
+    required this.stationaryDurationMs,
+    required this.stationaryCandidateCount,
+    required this.stationaryBlockedRecentStepCount,
+    required this.stationaryBlockedHeadingMotionCount,
+    required this.stationaryBlockedArcoreMotionCount,
+    this.adaptiveArcoreSigmaM,
+    this.arcoreNisLast,
+    this.arcorePostRobustNisLast,
+    required this.arcoreAcceptedAfterRobustInflationCount,
+    required this.arcoreRejectedAfterMaxInflationCount,
+    this.sourceDisagreementM,
   });
 
   factory LiveNavguardPosition.fromMap(Map<Object?, Object?> map) {
@@ -228,6 +262,7 @@ class LiveNavguardPosition {
       lateStepEventCount: _integer(map, 'lateStepEventCount'),
       lateArcoreEventCount: _integer(map, 'lateArcoreEventCount'),
       recoveryGoodFixCount: _integer(map, 'recoveryGoodFixCount'),
+      fusionMode: LiveFusionMode.parse(map['fusionMode']),
       stepCallbackLatencyLastMs: _optionalNumber(
         map,
         'stepCallbackLatencyLastMs',
@@ -241,6 +276,45 @@ class LiveNavguardPosition {
         'stepCallbackLatencyMeanMs',
       ),
       recoveryCorrectionM: _optionalNumber(map, 'recoveryCorrectionM'),
+      strideEstimateM: _optionalNumber(map, 'strideEstimateM'),
+      walkingHeadingOffsetDeg: _optionalNumber(map, 'walkingHeadingOffsetDeg'),
+      stationaryDetected: _optionalBool(map, 'stationaryDetected'),
+      stationaryEntryCount: _optionalInteger(map, 'stationaryEntryCount', 0),
+      stationaryDurationMs: _optionalInteger(map, 'stationaryDurationMs', 0),
+      stationaryCandidateCount: _optionalInteger(
+        map,
+        'stationaryCandidateCount',
+        0,
+      ),
+      stationaryBlockedRecentStepCount: _optionalInteger(
+        map,
+        'stationaryBlockedRecentStepCount',
+        0,
+      ),
+      stationaryBlockedHeadingMotionCount: _optionalInteger(
+        map,
+        'stationaryBlockedHeadingMotionCount',
+        0,
+      ),
+      stationaryBlockedArcoreMotionCount: _optionalInteger(
+        map,
+        'stationaryBlockedArcoreMotionCount',
+        0,
+      ),
+      adaptiveArcoreSigmaM: _optionalNumber(map, 'adaptiveArcoreSigmaM'),
+      arcoreNisLast: _optionalNumber(map, 'arcoreNisLast'),
+      arcorePostRobustNisLast: _optionalNumber(map, 'arcorePostRobustNisLast'),
+      arcoreAcceptedAfterRobustInflationCount: _optionalInteger(
+        map,
+        'arcoreAcceptedAfterRobustInflationCount',
+        0,
+      ),
+      arcoreRejectedAfterMaxInflationCount: _optionalInteger(
+        map,
+        'arcoreRejectedAfterMaxInflationCount',
+        0,
+      ),
+      sourceDisagreementM: _optionalNumber(map, 'sourceDisagreementM'),
     );
     if (_integer(map, 'pdrPredictionsApplied') != value.pdrPredictionCount ||
         map['stepCounterInvariantHolds'] != true ||
@@ -297,10 +371,26 @@ class LiveNavguardPosition {
   final int lateStepEventCount;
   final int lateArcoreEventCount;
   final int recoveryGoodFixCount;
+  final LiveFusionMode fusionMode;
   final double? stepCallbackLatencyLastMs;
   final double? stepCallbackLatencyMaxMs;
   final double? stepCallbackLatencyMeanMs;
   final double? recoveryCorrectionM;
+  final double? strideEstimateM;
+  final double? walkingHeadingOffsetDeg;
+  final bool? stationaryDetected;
+  final int stationaryEntryCount;
+  final int stationaryDurationMs;
+  final int stationaryCandidateCount;
+  final int stationaryBlockedRecentStepCount;
+  final int stationaryBlockedHeadingMotionCount;
+  final int stationaryBlockedArcoreMotionCount;
+  final double? adaptiveArcoreSigmaM;
+  final double? arcoreNisLast;
+  final double? arcorePostRobustNisLast;
+  final int arcoreAcceptedAfterRobustInflationCount;
+  final int arcoreRejectedAfterMaxInflationCount;
+  final double? sourceDisagreementM;
 
   bool get stepCounterInvariantHolds =>
       pdrPredictionCount +
@@ -399,7 +489,10 @@ class LiveNavguardEvent {
 abstract interface class LiveNavguardPlatform {
   Stream<Object?> get events;
   Future<LiveNavguardPreflight> getPreflight(LiveNavguardAnchor anchor);
-  Future<void> start(LiveNavguardAnchor anchor);
+  Future<void> start(
+    LiveNavguardAnchor anchor, [
+    LiveFusionMode fusionMode = LiveFusionMode.navguardV1,
+  ]);
   Future<void> beginDenial();
   Future<void> requestRecovery();
   Future<void> stop();
@@ -428,8 +521,13 @@ class MethodChannelLiveNavguardPlatform implements LiveNavguardPlatform {
   }
 
   @override
-  Future<void> start(LiveNavguardAnchor anchor) =>
-      _invoke('startLiveNavguardDemo', anchor.toArguments());
+  Future<void> start(
+    LiveNavguardAnchor anchor, [
+    LiveFusionMode fusionMode = LiveFusionMode.navguardV1,
+  ]) => _invoke('startLiveNavguardDemo', <String, Object?>{
+    ...anchor.toArguments(),
+    'fusionMode': fusionMode.wireName,
+  });
 
   @override
   Future<void> beginDenial() => _invoke('beginLiveGnssDenial');
@@ -1168,4 +1266,11 @@ int _integer(Map<Object?, Object?> map, String key) {
 int _optionalInteger(Map<Object?, Object?> map, String key, int fallback) {
   final Object? value = map[key];
   return value is num ? value.toInt() : fallback;
+}
+
+bool? _optionalBool(Map<Object?, Object?> map, String key) {
+  final Object? value = map[key];
+  if (value == null) return null;
+  if (value is! bool) throw FormatException('Invalid $key');
+  return value;
 }

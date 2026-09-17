@@ -4,21 +4,21 @@
 
 ### Current State
 
-**Project Phase:** Stage 9B — Live Map NAVGUARD Demo — Implementation Complete, Static Validation Pass, Physical Live-Map and Fixed-Lag Replay Verification Complete; Accuracy Not Validated
+**Project Phase:** Stage 10 — Navigation Accuracy v2 — Config D-v2 Implemented, Static Validation Passed, and Adaptive Mechanisms Physically Exercised as a Development Prototype; Accuracy Not Validated
 
-**Repository Status:** Ten Stage 9B Implementation/Dependency Paths and Four Stage 9B Documentation Paths Unstaged — Controlled 14-Path Staging Gate Pending
+**Repository Status:** Twelve Stage 10 Implementation/Test Paths and Four Stage 10 Documentation Paths Unstaged — Controlled 16-Path Staging Gate Pending
 
 **Technical Documentation:** Baseline Completed
 
-**Application Development:** Started — Bootstrap + SensorManager Capability Inventory + Four-Sensor Live Timing Diagnostics + GNSS Runtime Timing Diagnostics + ARCore Runtime Tracking Diagnostics + GNSS Anchor / WGS84 Local ENU Foundation + Handset Heading / True-North Correction Foundation + Step-Event Foundation + Deterministic Baseline PDR + ARCore Relative Motion → ENU Foundation + Evaluation Mode + Ground Truth Firewall + Config D Quality Engine + EKF Sensor Fusion + Software-Defined GNSS Denial + Fresh-Fix Recovery + Full NAVGUARD State Machine + Matched A/B/C/D Benchmark + Physically Verified Live Map Demo + Fixed-Lag Delayed-Step Replay
+**Application Development:** Started — Bootstrap + SensorManager Capability Inventory + Four-Sensor Live Timing Diagnostics + GNSS Runtime Timing Diagnostics + ARCore Runtime Tracking Diagnostics + GNSS Anchor / WGS84 Local ENU Foundation + Handset Heading / True-North Correction Foundation + Step-Event Foundation + Deterministic Baseline PDR + ARCore Relative Motion → ENU Foundation + Evaluation Mode + Ground Truth Firewall + Config D Quality Engine + EKF Sensor Fusion + Software-Defined GNSS Denial + Fresh-Fix Recovery + Full NAVGUARD State Machine + Matched A/B/C/D Benchmark + Physically Verified Live Map Demo + Fixed-Lag Delayed-Step Replay + Navigation Accuracy v2 Adaptive/Heuristic Fusion
 
-**Experimental Evaluation:** Five valid Stage 9A matched sessions complete — 149 protected-GT matches per Config; predefined >=20% D-vs-A target not met. Stage 9B live integration and delayed-step handling are physically verified, but live-demo, absolute-GNSS, benchmark, and metrological accuracy remain not validated
+**Experimental Evaluation:** The Stage 9A result remains unchanged: five valid matched sessions, 149 protected-GT matches per Config, D better than A in 2/5, worse in 3/5, >=20% target met in 0/5, median paired improvement approximately -1.14%, mean approximately -11.11%, and accuracy not validated. Stage 10 calibration and targeted regression sessions are development evidence only; independent final accuracy validation has not been performed
 
 ---
 
 ### Current Milestone
 
-Stage 9B implementation, 260/260-test static validation, valid-anchor and no-anchor physical map verification, software-defined denial, live Config D sources, denied-GNSS firewall, fresh-fix recovery, and the targeted 16/16 detected-step fixed-lag replay retest are complete. Live-demo and absolute-GNSS accuracy remain not validated. Documentation synchronization and the controlled 14-path staging gate are the current milestone; Stage 9C — Final UI / Documentation / Demo Packaging / Final Project Closure follows and is not complete.
+Stage 10 implementation, 278/278-test static validation, Config D-v2 adaptive/heuristic fusion, local derived-profile persistence, robust operational-origin stabilization, delayed-step final drain, stationary drift suppression, post-robust ARCore gating, same-session D-v1/D-v2 development comparison, and selectable live v2 mode are complete. Physical development execution passed, including persistence, stationary activation, and a targeted fair-input L-turn retest; absolute and relative accuracy remain not validated. Documentation synchronization and the controlled 16-path staging gate are the current milestone. Stage 11 — AI-Assisted Motion & Sensor Reliability Model follows and is not implemented.
 ---
 
 ### Completed
@@ -176,17 +176,39 @@ These five sessions are frozen as the current evaluation set. ARCore, step, head
 
 ---
 
+### Stage 10 — Navigation Accuracy v2
+
+Stage 10 introduced `config_d_v2_adaptive_navguard` as an adaptive/heuristic development profile while preserving D-v1 as `config_d_navguard_ekf_v1`. Config A remains deterministic fixed-stride PDR. D-v2 is **not AI**. It implements a stable pre-denial operational origin, dynamic stride and stride self-calibration, walking/device heading-offset calibration, turn-aware adaptive behavior, adaptive heading and ARCore uncertainty, bounded robust ARCore covariance inflation, pre/post-robust NIS diagnostics, post-robust innovation gating, stationary detection and ARCore drift suppression, source-disagreement diagnostics, a persistent derived calibration profile, primary absolute and secondary relative-displacement metrics, a D-v1/D-v2 same-session development benchmark, 12 s capture final-drain handling, and selectable live `NAVGUARD v2 (Adaptive)` operation.
+
+Operational GNSS stabilization uses a 20 s timeout, five accepted fixes as the target, three as the minimum, and at least 5 s of observation. Five fixes are normal; three or four at timeout allow degraded continuation with a coordinate-wise median ENU origin; fewer than three fail. The Stage 3A WGS84 anchor remains immutable. Stage 9B keeps the 12 s fixed-lag replay history; Stage 10 calibration and benchmark capture use a 12 s final drain because physical step callbacks previously averaged approximately 6–7 s delay and reached approximately 10.6 s. The formal window remains 30 s, and the drain accepts only delayed callbacks whose original timestamp is inside it.
+
+Android `SharedPreferences` persists only `schemaVersion`, `strideEstimateM`, `strideSampleCount`, `bodyHeadingOffsetRad`, and `headingOffsetSampleCount`. Physical restart persistence passed; one development run restored approximately 0.752 m stride and 2.21° heading offset. These are not universal calibration values. Latitude, longitude, raw GNSS fixes, raw sensor streams, raw ARCore poses, trajectories, timestamps, and camera images are not persisted; no cloud or telemetry is used.
+
+The final `DEVELOPMENT_CALIBRATION_SESSION` physically observed `stationaryEverDetected = true`, two stationary entries, 14,716 ms stationary duration, 0.03386757489976859 m stationary drift, and 21/21 received/applied steps. Stride changed from 0.75 m to 0.7523730395965736 m with five samples; heading offset changed from 0° to 2.2066232751778716° with five samples. ARCore accepted/rejected counts were 1,480/260. Pre-robust NIS mean/max were 59.962750136750486/165.91354580215992; post-robust mean/max were 3.4265619485971177/6.054501701453265. Robust inflation accepted 913 updates and rejected zero after maximum inflation. These are development observations, not formal validation.
+
+The final live stationary test in `NAVGUARD v2 (Adaptive)` reported stationary YES, one entry, 13,687 ms duration, and zero denied-GNSS estimator use. The prior defect was that `exitStationary(...)` updated `lastStepTimestampNs` with heading or ARCore event time when no physical step occurred. The fix updates it only for accepted real step events using original `SensorEvent.timestamp`. The state remains `[E, N, heading]`; this is stationary drift suppression, not classical ZUPT.
+
+Before the final turn correction, the controlled L-turn result was -17.386396742414703% absolute and -15.769133699656274% relative versus D-v1, with 451/899 ARCore updates hard-rejected. The root cause was applying the hard gate to pre-inflation NIS before covariance inflation could reduce measurement influence. The corrected order is: preliminary innovation/NIS; bounded covariance inflation; recompute `S`; recompute post-robust NIS; then apply the hard gate. Engineering references are soft-start NIS 5.99, hard-reject NIS 25.0, and ARCore sigma 0.35–5.0 m; these are not statistically validated guarantees. Earlier D-v2-vs-D-v1 controlled outcomes are preserved: straight +0.5983025061282222% absolute/+0.6929110812016313% relative, L-turn -17.386396742414703%/-15.769133699656274%, and mixed +0.5787171354548967%/+2.628688517799457%. D-v2 was not consistently superior before the fix.
+
+The clean targeted L-turn retest used approximately 15 straight steps, a 90° right turn, and 10 straight steps. Approximately 25 manual steps yielded 24 formal-window steps, with fair A/D-v1/D-v2 input `24/24/24`. D-v1/D-v2 absolute medians were 13.56790843528887/13.47382293944652 m, a +0.6934414120723457% D-v2 development improvement. Relative-displacement medians were 12.026944732036352/11.856664928086161 m, a +1.4158192936283631% improvement. ARCore accepted 901 updates: 606 nominal and 295 inflated; innovation hard rejects, rejected-after-maximum-inflation updates, and denied-GNSS estimator uses were all zero. Pre/post-robust NIS mean/max were 3.448132466354329/21.73240926815048 and 2.0656258056618424/6.070728289846873. Robust sigma mean/max were 0.40048823072921524/0.6666664053719006 m; source-disagreement mean/max were 0.521867776055212/1.6465281522807453 m. The previous mass turn rejection was not observed in this retest, but this is not universal proof that every turn is solved.
+
+GNSS stabilization in that final L-turn was degraded: 4/5 accepted fixes, reason `accepted_less_than_target`, reported-accuracy median 36.967708587646484 m, horizontal spread 12.786329740671398 m, and initial matched bias approximately 18.43 m. Its absolute errors must not be interpreted as validated NAVGUARD positioning accuracy; relative displacement is also only a secondary development diagnostic. Protected-GT mutation/removal invariance passed and `protectedGtEstimatorAccessCount = 0`; protected denied GNSS remained comparator-only and did not feed stride learning, heading-offset learning, adaptive ARCore noise, NIS gating, stationary detection, the Quality Engine, EKF, or estimator correction.
+
+Static validation passed with `flutter analyze --no-pub`, 278/278 tests, `flutter build apk --debug --no-pub`, and `git diff --check`. D-v2 is implemented and physically exercised as a development prototype, but independent final validation has not been performed, accuracy is **NOT VALIDATED**, and D-v2 is not proven more accurate. Overall physical verification remains **PARTIAL**. Stage 11 — AI-Assisted Motion & Sensor Reliability Model is next, not implemented, and planned as an on-device or locally deployable learned model for motion-state classification and source-reliability estimation from privacy-safe derived features, with deterministic heuristic fallback and no raw GNSS coordinate required as a model input. Detailed audit evidence is in `docs/06_device_capability_audit.md`.
+
+---
+
 ### In Progress
 
-* Ten Stage 9B implementation/dependency paths and four synchronized documentation paths remain unstaged while the controlled 14-path staging gate is prepared.
+* Twelve Stage 10 implementation/test paths and four synchronized documentation paths remain unstaged while the controlled 16-path staging gate is prepared.
 
 ---
 
 ### Next
 
-* Run the final combined Stage 9B implementation, physical-evidence, and documentation commit-readiness audit.
-* If that gate passes, perform controlled staging of the approved 14-path Stage 9B scope.
-* Continue with Stage 9C — Final UI / Documentation / Demo Packaging / Final Project Closure. Stage 9C is not complete.
+* Run the final combined Stage 10 implementation, physical-evidence, and documentation commit-readiness audit.
+* If that gate passes, perform controlled staging of the approved 16-path Stage 10 scope.
+* Continue with Stage 11 — AI-Assisted Motion & Sensor Reliability Model. Stage 11 is not implemented.
 * Complete the remaining device/runtime checks before freezing the device baseline.
 
 ---
@@ -223,8 +245,9 @@ These five sessions are frozen as the current evaluation set. ARCore, step, head
 | Quality Engine                              | Implemented and Physically Verified — Stage 7/8 Config D Scope; Thresholds Not Validated |
 | EKF / Sensor Fusion                         | Implemented and Physically Verified — Stage 7/8 Config D Scope; Accuracy and Noise Parameters Not Validated |
 | Live Map NAVGUARD Demo                      | Implemented and Physically Verified — OpenStreetMap Visualization, Interactive Denial/Recovery, No-Anchor Gate; Accuracy Not Validated |
-| Testing                                     | Stage 1 + Stage 2A + Stage 2B + Stage 2C + Stage 2D + Stage 3A + Stage 3B + Stage 3C + Stage 4 + Stage 5 + Stage 6 + Stage 7 + Stage 8 + Stage 9A + Stage 9B Defined Scopes Passed; 260/260 Current Tests Passed |
-| Field Experiments                           | Stage 9A Five Valid Matched Sessions + Stage 9B Live Map and Fixed-Lag Retests Complete; Results Session-Specific |
+| Config D-v2 Adaptive NAVGUARD                | Implemented and Physically Exercised as a Stage 10 Development Prototype; Accuracy Not Validated; Not AI |
+| Testing                                     | Stage 1 through Stage 10 Defined Scopes Passed; 278/278 Current Tests Passed |
+| Field Experiments                           | Stage 9A Five Valid Matched Sessions + Stage 9B Live Map/Fixed-Lag Retests + Stage 10 Calibration/Targeted Regression Sessions Complete; Stage 10 Results Are Development-Only |
 | Final Benchmark / Evaluation                | Stage 9A Matched Benchmark Implemented; >=20% D-vs-A Target Not Met; Accuracy Not Validated |
 
 ---
@@ -243,7 +266,7 @@ These five sessions are frozen as the current evaluation set. ARCore, step, head
 | Evaluation Planning        | Complete            |
 | Risk & Limitation Analysis | Complete            |
 | Technical References       | Complete            |
-| Final Experimental Results | Stage 9A Five-Session Descriptive Results and Stage 9B Physical Live-Map Evidence Recorded; Accuracy Validation Pending |
+| Final Experimental Results | Stage 9A Five-Session Descriptive Results, Stage 9B Physical Live-Map Evidence, and Stage 10 Development Evidence Recorded; Independent Accuracy Validation Pending |
 
 ---
 
@@ -257,7 +280,7 @@ Raw experimental data, precise location logs, credentials, secrets, and other se
 
 ### Current Development Rule
 
-Flutter Android bootstrap, Stage 2A SensorManager runtime capability inventory, Stage 2B four-sensor live timing diagnostics, Stage 2C GNSS runtime timing diagnostics, Stage 2D ARCore runtime tracking diagnostics, Stage 3A — GNSS Anchor + Local ENU Reference Foundation, Stage 3B — Heading / True-North Reference Foundation, Stage 3C — Step-Event Foundation, Stage 4 — Baseline PDR, Stage 5 — ARCore Relative Motion → ENU Foundation, Stage 6 — Evaluation Mode + Ground Truth Firewall, Stage 7 — Config D Quality Engine + EKF Sensor Fusion, Stage 8 — GNSS Denial / Recovery + Full NAVGUARD Flow, Stage 9A — Matched A/B/C/D Benchmark + Protected Ground Truth, and Stage 9B — Live Map NAVGUARD Demo are implemented and verified for their defined scopes.
+Flutter Android bootstrap, Stage 2A SensorManager runtime capability inventory, Stage 2B four-sensor live timing diagnostics, Stage 2C GNSS runtime timing diagnostics, Stage 2D ARCore runtime tracking diagnostics, Stage 3A — GNSS Anchor + Local ENU Reference Foundation, Stage 3B — Heading / True-North Reference Foundation, Stage 3C — Step-Event Foundation, Stage 4 — Baseline PDR, Stage 5 — ARCore Relative Motion → ENU Foundation, Stage 6 — Evaluation Mode + Ground Truth Firewall, Stage 7 — Config D Quality Engine + EKF Sensor Fusion, Stage 8 — GNSS Denial / Recovery + Full NAVGUARD Flow, Stage 9A — Matched A/B/C/D Benchmark + Protected Ground Truth, Stage 9B — Live Map NAVGUARD Demo, and Stage 10 — Navigation Accuracy v2 are implemented for their defined scopes. Stage 10 is verified as a development prototype only; accuracy is not validated.
 
 Stage 2B physically verified live event delivery and timestamp-derived timing behavior for the accelerometer, gyroscope, magnetometer, and rotation vector in 12 tested sessions under a 20,000 µs request. Requested and observed rates remain distinct, the 60 ms gap threshold remains provisional, and these results do not verify sensor noise, bias, calibration, heading, or navigation performance.
 
@@ -285,13 +308,13 @@ The approximately 73.46 m recovery correction is an operational separation betwe
 
 Stage 9B physically verified the OpenStreetMap live visualization, explicit no-anchor gate, interactive software-defined denial, low-latency heading/ARCore map updates, fixed-lag delayed-step replay, denied-GNSS firewall, and fresh-fix recovery. The initial `56 / 0 / 56` received/applied/late outcome and two failed 1,000 ms retests are preserved. The final retest incorporated 16/16 detected events with zero late steps using the 12,000 ms bounded replay history; denied-GNSS estimator use remained zero and recovery completed with a 5.73 m correction distance that is not error. Absolute handset-GNSS map alignment can be offset by tens of metres in urban sessions, with no proven single cause.
 
-Physical verification remains partial and the device baseline is not frozen. Fusion accuracy, quality thresholds, noise parameters, PDR accuracy, step-detection accuracy, step-length accuracy, heading absolute accuracy, true-north absolute accuracy, protected-GNSS ground-truth accuracy, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, same-location anchor repeatability, ARCore position/distance/vertical accuracy, ENU-alignment accuracy, live-map accuracy, and physical AR-loss fallback were not validated. Body heading and handset-to-body calibration are not implemented. Config D Quality Engine + EKF fusion, software-defined GNSS denial, denied-GNSS quarantine, fresh-fix recovery, the full state-machine flow, the Stage 9A matched A/B/C/D benchmark, and the Stage 9B live-map demonstration are implemented. The five valid Stage 9A matched sessions did not meet the predefined >=20% D-vs-A target and do not establish validated navigation accuracy. Motion AI is not implemented. Other required device checks remain pending.
+Physical verification remains partial and the device baseline is not frozen. Fusion accuracy, quality thresholds, noise parameters, PDR accuracy, step-detection accuracy, step-length accuracy, heading absolute accuracy, true-north absolute accuracy, protected-GNSS ground-truth accuracy, GNSS absolute coordinate accuracy, survey-grade anchor quality, physical ENU distance accuracy, same-location anchor repeatability, ARCore position/distance/vertical accuracy, ENU-alignment accuracy, live-map accuracy, and physical AR-loss fallback were not validated. Body heading and handset-to-body calibration are not implemented. Config D-v1, Config D-v2 adaptive/heuristic fusion, software-defined GNSS denial, denied-GNSS quarantine, fresh-fix recovery, the full state-machine flow, the Stage 9A matched A/B/C/D benchmark, and the Stage 9B live-map demonstration are implemented. The five valid Stage 9A sessions did not meet the predefined >=20% D-vs-A target; Stage 10 sessions are development-only and do not establish validated navigation accuracy. AI/ML is not implemented. Other required device checks and independent cross-session validation remain pending.
 
 ---
 
 ### Last Status Update
 
-**2026-09-15**
+**2026-09-17**
 
 ---
 
@@ -301,21 +324,21 @@ Physical verification remains partial and the device baseline is not frozen. Fus
 
 ### Mevcut Durum
 
-**Proje Aşaması:** Aşama 9B — Canlı Harita NAVGUARD Demosu — Uygulama Tamamlandı, Statik Doğrulama Geçti, Fiziksel Canlı-Harita ve Fixed-Lag Replay Doğrulaması Tamamlandı; Doğruluk Doğrulanmadı
+**Proje Aşaması:** Stage 10 — Navigasyon Doğruluğu v2 — Yapılandırma D-v2 Uygulandı, Statik Doğrulama Geçti ve Uyarlanabilir Mekanizmalar Geliştirme Prototipi Olarak Fiziksel Biçimde Çalıştırıldı; Doğruluk Doğrulanmadı
 
-**Repository Durumu:** On Stage 9B Uygulama/Bağımlılık Yolu ve Dört Stage 9B Dokümantasyon Yolu Unstaged — Kontrollü 14-Yolluk Staging Kapısı Bekliyor
+**Repository Durumu:** On İki Stage 10 Uygulama/Test Yolu ve Dört Stage 10 Dokümantasyon Yolu Unstaged — Kontrollü 16-Yolluk Staging Kapısı Bekliyor
 
 **Teknik Dokümantasyon:** Baseline Tamamlandı
 
-**Uygulama Geliştirme:** Başladı — Bootstrap + SensorManager Yetenek Envanteri + Dört Sensörlü Canlı Zamanlama Tanıları + GNSS Çalışma Zamanı Zamanlama Tanıları + ARCore Çalışma Zamanı Takip Tanıları + GNSS Anchor / WGS84 Yerel ENU Temeli + Handset Heading / Gerçek Kuzey Düzeltme Temeli + Adım Olayı Temeli + Deterministik Temel PDR + ARCore Göreli Hareket → ENU Temeli + Değerlendirme Modu + Ground Truth Güvenlik Duvarı + Yapılandırma D Quality Engine + EKF Sensör Füzyonu + Yazılım-Tanımlı GNSS Kesintisi + Taze-Fix Recovery + Tam NAVGUARD Durum Makinesi + Eşleştirilmiş A/B/C/D Benchmark + Fiziksel Olarak Doğrulanmış Canlı Harita Demosu + Fixed-Lag Gecikmiş-Adım Replay'i
+**Uygulama Geliştirme:** Başladı — Bootstrap + SensorManager Yetenek Envanteri + Dört Sensörlü Canlı Zamanlama Tanıları + GNSS Çalışma Zamanı Zamanlama Tanıları + ARCore Çalışma Zamanı Takip Tanıları + GNSS Anchor / WGS84 Yerel ENU Temeli + Handset Heading / Gerçek Kuzey Düzeltme Temeli + Adım Olayı Temeli + Deterministik Temel PDR + ARCore Göreli Hareket → ENU Temeli + Değerlendirme Modu + Ground Truth Güvenlik Duvarı + Yapılandırma D Quality Engine + EKF Sensör Füzyonu + Yazılım-Tanımlı GNSS Kesintisi + Taze-Fix Recovery + Tam NAVGUARD Durum Makinesi + Eşleştirilmiş A/B/C/D Benchmark + Fiziksel Olarak Doğrulanmış Canlı Harita Demosu + Fixed-Lag Gecikmiş-Adım Replay'i + Navigasyon Doğruluğu v2 Uyarlanabilir/Sezgisel Füzyon
 
-**Deneysel Değerlendirme:** Beş geçerli Stage 9A eşleştirilmiş oturumu tamamlandı — Yapılandırma başına 149 korumalı-GT eşleşmesi; önceden tanımlanan >=%20 D-ve-A hedefi karşılanmadı. Stage 9B canlı entegrasyonu ve gecikmiş-adım işleme fiziksel olarak doğrulandı; canlı-demo, mutlak-GNSS, benchmark ve metrolojik doğruluk doğrulanmadı
+**Deneysel Değerlendirme:** Stage 9A sonucu değişmez: beş geçerli eşleştirilmiş oturum, Yapılandırma başına 149 korumalı-GT eşleşmesi, D'nin A'dan iyi olduğu 2/5 ve kötü olduğu 3/5 oturum, >=%20 hedefi 0/5, eşleştirilmiş medyan iyileştirme yaklaşık -%1,14, ortalama yaklaşık -%11,11 ve doğruluk doğrulanmadı. Stage 10 kalibrasyon ve hedefli regresyon oturumları yalnızca geliştirme kanıtıdır; bağımsız nihai doğruluk doğrulaması yapılmadı
 
 ---
 
 ### Mevcut Kilometre Taşı
 
-Stage 9B uygulaması, 260/260 testli statik doğrulama, geçerli-anchor ve anchor-yok fiziksel harita doğrulaması, yazılım-tanımlı kesinti, canlı Yapılandırma D kaynakları, kesinti-GNSS firewall'u, taze-fix recovery ve hedefli 16/16 algılanan-adım fixed-lag replay yeniden testi tamamlandı. Canlı-demo ve mutlak-GNSS doğruluğu doğrulanmadı. Dokümantasyon senkronizasyonu ve kontrollü 14-yolluk staging kapısı mevcut kilometre taşıdır; Aşama 9C — Nihai UI / Dokümantasyon / Demo Paketleme / Nihai Proje Kapanışı daha sonra gelir ve tamamlanmamıştır.
+Stage 10 uygulaması, 278/278 testli statik doğrulama, Yapılandırma D-v2 uyarlanabilir/sezgisel füzyon, yerel türetilmiş-profil kalıcılığı, sağlam operasyonel başlangıç sabitlemesi, gecikmiş-adım final drain'i, sabitlik drift baskılama, sağlamlaştırma-sonrası ARCore gate'i, aynı oturum D-v1/D-v2 geliştirme karşılaştırması ve seçilebilir canlı v2 modu tamamlandı. Kalıcılık, sabitlik aktivasyonu ve adil-girdili hedefli L-dönüş yeniden testi dahil fiziksel geliştirme çalışması geçti; mutlak ve göreli doğruluk doğrulanmadı. Dokümantasyon senkronizasyonu ve kontrollü 16-yolluk staging kapısı mevcut kilometre taşıdır. Sıradaki Stage 11 — AI-Assisted Motion & Sensor Reliability Model uygulanmamıştır.
 
 ---
 
@@ -474,17 +497,39 @@ Bu beş oturum mevcut değerlendirme seti olarak dondurulmuştur. ARCore, adım,
 
 ---
 
+### Stage 10 — Navigasyon Doğruluğu v2
+
+Stage 10, D-v1'i `config_d_navguard_ekf_v1` olarak korurken `config_d_v2_adaptive_navguard` uyarlanabilir/sezgisel geliştirme profilini ekledi. Yapılandırma A deterministik sabit-adım-uzunluklu PDR olarak kalır. D-v2 **AI değildir**. Sağlam kesinti-öncesi operasyonel başlangıç, dinamik adım uzunluğu ve öz-kalibrasyon, yürüyüş/cihaz heading-offset kalibrasyonu, dönüş-duyarlı uyarlama, uyarlanabilir heading ve ARCore belirsizliği, sınırlı sağlam ARCore kovaryans şişirmesi, ön/son sağlam NIS tanıları, sağlamlaştırma-sonrası innovation gate'i, sabitlik algılama ve ARCore drift baskılama, kaynak-uyuşmazlığı tanıları, kalıcı türetilmiş kalibrasyon profili, birincil mutlak ve ikincil göreli-yer-değiştirme metrikleri, aynı-oturum D-v1/D-v2 geliştirme benchmark'ı, 12 sn capture final drain'i ve seçilebilir canlı `NAVGUARD v2 (Adaptive)` çalışması uygulandı.
+
+Operasyonel GNSS sabitlemesi 20 sn timeout, beş kabul edilmiş fix hedefi, üç fix minimumu ve en az 5 sn gözlem kullanır. Beş fix normaldir; timeout'ta üç veya dört fix koordinat-bazlı medyan ENU başlangıcıyla degraded devam sağlar; üçten az fix başarısız olur. Stage 3A WGS84 anchor'ı değişmez kalır. Stage 9B 12 sn fixed-lag replay geçmişini korur; fiziksel adım callback'lerinde daha önce yaklaşık 6–7 sn ortalama ve 10,6 sn maksimum gecikme görüldüğü için Stage 10 kalibrasyon ve benchmark yakalaması 12 sn final drain kullanır. Resmî pencere 30 sn'dir; drain yalnızca özgün zaman damgası pencere içinde olan gecikmiş callback'leri alır.
+
+Android `SharedPreferences` yalnızca `schemaVersion`, `strideEstimateM`, `strideSampleCount`, `bodyHeadingOffsetRad` ve `headingOffsetSampleCount` alanlarını kalıcılaştırır. Fiziksel yeniden başlatmada kalıcılık geçti; bir geliştirme çalışması yaklaşık 0,752 m adım uzunluğu ve 2,21° heading offset'i geri yükledi. Bunlar evrensel kalibrasyon değerleri değildir. Latitude, longitude, ham GNSS fix'leri, ham sensör akışları, ham ARCore pozları, rotalar, zaman damgaları ve kamera görüntüleri saklanmaz; cloud veya telemetry yoktur.
+
+Nihai `DEVELOPMENT_CALIBRATION_SESSION` fiziksel oturumu `stationaryEverDetected = true`, iki sabitlik girişi, 14.716 ms sabitlik süresi, 0,03386757489976859 m sabit drift ve 21/21 alınan/uygulanan adım gözlemledi. Adım uzunluğu beş örnekle 0,75 m'den 0,7523730395965736 m'ye; heading offset beş örnekle 0°'den 2,2066232751778716°'ye değişti. ARCore kabul/ret sayıları 1.480/260 idi. Ön-sağlam NIS ortalama/maksimum 59,962750136750486/165,91354580215992; son-sağlam ortalama/maksimum 3,4265619485971177/6,054501701453265 idi. Sağlam şişirme 913 update'i kabul etti; maksimum şişirme sonrası sıfır ret vardı. Bunlar resmî doğrulama değil geliştirme gözlemleridir.
+
+Nihai canlı `NAVGUARD v2 (Adaptive)` sabitlik testi stationary YES, bir giriş, 13.687 ms süre ve sıfır kesinti-GNSS tahmin motoru kullanımı bildirdi. Önceki hata, fiziksel adım olmadığında `exitStationary(...)` fonksiyonunun `lastStepTimestampNs` değerini heading veya ARCore olay zamanı ile güncellemesiydi. Düzeltme bu değeri yalnızca kabul edilen gerçek adımların özgün `SensorEvent.timestamp` değeriyle günceller. Durum `[E, N, heading]` olarak kalır; bu klasik ZUPT değil sabitlik drift baskılamasıdır.
+
+Nihai dönüş düzeltmesinden önce kontrollü L-dönüş sonucu D-v1'e göre mutlak -%17,386396742414703 ve göreli -%15,769133699656274 idi; 899 ARCore update'inin 451'i hard-reject edildi. Kök neden, kovaryans şişirmesi ölçüm etkisini azaltmadan önce hard gate'in şişirme-öncesi NIS'e uygulanmasıydı. Düzeltilen sıra: ilk innovation/NIS; sınırlı kovaryans şişirmesi; `S` yeniden hesabı; sağlamlaştırma-sonrası NIS yeniden hesabı; ardından hard gate. Mühendislik referansları soft-start NIS 5,99, hard-reject NIS 25,0 ve ARCore sigma 0,35–5,0 m'dir; istatistiksel olarak doğrulanmış garanti değildir. Önceki D-v2-ve-D-v1 kontrollü sonuçları korunur: düz +%0,5983025061282222 mutlak/+%0,6929110812016313 göreli, L-dönüş -%17,386396742414703/-%15,769133699656274 ve karma +%0,5787171354548967/+%2,628688517799457. D-v2 düzeltme öncesinde tutarlı biçimde üstün değildi.
+
+Temiz hedefli L-dönüş yeniden testi yaklaşık 15 düz adım, 90° sağ dönüş ve 10 düz adım kullandı. Yaklaşık 25 manuel adım, `24/24/24` adil A/D-v1/D-v2 girdisiyle 24 resmî-pencere adımı üretti. D-v1/D-v2 mutlak medyanları 13,56790843528887/13,47382293944652 m; D-v2 geliştirme iyileştirmesi +%0,6934414120723457 idi. Göreli-yer-değiştirme medyanları 12,026944732036352/11,856664928086161 m; iyileştirme +%1,4158192936283631 idi. ARCore 606 nominal ve 295 şişirilmiş olmak üzere 901 update kabul etti; innovation hard reject, maksimum-şişirme-sonrası ret ve kesinti-GNSS tahmin motoru kullanımı sıfırdı. Ön/son sağlam NIS ortalama/maksimum 3,448132466354329/21,73240926815048 ve 2,0656258056618424/6,070728289846873 idi. Sağlam sigma ortalama/maksimum 0,40048823072921524/0,6666664053719006 m; kaynak uyuşmazlığı ortalama/maksimum 0,521867776055212/1,6465281522807453 m idi. Önceki kitlesel dönüş reddi bu yeniden testte görülmedi; bu her dönüşün çözüldüğüne dair evrensel kanıt değildir.
+
+Son L-dönüşün GNSS sabitlemesi degraded durumdaydı: 4/5 kabul edilen fix, `accepted_less_than_target` nedeni, 36,967708587646484 m bildirilen doğruluk medyanı, 12,786329740671398 m yatay yayılım ve yaklaşık 18,43 m ilk eşleşme bias'ı. Mutlak hataları doğrulanmış NAVGUARD konum doğruluğu olarak yorumlanamaz; göreli yer değiştirme de yalnızca ikincil geliştirme tanısıdır. Korumalı-GT mutasyon/kaldırma değişmezliği geçti ve `protectedGtEstimatorAccessCount = 0` idi; korumalı kesinti GNSS'i yalnızca karşılaştırıcı olarak kaldı ve adım-uzunluğu öğrenimi, heading-offset öğrenimi, uyarlanabilir ARCore gürültüsü, NIS gate'i, sabitlik algılama, Quality Engine, EKF veya tahmin motoru düzeltmesini beslemedi.
+
+Statik doğrulama `flutter analyze --no-pub`, 278/278 test, `flutter build apk --debug --no-pub` ve `git diff --check` ile geçti. D-v2 uygulandı ve geliştirme prototipi olarak fiziksel biçimde çalıştırıldı; bağımsız nihai doğrulama yapılmadı, doğruluk **DOĞRULANMAMIŞTIR** ve D-v2'nin kanıtlanmış biçimde daha doğru olduğu söylenemez. Genel fiziksel doğrulama **KISMİ** kalır. Stage 11 — AI-Assisted Motion & Sensor Reliability Model sıradadır ancak uygulanmamıştır; privacy-safe türetilmiş özelliklerden hareket-durumu sınıflandırması ve kaynak-güvenilirliği tahmini yapan cihaz-üzeri veya yerel konuşlandırılabilir öğrenilmiş model, deterministik sezgisel fallback ve model girdisi olarak ham GNSS koordinatı gerektirmeme planlanır. Ayrıntılı denetim kanıtı `docs/06_device_capability_audit.md` içindedir.
+
+---
+
 ### Devam Edenler
 
-* On Stage 9B uygulama/bağımlılık yolu ve dört senkronize dokümantasyon yolu unstaged durumdadır; kontrollü 14-yolluk staging kapısı hazırlanmaktadır.
+* On iki Stage 10 uygulama/test yolu ve dört senkronize dokümantasyon yolu unstaged durumdadır; kontrollü 16-yolluk staging kapısı hazırlanmaktadır.
 
 ---
 
 ### Sonraki Adımlar
 
-* Nihai birleşik Stage 9B uygulama, fiziksel kanıt ve dokümantasyon commit-readiness denetimini çalıştır.
-* Bu kapı geçerse onaylanan 14-yolluk Stage 9B kapsamını kontrollü biçimde stage et.
-* Aşama 9C — Nihai UI / Dokümantasyon / Demo Paketleme / Nihai Proje Kapanışı ile devam et. Stage 9C tamamlanmamıştır.
+* Nihai birleşik Stage 10 uygulama, fiziksel kanıt ve dokümantasyon commit-readiness denetimini çalıştır.
+* Bu kapı geçerse onaylanan 16-yolluk Stage 10 kapsamını kontrollü biçimde stage et.
+* Stage 11 — AI-Assisted Motion & Sensor Reliability Model ile devam et. Stage 11 uygulanmamıştır.
 * Cihaz baseline'ını sabitlemeden önce kalan cihaz/çalışma zamanı kontrollerini tamamla.
 
 ---
@@ -521,8 +566,9 @@ Bu beş oturum mevcut değerlendirme seti olarak dondurulmuştur. ARCore, adım,
 | Quality Engine                              | Uygulandı ve Fiziksel Olarak Doğrulandı — Stage 7/8 Yapılandırma D Kapsamı; Eşikler Doğrulanmadı |
 | EKF / Sensör Füzyonu                        | Uygulandı ve Fiziksel Olarak Doğrulandı — Stage 7/8 Yapılandırma D Kapsamı; Doğruluk ve Gürültü Parametreleri Doğrulanmadı |
 | Canlı Harita NAVGUARD Demosu                | Uygulandı ve Fiziksel Olarak Doğrulandı — OpenStreetMap Görselleştirmesi, Etkileşimli Kesinti/Recovery, Anchor-Yok Gate; Doğruluk Doğrulanmadı |
-| Test                                        | Stage 1 + Stage 2A + Stage 2B + Stage 2C + Stage 2D + Stage 3A + Stage 3B + Stage 3C + Stage 4 + Stage 5 + Stage 6 + Stage 7 + Stage 8 + Stage 9A + Stage 9B Tanımlı Kapsamları Geçti; Güncel 260/260 Test Geçti |
-| Saha Deneyleri                              | Stage 9A Beş Geçerli Eşleştirilmiş Oturum + Stage 9B Canlı Harita ve Fixed-Lag Yeniden Testleri Tamamlandı; Sonuçlar Oturuma Özgü |
+| Yapılandırma D-v2 Uyarlanabilir NAVGUARD    | Stage 10 Geliştirme Prototipi Olarak Uygulandı ve Fiziksel Biçimde Çalıştırıldı; Doğruluk Doğrulanmadı; AI Değildir |
+| Test                                        | Stage 1'den Stage 10'a Kadar Tanımlı Kapsamlar Geçti; Güncel 278/278 Test Geçti |
+| Saha Deneyleri                              | Stage 9A Beş Geçerli Eşleştirilmiş Oturum + Stage 9B Canlı Harita/Fixed-Lag Yeniden Testleri + Stage 10 Kalibrasyon/Hedefli Regresyon Oturumları Tamamlandı; Stage 10 Sonuçları Yalnızca Geliştirme Kanıtıdır |
 | Nihai Benchmark / Değerlendirme             | Stage 9A Eşleştirilmiş Benchmark Uygulandı; >=%20 D-ve-A Hedefi Karşılanmadı; Doğruluk Doğrulanmadı |
 
 ---
@@ -541,7 +587,7 @@ Bu beş oturum mevcut değerlendirme seti olarak dondurulmuştur. ARCore, adım,
 | Değerlendirme Planlaması  | Tamamlandı         |
 | Risk ve Sınırlama Analizi | Tamamlandı         |
 | Teknik Referanslar        | Tamamlandı         |
-| Nihai Deneysel Sonuçlar   | Stage 9A Beş Oturumlu Betimsel Sonuçlar ve Stage 9B Fiziksel Canlı-Harita Kanıtı Kaydedildi; Doğruluk Doğrulaması Bekliyor |
+| Nihai Deneysel Sonuçlar   | Stage 9A Beş Oturumlu Betimsel Sonuçlar, Stage 9B Fiziksel Canlı-Harita Kanıtı ve Stage 10 Geliştirme Kanıtı Kaydedildi; Bağımsız Doğruluk Doğrulaması Bekliyor |
 
 ---
 
@@ -555,7 +601,7 @@ Ham deneysel veriler, hassas konum logları, kimlik bilgileri, gizli bilgiler ve
 
 ### Mevcut Geliştirme Kuralı
 
-Flutter Android bootstrap, Stage 2A SensorManager çalışma zamanı yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama tanıları, Stage 2C GNSS çalışma zamanı zamanlama tanıları, Stage 2D ARCore çalışma zamanı takip tanıları, Aşama 3A — GNSS Anchor + Yerel ENU Referans Temeli, Aşama 3B — Heading / Gerçek Kuzey Referans Temeli, Aşama 3C — Adım Olayı Temeli, Aşama 4 — Temel PDR, Aşama 5 — ARCore Göreli Hareket → ENU Temeli, Aşama 6 — Değerlendirme Modu + Ground Truth Güvenlik Duvarı, Aşama 7 — Yapılandırma D Quality Engine + EKF Sensör Füzyonu, Aşama 8 — GNSS Kesintisi / Geri Kazanım + Tam NAVGUARD Akışı, Aşama 9A — Eşleştirilmiş A/B/C/D Benchmark + Korunan Referans Konum ve Aşama 9B — Canlı Harita NAVGUARD Demosu tanımlı kapsamlarında uygulandı ve doğrulandı.
+Flutter Android bootstrap, Stage 2A SensorManager çalışma zamanı yetenek envanteri, Stage 2B dört sensörlü canlı zamanlama tanıları, Stage 2C GNSS çalışma zamanı zamanlama tanıları, Stage 2D ARCore çalışma zamanı takip tanıları, Aşama 3A — GNSS Anchor + Yerel ENU Referans Temeli, Aşama 3B — Heading / Gerçek Kuzey Referans Temeli, Aşama 3C — Adım Olayı Temeli, Aşama 4 — Temel PDR, Aşama 5 — ARCore Göreli Hareket → ENU Temeli, Aşama 6 — Değerlendirme Modu + Ground Truth Güvenlik Duvarı, Aşama 7 — Yapılandırma D Quality Engine + EKF Sensör Füzyonu, Aşama 8 — GNSS Kesintisi / Geri Kazanım + Tam NAVGUARD Akışı, Aşama 9A — Eşleştirilmiş A/B/C/D Benchmark + Korunan Referans Konum, Aşama 9B — Canlı Harita NAVGUARD Demosu ve Stage 10 — Navigasyon Doğruluğu v2 tanımlı kapsamlarında uygulandı. Stage 10 yalnızca geliştirme prototipi olarak doğrulandı; doğruluk doğrulanmadı.
 
 Stage 2B, 20.000 µs talep altında 12 test oturumunda ivmeölçer, jiroskop, manyetometre ve dönüş vektörü için canlı olay iletimini ve timestamp-türevli zamanlama davranışını fiziksel olarak doğruladı. Talep edilen ve gözlenen hızlar ayrı kalır, 60 ms boşluk eşiği geçicidir ve bu sonuçlar sensör gürültüsünü, bias'ı, kalibrasyonu, heading'i veya navigasyon performansını doğrulamaz.
 
@@ -583,10 +629,10 @@ Yaklaşık 73,46 m recovery correction, recovery-öncesi kesintili tahmin ile re
 
 Stage 9B; OpenStreetMap canlı görselleştirmesini, açık anchor-yok gate'ini, etkileşimli yazılım-tanımlı kesintiyi, düşük gecikmeli heading/ARCore harita güncellemelerini, fixed-lag gecikmiş-adım replay'ini, kesinti-GNSS firewall'unu ve taze-fix recovery'yi fiziksel olarak doğruladı. İlk `56 / 0 / 56` alınan/uygulanan/geç sonucu ile başarısız iki 1.000 ms yeniden test korunur. Nihai yeniden test 12.000 ms sınırlı replay geçmişiyle algılanan 16/16 olayı sıfır geç adımla uyguladı; kesinti-GNSS tahmin motoru kullanımı sıfır kaldı ve recovery, hata olmayan 5,73 m correction mesafesiyle tamamlandı. Mutlak telefon-GNSS harita hizalaması bazı kentsel oturumlarda onlarca metre offsetli olabilir; kanıtlanmış tek bir neden yoktur.
 
-Fiziksel doğrulama kısmi durumdadır ve cihaz baseline'ı sabitlenmemiştir. Füzyon doğruluğu, kalite eşikleri, gürültü parametreleri, PDR doğruluğu, adım-algılama doğruluğu, adım-uzunluğu doğruluğu, heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, korumalı-GNSS ground-truth doğruluğu, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu, aynı-konum anchor tekrarlanabilirliği, ARCore konum/mesafe/dikey doğruluğu, ENU-hizalama doğruluğu, canlı-harita doğruluğu ve fiziksel AR-kaybı fallback'i doğrulanmadı. Body heading ve telefon-vücut kalibrasyonu uygulanmadı. Yapılandırma D Quality Engine + EKF füzyonu, yazılım-tanımlı GNSS kesintisi, kesinti-GNSS karantinası, taze-fix recovery, tam durum-makinesi akışı, Stage 9A eşleştirilmiş A/B/C/D benchmark ve Stage 9B canlı-harita demosu uygulandı. Beş geçerli Stage 9A eşleştirilmiş oturumu önceden tanımlanan >=%20 D-ve-A hedefini karşılamadı ve doğrulanmış navigasyon doğruluğu oluşturmaz. Motion AI uygulanmamıştır. Diğer gerekli cihaz kontrolleri beklemektedir.
+Fiziksel doğrulama kısmi durumdadır ve cihaz baseline'ı sabitlenmemiştir. Füzyon doğruluğu, kalite eşikleri, gürültü parametreleri, PDR doğruluğu, adım-algılama doğruluğu, adım-uzunluğu doğruluğu, heading mutlak doğruluğu, gerçek-kuzey mutlak doğruluğu, korumalı-GNSS ground-truth doğruluğu, GNSS mutlak koordinat doğruluğu, survey-grade anchor niteliği, fiziksel ENU mesafe doğruluğu, aynı-konum anchor tekrarlanabilirliği, ARCore konum/mesafe/dikey doğruluğu, ENU-hizalama doğruluğu, canlı-harita doğruluğu ve fiziksel AR-kaybı fallback'i doğrulanmadı. Body heading ve telefon-vücut kalibrasyonu uygulanmadı. Yapılandırma D-v1, Yapılandırma D-v2 uyarlanabilir/sezgisel füzyon, yazılım-tanımlı GNSS kesintisi, kesinti-GNSS karantinası, taze-fix recovery, tam durum-makinesi akışı, Stage 9A eşleştirilmiş A/B/C/D benchmark ve Stage 9B canlı-harita demosu uygulandı. Beş geçerli Stage 9A oturumu önceden tanımlanan >=%20 D-ve-A hedefini karşılamadı; Stage 10 oturumları yalnızca geliştirme kanıtıdır ve doğrulanmış navigasyon doğruluğu oluşturmaz. AI/ML uygulanmamıştır. Diğer gerekli cihaz kontrolleri ve bağımsız oturumlar-arası doğrulama beklemektedir.
 
 ---
 
 ### Son Durum Güncellemesi
 
-**2026-09-15**
+**2026-09-17**

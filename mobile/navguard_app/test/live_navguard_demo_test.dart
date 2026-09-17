@@ -47,6 +47,39 @@ void main() {
       expect(() => LiveNavguardEvent.fromRaw(payload), throwsFormatException);
     });
 
+    test('parses adaptive v2 post-robust and stationary diagnostics', () {
+      final Map<String, Object?> payload =
+          _positionMap(
+            state: 'NAVGUARD_ACTIVE',
+            source: 'NAVGUARD',
+            east: 0,
+            north: 0,
+          )..addAll(<String, Object?>{
+            'fusionMode': LiveFusionMode.adaptiveV2.wireName,
+            'stationaryDetected': true,
+            'stationaryEntryCount': 1,
+            'stationaryDurationMs': 4500,
+            'stationaryCandidateCount': 2,
+            'stationaryBlockedRecentStepCount': 3,
+            'stationaryBlockedHeadingMotionCount': 4,
+            'stationaryBlockedArcoreMotionCount': 5,
+            'arcoreNisLast': 40.0,
+            'arcorePostRobustNisLast': 6.0,
+            'arcoreAcceptedAfterRobustInflationCount': 7,
+            'arcoreRejectedAfterMaxInflationCount': 1,
+          });
+
+      final LiveNavguardPosition position = LiveNavguardEvent.fromRaw(
+        payload,
+      ).position!;
+      expect(position.fusionMode, LiveFusionMode.adaptiveV2);
+      expect(position.stationaryEntryCount, 1);
+      expect(position.stationaryDurationMs, 4500);
+      expect(position.arcoreNisLast, 40.0);
+      expect(position.arcorePostRobustNisLast, 6.0);
+      expect(position.arcoreRejectedAfterMaxInflationCount, 1);
+    });
+
     test(
       'rejects unsupported schema and raw timestamp-free contract holds',
       () {
@@ -709,6 +742,34 @@ void main() {
     expect(find.byKey(const Key('live-navguard-map')), findsNothing);
     expect(platform.startCallCount, 0);
   });
+
+  testWidgets('adaptive v2 is selectable while v1 remains the default', (
+    WidgetTester tester,
+  ) async {
+    final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LiveNavguardMapScreen(
+          anchor: const LiveNavguardAnchor(latitudeDeg: 41, longitudeDeg: 29),
+          platform: platform,
+          enableMapTiles: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(platform.lastStartMode, isNull);
+    expect(find.text('NAVGUARD v1'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('live-fusion-mode-selector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('NAVGUARD v2 (Adaptive)').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start Live Demo'));
+    await tester.pumpAndSettle();
+
+    expect(platform.lastStartMode, LiveFusionMode.adaptiveV2);
+    expect(platform.startCallCount, 1);
+  });
 }
 
 class FakeLiveNavguardPlatform implements LiveNavguardPlatform {
@@ -719,6 +780,7 @@ class FakeLiveNavguardPlatform implements LiveNavguardPlatform {
   final bool anchorAvailable;
   int preflightCallCount = 0;
   int startCallCount = 0;
+  LiveFusionMode? lastStartMode;
 
   @override
   Stream<Object?> get events => _events.stream;
@@ -733,8 +795,12 @@ class FakeLiveNavguardPlatform implements LiveNavguardPlatform {
   }
 
   @override
-  Future<void> start(LiveNavguardAnchor anchor) async {
+  Future<void> start(
+    LiveNavguardAnchor anchor, [
+    LiveFusionMode fusionMode = LiveFusionMode.navguardV1,
+  ]) async {
     startCallCount++;
+    lastStartMode = fusionMode;
     emitState('PREPARING');
   }
 

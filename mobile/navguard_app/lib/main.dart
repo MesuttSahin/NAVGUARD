@@ -15,6 +15,7 @@ import 'navigation/gnss_anchor.dart';
 import 'navigation/heading.dart';
 import 'navigation/navguard_fusion.dart';
 import 'navigation/navguard_benchmark.dart';
+import 'navigation/navguard_accuracy_v2.dart';
 import 'navigation/step_event.dart';
 
 void main() {
@@ -49,6 +50,10 @@ enum _DiagnosticOperation {
   fullNavguardFlowDiagnostic,
   navguardBenchmarkPreflight,
   navguardBenchmarkDiagnostic,
+  accuracyV2Preflight,
+  accuracyV2Calibration,
+  accuracyV2DevelopmentBenchmark,
+  accuracyV2Reset,
 }
 
 class _SensorOption {
@@ -235,6 +240,10 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     'io.github.mesuttsahin.navguard/navguard_benchmark',
   );
 
+  static const MethodChannel _accuracyV2Channel = MethodChannel(
+    navguardAccuracyV2ChannelName,
+  );
+
   static const JsonEncoder _jsonEncoder = JsonEncoder.withIndent('  ');
 
   _DiagnosticOperation? _activeOperation;
@@ -289,6 +298,18 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool _navguardBenchmarkCancellationRequestInFlight = false;
   bool _navguardBenchmarkPollInFlight = false;
   Timer? _navguardBenchmarkPollTimer;
+  AccuracyV2Preflight? _accuracyV2Preflight;
+  CalibrationProfile? _accuracyV2Profile;
+  CalibrationResult? _accuracyV2CalibrationResult;
+  AccuracyV2DevelopmentBenchmarkResult? _accuracyV2BenchmarkResult;
+  AccuracyV2GnssStabilizationDiagnostics? _accuracyV2GnssFailureDiagnostics;
+  Timer? _accuracyV2CalibrationProgressTimer;
+  int? _accuracyV2FinalDrainRemainingSeconds;
+  Timer? _accuracyV2BenchmarkProgressTimer;
+  bool _accuracyV2BenchmarkPollInFlight = false;
+  String _accuracyV2BenchmarkPhase = 'IDLE';
+  int? _accuracyV2BenchmarkDrainRemainingSeconds;
+  String? _accuracyV2DevelopmentScenario;
   String? _formattedOutput;
   String? _errorMessage;
 
@@ -375,6 +396,18 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _isNavguardBenchmarkDiagnosticLoading =>
       _activeOperation == _DiagnosticOperation.navguardBenchmarkDiagnostic;
 
+  bool get _isAccuracyV2PreflightLoading =>
+      _activeOperation == _DiagnosticOperation.accuracyV2Preflight;
+
+  bool get _isAccuracyV2CalibrationLoading =>
+      _activeOperation == _DiagnosticOperation.accuracyV2Calibration;
+
+  bool get _isAccuracyV2BenchmarkLoading =>
+      _activeOperation == _DiagnosticOperation.accuracyV2DevelopmentBenchmark;
+
+  bool get _isAccuracyV2ResetLoading =>
+      _activeOperation == _DiagnosticOperation.accuracyV2Reset;
+
   bool get _canRunHeadingDiagnostic =>
       !_isBusy &&
       _headingPreflight?.rotationVectorAvailable == true &&
@@ -417,6 +450,12 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   bool get _canRunNavguardBenchmark =>
       !_isBusy &&
       _navguardBenchmarkPreflight?.nativeReady == true &&
+      _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
+      _gnssAnchor != null;
+
+  bool get _canRunAccuracyV2 =>
+      !_isBusy &&
+      _accuracyV2Preflight?.nativeReady == true &&
       _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked &&
       _gnssAnchor != null;
 
@@ -2741,6 +2780,303 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
     }
   }
 
+  Map<String, Object?> _accuracyV2AnchorArguments({
+    String? developmentScenario,
+  }) {
+    final GnssAnchor? anchor =
+        _gnssAnchorState == GnssAnchorRuntimeState.anchorLocked
+        ? _gnssAnchor
+        : null;
+    return <String, Object?>{
+      'anchorAvailable': anchor != null,
+      'latitudeDeg': anchor?.latitudeDeg,
+      'longitudeDeg': anchor?.longitudeDeg,
+      'altitudeEllipsoidM': anchor?.altitudeEllipsoidM,
+      if (developmentScenario != null)
+        'developmentScenario': developmentScenario,
+    };
+  }
+
+  Future<void> _refreshAccuracyV2Preflight() async {
+    if (_isBusy) return;
+    setState(() {
+      _activeOperation = _DiagnosticOperation.accuracyV2Preflight;
+      _errorMessage = null;
+      _formattedOutput = null;
+    });
+    AccuracyV2Preflight? preflight;
+    CalibrationProfile? profile;
+    String? errorMessage;
+    try {
+      final Object? rawPreflight = await _accuracyV2Channel
+          .invokeMethod<Object?>(
+            'getAccuracyV2Preflight',
+            _accuracyV2AnchorArguments(),
+          );
+      final Object? rawProfile = await _accuracyV2Channel.invokeMethod<Object?>(
+        'getCalibrationProfile',
+      );
+      preflight = AccuracyV2Preflight.fromPlatform(rawPreflight);
+      profile = CalibrationProfile.fromPlatform(rawProfile);
+    } on PlatformException catch (error) {
+      errorMessage = 'Accuracy v2 preflight failed (${error.code}).';
+    } on MissingPluginException {
+      errorMessage = 'Accuracy v2 native channel is unavailable.';
+    } on FormatException {
+      errorMessage = 'Native Accuracy v2 preflight response was invalid.';
+    } catch (_) {
+      errorMessage = 'Unexpected error while refreshing Accuracy v2.';
+    }
+    if (!mounted) return;
+    setState(() {
+      _activeOperation = null;
+      _accuracyV2Preflight = preflight;
+      _accuracyV2Profile = profile;
+      _formattedOutput = preflight == null || profile == null
+          ? null
+          : _jsonEncoder.convert(<String, Object?>{
+              'preflight': preflight.sanitizedMetadata,
+              'calibrationProfile': profile.sanitizedMetadata,
+            });
+      _errorMessage = errorMessage;
+    });
+  }
+
+  Future<void> _runAccuracyV2Calibration() async {
+    if (!_canRunAccuracyV2) return;
+    setState(() {
+      _activeOperation = _DiagnosticOperation.accuracyV2Calibration;
+      _accuracyV2CalibrationResult = null;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+    _startAccuracyV2CalibrationProgress();
+    CalibrationResult? result;
+    CalibrationProfile? profile;
+    String? errorMessage;
+    try {
+      final Object? raw = await _accuracyV2Channel.invokeMethod<Object?>(
+        'runAccuracyV2Calibration',
+        _accuracyV2AnchorArguments(),
+      );
+      result = CalibrationResult.fromPlatform(raw);
+      profile = CalibrationProfile.fromPlatform(
+        await _accuracyV2Channel.invokeMethod<Object?>('getCalibrationProfile'),
+      );
+    } on PlatformException catch (error) {
+      errorMessage = 'Accuracy v2 calibration failed (${error.code}).';
+    } on MissingPluginException {
+      errorMessage = 'Accuracy v2 native channel is unavailable.';
+    } on FormatException {
+      errorMessage = 'Native Accuracy v2 calibration result was invalid.';
+    } catch (_) {
+      errorMessage = 'Unexpected error while running Accuracy v2 calibration.';
+    }
+    _accuracyV2CalibrationProgressTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _activeOperation = null;
+      _accuracyV2CalibrationResult = result;
+      _accuracyV2Profile = profile ?? _accuracyV2Profile;
+      _accuracyV2FinalDrainRemainingSeconds = null;
+      _formattedOutput = result == null
+          ? null
+          : _jsonEncoder.convert(result.sanitizedMetadata);
+      _errorMessage = errorMessage;
+    });
+  }
+
+  Future<void> _runAccuracyV2DevelopmentBenchmark() async {
+    final String? developmentScenario = _accuracyV2DevelopmentScenario;
+    if (!_canRunAccuracyV2 || developmentScenario == null) return;
+    setState(() {
+      _activeOperation = _DiagnosticOperation.accuracyV2DevelopmentBenchmark;
+      _accuracyV2BenchmarkResult = null;
+      _accuracyV2GnssFailureDiagnostics = null;
+      _accuracyV2BenchmarkPhase = 'GNSS_STABILIZATION';
+      _accuracyV2BenchmarkDrainRemainingSeconds = null;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+    _startAccuracyV2BenchmarkProgress();
+    AccuracyV2DevelopmentBenchmarkResult? result;
+    String? errorMessage;
+    try {
+      final Object? raw = await _accuracyV2Channel.invokeMethod<Object?>(
+        'runAccuracyV2DevelopmentBenchmark',
+        _accuracyV2AnchorArguments(developmentScenario: developmentScenario),
+      );
+      result = AccuracyV2DevelopmentBenchmarkResult.fromPlatform(raw);
+    } on PlatformException catch (error) {
+      if (error.code ==
+          'navguard_accuracy_v2_gnss_stabilization_insufficient') {
+        try {
+          _accuracyV2GnssFailureDiagnostics =
+              AccuracyV2GnssStabilizationDiagnostics.fromPlatformErrorDetails(
+                error.details,
+              );
+        } on FormatException {
+          _accuracyV2GnssFailureDiagnostics = null;
+        }
+        final AccuracyV2GnssStabilizationDiagnostics? diagnostics =
+            _accuracyV2GnssFailureDiagnostics;
+        errorMessage = diagnostics == null
+            ? 'Not enough stable GNSS fixes were available.'
+            : 'Not enough stable GNSS fixes were available. '
+                  'Accepted: ${diagnostics.acceptedFixCount} / minimum ${diagnostics.minimumFixCount}.';
+      } else {
+        errorMessage =
+            'Accuracy v2 development benchmark failed (${error.code}).';
+      }
+    } on MissingPluginException {
+      errorMessage = 'Accuracy v2 native channel is unavailable.';
+    } on FormatException {
+      errorMessage = 'Native Accuracy v2 benchmark result was invalid.';
+    } catch (_) {
+      errorMessage =
+          'Unexpected error while running the Accuracy v2 benchmark.';
+    }
+    _accuracyV2BenchmarkProgressTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _activeOperation = null;
+      _accuracyV2BenchmarkPhase = 'IDLE';
+      _accuracyV2BenchmarkDrainRemainingSeconds = null;
+      _accuracyV2BenchmarkResult = result;
+      _formattedOutput = result == null
+          ? _accuracyV2GnssFailureDiagnostics == null
+                ? null
+                : _jsonEncoder.convert(
+                    _accuracyV2GnssFailureDiagnostics!.sanitizedMetadata,
+                  )
+          : _jsonEncoder.convert(result.sanitizedMetadata);
+      _errorMessage = errorMessage;
+    });
+  }
+
+  void _startAccuracyV2CalibrationProgress() {
+    _accuracyV2CalibrationProgressTimer?.cancel();
+    final DateTime startedAt = DateTime.now();
+    _accuracyV2FinalDrainRemainingSeconds = null;
+    _accuracyV2CalibrationProgressTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (Timer timer) {
+        if (!mounted ||
+            _activeOperation != _DiagnosticOperation.accuracyV2Calibration) {
+          timer.cancel();
+          return;
+        }
+        final int elapsedSeconds = DateTime.now()
+            .difference(startedAt)
+            .inSeconds;
+        final int? remaining = elapsedSeconds < 48
+            ? null
+            : math.max(0, 60 - elapsedSeconds);
+        setState(() => _accuracyV2FinalDrainRemainingSeconds = remaining);
+        if (elapsedSeconds >= 60) timer.cancel();
+      },
+    );
+  }
+
+  void _startAccuracyV2BenchmarkProgress() {
+    _accuracyV2BenchmarkProgressTimer?.cancel();
+    unawaited(_pollAccuracyV2BenchmarkProgress());
+    _accuracyV2BenchmarkProgressTimer = Timer.periodic(
+      const Duration(milliseconds: 500),
+      (_) => unawaited(_pollAccuracyV2BenchmarkProgress()),
+    );
+  }
+
+  Future<void> _pollAccuracyV2BenchmarkProgress() async {
+    if (_accuracyV2BenchmarkPollInFlight ||
+        _activeOperation !=
+            _DiagnosticOperation.accuracyV2DevelopmentBenchmark) {
+      return;
+    }
+    _accuracyV2BenchmarkPollInFlight = true;
+    try {
+      final Object? raw = await _accuracyV2Channel.invokeMethod<Object?>(
+        'getAccuracyV2OperationStatus',
+      );
+      if (raw is! Map<Object?, Object?> ||
+          raw['schemaVersion'] != 1 ||
+          raw['snapshotKind'] != 'navguard_accuracy_v2_operation_status') {
+        return;
+      }
+      final Object? rawPhase = raw['phase'];
+      final Object? rawRemaining = raw['finalDrainRemainingSeconds'];
+      if (rawPhase is! String ||
+          !<String>{
+            'GNSS_STABILIZATION',
+            'BENCHMARK_FORMAL_WINDOW',
+            'BENCHMARK_FINAL_DRAIN',
+            'FINALIZING',
+          }.contains(rawPhase) ||
+          (rawRemaining != null &&
+              (rawRemaining is! num ||
+                  !rawRemaining.isFinite ||
+                  rawRemaining < 0 ||
+                  rawRemaining.toInt() != rawRemaining))) {
+        return;
+      }
+      if (!mounted ||
+          _activeOperation !=
+              _DiagnosticOperation.accuracyV2DevelopmentBenchmark) {
+        return;
+      }
+      final int? remainingSeconds = rawRemaining is num
+          ? rawRemaining.toInt()
+          : null;
+      setState(() {
+        _accuracyV2BenchmarkPhase = rawPhase;
+        _accuracyV2BenchmarkDrainRemainingSeconds = remainingSeconds;
+      });
+    } on PlatformException {
+      // The benchmark result call remains authoritative; progress is best-effort.
+    } on MissingPluginException {
+      // Older native builds simply retain the preparation label.
+    } finally {
+      _accuracyV2BenchmarkPollInFlight = false;
+    }
+  }
+
+  Future<void> _resetAccuracyV2Profile() async {
+    if (_isBusy) return;
+    setState(() {
+      _activeOperation = _DiagnosticOperation.accuracyV2Reset;
+      _formattedOutput = null;
+      _errorMessage = null;
+    });
+    CalibrationProfile? profile;
+    String? errorMessage;
+    try {
+      profile = CalibrationProfile.fromPlatform(
+        await _accuracyV2Channel.invokeMethod<Object?>(
+          'resetAccuracyV2Calibration',
+        ),
+      );
+    } on PlatformException catch (error) {
+      errorMessage = 'Accuracy v2 profile reset failed (${error.code}).';
+    } on MissingPluginException {
+      errorMessage = 'Accuracy v2 native channel is unavailable.';
+    } on FormatException {
+      errorMessage = 'Native Accuracy v2 reset response was invalid.';
+    } catch (_) {
+      errorMessage =
+          'Unexpected error while resetting the Accuracy v2 profile.';
+    }
+    if (!mounted) return;
+    setState(() {
+      _activeOperation = null;
+      _accuracyV2Profile = profile ?? _accuracyV2Profile;
+      _accuracyV2CalibrationResult = null;
+      _formattedOutput = profile == null
+          ? null
+          : _jsonEncoder.convert(profile.sanitizedMetadata);
+      _errorMessage = errorMessage;
+    });
+  }
+
   Future<void> _runDiagnosticRequest({
     required MethodChannel channel,
     required _DiagnosticOperation operation,
@@ -2970,6 +3306,8 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
   void dispose() {
     _fullNavguardFlowStatePollTimer?.cancel();
     _navguardBenchmarkPollTimer?.cancel();
+    _accuracyV2CalibrationProgressTimer?.cancel();
+    _accuracyV2BenchmarkProgressTimer?.cancel();
     super.dispose();
   }
 
@@ -4262,6 +4600,257 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
               ],
               const Divider(height: 32),
               Text(
+                'NAVGUARD Accuracy v2',
+                key: const Key('accuracy-v2-panel-title'),
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Adaptive/heuristic research mode — development and calibration only. Accuracy is NOT VALIDATED.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Native ready: ${_fullFlowAvailabilityLabel(_accuracyV2Preflight?.nativeReady)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Self-tests: ${_fullFlowAvailabilityLabel(_accuracyV2Preflight?.selfTestsPassed)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Calibration Profile: ${_accuracyV2Profile == null ? 'Not loaded' : (_accuracyV2Profile!.profilePersisted ? 'Persisted' : 'Default / Not calibrated')}',
+                key: const Key('accuracy-v2-profile'),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Stride estimate: ${_accuracyV2Profile == null ? 'Not available' : '${_accuracyV2Profile!.strideEstimateM.toStringAsFixed(3)} m'}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Heading offset: ${_accuracyV2Profile == null ? 'Not available' : '${_accuracyV2Profile!.bodyHeadingOffsetDeg.toStringAsFixed(2)}°'}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Stationary status: ${_accuracyV2CalibrationResult == null ? 'Not measured' : (_accuracyV2CalibrationResult!.stationaryEverDetected ? 'Detected (${_accuracyV2CalibrationResult!.stationaryEntryCount} entries, ${_accuracyV2CalibrationResult!.stationaryDetectedDurationMs} ms)' : 'Not detected')}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Adaptive ARCore accepted/rejected: ${_accuracyV2CalibrationResult == null ? 'Not measured' : '${_accuracyV2CalibrationResult!.arcoreAccepted} / ${_accuracyV2CalibrationResult!.arcoreRejected}'}',
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Calibration sequence (~60 s): remain stationary ~8 s, walk straight ~20–25 steps, make a 90° turn and continue walking, then stand still for the final 12-second processing phase.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                key: const Key('accuracy-v2-development-scenario'),
+                initialValue: _accuracyV2DevelopmentScenario,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Development benchmark scenario',
+                  border: OutlineInputBorder(),
+                ),
+                hint: const Text('Select STRAIGHT, L_TURN, or MIXED'),
+                items: accuracyV2DevelopmentScenarios
+                    .map(
+                      (String scenario) => DropdownMenuItem<String>(
+                        value: scenario,
+                        child: Text(scenario),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: _isBusy
+                    ? null
+                    : (String? scenario) {
+                        setState(
+                          () => _accuracyV2DevelopmentScenario = scenario,
+                        );
+                      },
+              ),
+              if (_isAccuracyV2CalibrationLoading) ...<Widget>[
+                const SizedBox(height: 8),
+                Text(
+                  _accuracyV2FinalDrainRemainingSeconds == null
+                      ? 'Calibration movement in progress. A final delayed-step processing phase will follow.'
+                      : 'Processing delayed step events… Remain stationary '
+                            '(${_accuracyV2FinalDrainRemainingSeconds}s)',
+                  key: const Key('accuracy-v2-calibration-progress'),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              if (_isAccuracyV2BenchmarkLoading) ...<Widget>[
+                const SizedBox(height: 8),
+                Text(
+                  _accuracyV2BenchmarkPhase == 'BENCHMARK_FINAL_DRAIN'
+                      ? 'Processing delayed step events… Stand still. '
+                            '(${_accuracyV2BenchmarkDrainRemainingSeconds ?? 0}s)'
+                      : _accuracyV2BenchmarkPhase == 'BENCHMARK_FORMAL_WINDOW'
+                      ? 'Development benchmark movement window in progress. A 12-second stand-still processing phase will follow.'
+                      : _accuracyV2BenchmarkPhase == 'FINALIZING'
+                      ? 'Finalizing the development benchmark… Stand still.'
+                      : 'Stabilizing GNSS… Target: 5 fixes; minimum: 3; acquisition timeout: 20 s.',
+                  key: const Key('accuracy-v2-benchmark-progress'),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              if (_accuracyV2GnssFailureDiagnostics
+                  case final AccuracyV2GnssStabilizationDiagnostics
+                      failure) ...<Widget>[
+                const SizedBox(height: 8),
+                Text(
+                  'Not enough stable GNSS fixes were available. '
+                  'Accepted: ${failure.acceptedFixCount} / minimum ${failure.minimumFixCount}. '
+                  'Received: ${failure.receivedFixCount}; accuracy rejects: ${failure.rejectedAccuracyCount}.',
+                  key: const Key('accuracy-v2-gnss-failure'),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 8),
+              if (_accuracyV2BenchmarkResult
+                  case final AccuracyV2DevelopmentBenchmarkResult
+                      benchmark) ...<Widget>[
+                Text(
+                  'Scenario: ${benchmark.developmentScenario} · '
+                  'formal-window steps: ${benchmark.benchmarkStepEventsInFormalWindow} · '
+                  'included from drain: ${benchmark.benchmarkStepEventsIncludedFromFinalDrain}',
+                  key: const Key('accuracy-v2-benchmark-capture-summary'),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'A/D1/D2 steps: ${benchmark.configAStepsApplied} / '
+                  '${benchmark.configD1StepsApplied} / ${benchmark.configD2StepsApplied}',
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Absolute — D1 median: ${_formatMeters(benchmark.configD1.medianHorizontalErrorM)} · '
+                  'D2 median: ${_formatMeters(benchmark.configD2.medianHorizontalErrorM)}',
+                  key: const Key('accuracy-v2-benchmark-summary'),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Absolute D2 vs D1 development improvement: '
+                  '${benchmark.d2VsD1MedianImprovementPercent?.toStringAsFixed(2) ?? 'Not available'}%',
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Relative drift — D1 median: ${_formatMeters(benchmark.configD1.relativeMedianHorizontalErrorM)} · '
+                  'D2 median: ${_formatMeters(benchmark.configD2.relativeMedianHorizontalErrorM)} · '
+                  'D2 vs D1: ${benchmark.d2VsD1RelativeMedianImprovementPercent?.toStringAsFixed(2) ?? 'Not available'}%',
+                  key: const Key('accuracy-v2-relative-summary'),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'ARCore nominal/inflated/rejected: '
+                  '${benchmark.arcoreAcceptedNominalCount} / '
+                  '${benchmark.arcoreAcceptedInflatedCount} / '
+                  '${benchmark.arcoreRejectedByQualityCount + benchmark.arcoreRejectedByInnovationCount}',
+                  key: const Key('accuracy-v2-robust-arcore-summary'),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'ARCore pre/post robust NIS mean: '
+                  '${benchmark.arcorePreRobustNisMean.toStringAsFixed(2)} / '
+                  '${benchmark.arcorePostRobustNisMean.toStringAsFixed(2)} · '
+                  'accepted after inflation: ${benchmark.arcoreAcceptedAfterRobustInflationCount} · '
+                  'rejected at max: ${benchmark.arcoreRejectedAfterMaxInflationCount}',
+                  key: const Key('accuracy-v2-post-robust-summary'),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Stationary: ${benchmark.stationaryDetectedDurationMs} ms · '
+                  'entries: ${benchmark.stationaryEntryCount} · '
+                  'candidates: ${benchmark.stationaryCandidateCount} · '
+                  'ARCore drift suppressed: ${benchmark.stationaryArcoreSuppressedCount}',
+                  key: const Key('accuracy-v2-stationary-summary'),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'GT firewall mutation/removal: '
+                  '${benchmark.gtMutationInvariant && benchmark.gtRemovalInvariant ? 'PASS' : 'FAIL'}',
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  benchmark.gnssStabilization.degraded
+                      ? 'GNSS stabilization degraded — accepted '
+                            '${benchmark.gnssStabilization.acceptedFixCount} / '
+                            '${benchmark.gnssStabilization.targetFixCount}'
+                      : 'GNSS stabilization target met — accepted '
+                            '${benchmark.gnssStabilization.acceptedFixCount} / '
+                            '${benchmark.gnssStabilization.targetFixCount}',
+                  key: const Key('accuracy-v2-gnss-result'),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Architecture: D-v1 remains the preserved v1 path; D-v2 starts from the robust stabilized median origin.',
+                ),
+              ],
+              const SizedBox(height: 12),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  OutlinedButton.icon(
+                    key: const Key('accuracy-v2-refresh'),
+                    onPressed: _isBusy ? null : _refreshAccuracyV2Preflight,
+                    icon: _isAccuracyV2PreflightLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh),
+                    label: const Text('Refresh'),
+                  ),
+                  FilledButton.icon(
+                    key: const Key('accuracy-v2-calibration'),
+                    onPressed: _canRunAccuracyV2
+                        ? _runAccuracyV2Calibration
+                        : null,
+                    icon: _isAccuracyV2CalibrationLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.tune),
+                    label: const Text('Run Calibration'),
+                  ),
+                  FilledButton.icon(
+                    key: const Key('accuracy-v2-development-benchmark'),
+                    onPressed:
+                        _canRunAccuracyV2 &&
+                            _accuracyV2DevelopmentScenario != null
+                        ? _runAccuracyV2DevelopmentBenchmark
+                        : null,
+                    icon: _isAccuracyV2BenchmarkLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.compare_arrows),
+                    label: const Text('Run Development Benchmark'),
+                  ),
+                  OutlinedButton.icon(
+                    key: const Key('accuracy-v2-reset'),
+                    onPressed: _isBusy ? null : _resetAccuracyV2Profile,
+                    icon: _isAccuracyV2ResetLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.restart_alt),
+                    label: const Text('Reset Profile'),
+                  ),
+                ],
+              ),
+              const Divider(height: 32),
+              Text(
                 _isBusy ? _activeOperationLabel : 'Diagnostic Output',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
@@ -4344,6 +4933,24 @@ class _SensorDiagnosticsPageState extends State<SensorDiagnosticsPage> {
         return 'Refreshing NAVGUARD Benchmark preflight...';
       case _DiagnosticOperation.navguardBenchmarkDiagnostic:
         return 'Running matched A/B/C/D benchmark...';
+      case _DiagnosticOperation.accuracyV2Preflight:
+        return 'Refreshing NAVGUARD Accuracy v2 preflight...';
+      case _DiagnosticOperation.accuracyV2Calibration:
+        return _accuracyV2FinalDrainRemainingSeconds == null
+            ? 'Running Accuracy v2 development calibration...'
+            : 'Processing delayed step events… Remain stationary '
+                  '(${_accuracyV2FinalDrainRemainingSeconds}s)';
+      case _DiagnosticOperation.accuracyV2DevelopmentBenchmark:
+        return _accuracyV2BenchmarkPhase == 'BENCHMARK_FINAL_DRAIN'
+            ? 'Processing delayed step events… Stand still. '
+                  '(${_accuracyV2BenchmarkDrainRemainingSeconds ?? 0}s)'
+            : _accuracyV2BenchmarkPhase == 'BENCHMARK_FORMAL_WINDOW'
+            ? 'Running the 30-second formal development benchmark window...'
+            : _accuracyV2BenchmarkPhase == 'FINALIZING'
+            ? 'Finalizing the development benchmark...'
+            : 'Stabilizing GNSS, then running the matched D-v1/D-v2 development benchmark...';
+      case _DiagnosticOperation.accuracyV2Reset:
+        return 'Resetting the memory-only Accuracy v2 profile...';
       case null:
         return 'Diagnostic Output';
     }

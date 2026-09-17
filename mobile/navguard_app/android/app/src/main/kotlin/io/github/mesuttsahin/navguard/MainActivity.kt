@@ -24,6 +24,7 @@ class MainActivity : FlutterActivity() {
     private var navguardFusionDiagnostic: NavguardFusionDiagnostic? = null
     private var fullNavguardFlowDiagnostic: FullNavguardFlowDiagnostic? = null
     private var navguardBenchmarkDiagnostic: NavguardBenchmarkDiagnostic? = null
+    private var navguardAccuracyV2Diagnostic: NavguardAccuracyV2Diagnostic? = null
     private var liveNavguardDemoController: LiveNavguardDemoController? = null
     private var locationManager: LocationManager? = null
 
@@ -36,6 +37,8 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        NavguardCalibrationProfileStore.initialize(applicationContext)
 
         val sensorManager =
             getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -130,6 +133,17 @@ class MainActivity : FlutterActivity() {
                 null
             }
 
+        navguardAccuracyV2Diagnostic =
+            if (sensorManager != null && availableLocationManager != null) {
+                NavguardAccuracyV2Diagnostic(
+                    applicationContext = applicationContext,
+                    locationManager = availableLocationManager,
+                    sensorManager = sensorManager,
+                )
+            } else {
+                null
+            }
+
         liveNavguardDemoController =
             if (sensorManager != null && availableLocationManager != null) {
                 LiveNavguardDemoController(
@@ -153,6 +167,7 @@ class MainActivity : FlutterActivity() {
         configureNavguardFusionChannel(flutterEngine)
         configureFullNavguardFlowChannel(flutterEngine)
         configureNavguardBenchmarkChannel(flutterEngine)
+        configureNavguardAccuracyV2Channel(flutterEngine)
         configureLiveNavguardDemoChannels(flutterEngine)
     }
 
@@ -1122,7 +1137,8 @@ class MainActivity : FlutterActivity() {
             evaluationModeDiagnostic?.isDiagnosticRunning() == true ||
             navguardFusionDiagnostic?.isDiagnosticRunning() == true ||
             fullNavguardFlowDiagnostic?.isDiagnosticRunning() == true ||
-            navguardBenchmarkDiagnostic?.isDiagnosticRunning() == true
+            navguardBenchmarkDiagnostic?.isDiagnosticRunning() == true ||
+            navguardAccuracyV2Diagnostic?.isOperationRunning() == true
 
     private fun isStandaloneOperationRunning(): Boolean =
         synchronized(standaloneOperationLock) { standaloneOperationRunning }
@@ -1519,6 +1535,139 @@ class MainActivity : FlutterActivity() {
             "currentPhase" to "IDLE",
         )
 
+    private fun configureNavguardAccuracyV2Channel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            NAVGUARD_ACCURACY_V2_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            val diagnostic = navguardAccuracyV2Diagnostic
+            when (call.method) {
+                METHOD_GET_ACCURACY_V2_PREFLIGHT -> {
+                    val anchor = parseLiveAnchor(call.arguments)
+                    val snapshot =
+                        diagnostic?.createPreflightSnapshot(anchorAvailable = anchor != null)?.toMutableMap()
+                            ?: createUnavailableAccuracyV2PreflightSnapshot().toMutableMap()
+                    snapshot["operationBusy"] = isAnotherEvaluationExclusiveOperationRunning()
+                    snapshot["nativeReady"] = snapshot["nativeReady"] == true && snapshot["operationBusy"] != true
+                    result.success(snapshot)
+                }
+
+                METHOD_GET_ACCURACY_V2_CALIBRATION_PROFILE -> {
+                    result.success(diagnostic?.getCalibrationProfile() ?: NavguardCalibrationProfileStore.readSanitizedMap())
+                }
+
+                METHOD_GET_ACCURACY_V2_OPERATION_STATUS -> {
+                    result.success(
+                        diagnostic?.createOperationStatusSnapshot()
+                            ?: linkedMapOf(
+                                "schemaVersion" to SCHEMA_VERSION,
+                                "snapshotKind" to "navguard_accuracy_v2_operation_status",
+                                "phase" to "IDLE",
+                                "finalDrainRemainingSeconds" to null,
+                            ),
+                    )
+                }
+
+                METHOD_RESET_ACCURACY_V2_CALIBRATION -> {
+                    if (isAnotherEvaluationExclusiveOperationRunning()) {
+                        result.error(ERROR_ACCURACY_V2_ALREADY_RUNNING, "Another mutually exclusive NAVGUARD operation is running.", null)
+                    } else {
+                        result.success(diagnostic?.resetCalibrationProfile() ?: NavguardCalibrationProfileStore.reset().toSanitizedMap(false))
+                    }
+                }
+
+                METHOD_RUN_ACCURACY_V2_CALIBRATION,
+                METHOD_RUN_ACCURACY_V2_DEVELOPMENT_BENCHMARK,
+                -> {
+                    if (diagnostic == null) {
+                        result.error(ERROR_ACCURACY_V2_UNAVAILABLE, "NAVGUARD Accuracy v2 services are unavailable.", null)
+                        return@setMethodCallHandler
+                    }
+                    if (isAnotherEvaluationExclusiveOperationRunning()) {
+                        result.error(ERROR_ACCURACY_V2_ALREADY_RUNNING, "Another mutually exclusive NAVGUARD operation is running.", null)
+                        return@setMethodCallHandler
+                    }
+                    val anchor = parseLiveAnchor(call.arguments)
+                    if (anchor == null) {
+                        result.error(ERROR_ACCURACY_V2_ANCHOR_REQUIRED, "A valid locked Stage 3A GNSS anchor is required.", null)
+                        return@setMethodCallHandler
+                    }
+                    val callback = accuracyV2Callback(result)
+                    if (call.method == METHOD_RUN_ACCURACY_V2_CALIBRATION) {
+                        diagnostic.runCalibration(
+                            anchor.latitudeDeg,
+                            anchor.longitudeDeg,
+                            anchor.altitudeEllipsoidM,
+                            callback,
+                        )
+                    } else {
+                        val developmentScenario =
+                            (call.arguments as? Map<*, *>)?.get("developmentScenario") as? String
+                        if (
+                            developmentScenario == null ||
+                            developmentScenario !in setOf("STRAIGHT", "L_TURN", "MIXED")
+                        ) {
+                            result.error(
+                                "navguard_accuracy_v2_invalid_development_scenario",
+                                "Select STRAIGHT, L_TURN, or MIXED before running the benchmark.",
+                                null,
+                            )
+                            return@setMethodCallHandler
+                        }
+                        diagnostic.runDevelopmentBenchmark(
+                            anchor.latitudeDeg,
+                            anchor.longitudeDeg,
+                            anchor.altitudeEllipsoidM,
+                            developmentScenario,
+                            callback,
+                        )
+                    }
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun accuracyV2Callback(result: MethodChannel.Result): NavguardAccuracyV2Diagnostic.Callback =
+        object : NavguardAccuracyV2Diagnostic.Callback {
+            override fun onSuccess(summary: Map<String, Any?>) {
+                result.success(summary)
+            }
+
+            override fun onError(
+                code: String,
+                message: String,
+                details: Map<String, Any?>?,
+            ) {
+                result.error(code, message, details)
+            }
+        }
+
+    private fun createUnavailableAccuracyV2PreflightSnapshot(): Map<String, Any?> =
+        linkedMapOf(
+            "schemaVersion" to SCHEMA_VERSION,
+            "snapshotKind" to SNAPSHOT_KIND_ACCURACY_V2_PREFLIGHT,
+            "configId" to NavguardAdaptiveFusionV2.CONFIG_ID,
+            "fineLocationPermissionGranted" to hasFineLocationPermission(),
+            "gpsProviderAvailable" to false,
+            "gpsProviderEnabled" to false,
+            "rotationVectorAvailable" to false,
+            "stepDetectorAvailable" to false,
+            "activityRecognitionPermissionGranted" to hasActivityRecognitionPermission(),
+            "arCoreSupported" to false,
+            "arCoreInstalled" to false,
+            "cameraPermissionGranted" to hasCameraPermission(),
+            "anchorAvailable" to false,
+            "nativeReady" to false,
+            "operationBusy" to isAnotherEvaluationExclusiveOperationRunning(),
+            "selfTests" to emptyMap<String, Boolean>(),
+            "selfTestsPassed" to false,
+            "developmentOnly" to true,
+            "accuracyValidated" to false,
+            "aiModelImplemented" to false,
+        )
+
     private fun configureLiveNavguardDemoChannels(flutterEngine: FlutterEngine) {
         val controller = liveNavguardDemoController
         EventChannel(
@@ -1582,6 +1731,7 @@ class MainActivity : FlutterActivity() {
                         anchorLatitudeDeg = anchor.latitudeDeg,
                         anchorLongitudeDeg = anchor.longitudeDeg,
                         anchorAltitudeEllipsoidM = anchor.altitudeEllipsoidM,
+                        fusionModeId = parseLiveFusionMode(call.arguments),
                         callback = liveCommandCallback(result),
                     )
                 }
@@ -1604,10 +1754,12 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun rejectIfLiveDemoRunning(result: MethodChannel.Result): Boolean {
-        if (liveNavguardDemoController?.isDemoRunning() != true) return false
+        if (liveNavguardDemoController?.isDemoRunning() != true &&
+            navguardAccuracyV2Diagnostic?.isOperationRunning() != true
+        ) return false
         result.error(
             ERROR_LIVE_NAVGUARD_DEMO_ALREADY_RUNNING,
-            "The live NAVGUARD demo is running; diagnostics are mutually exclusive.",
+            "A live NAVGUARD or Accuracy v2 operation is running; diagnostics are mutually exclusive.",
             null,
         )
         return true
@@ -1642,6 +1794,11 @@ class MainActivity : FlutterActivity() {
                 altitudeEllipsoidM?.isFinite() == false
         ) return null
         return LiveAnchorArguments(latitudeDeg, longitudeDeg, altitudeEllipsoidM)
+    }
+
+    private fun parseLiveFusionMode(rawArguments: Any?): String {
+        val arguments = rawArguments as? Map<*, *>
+        return arguments?.get("fusionMode") as? String ?: "config_d_navguard_ekf_v1"
     }
 
     private fun requestGnssForegroundPermission(result: MethodChannel.Result) {
@@ -2374,6 +2531,8 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/full_navguard_flow"
         const val NAVGUARD_BENCHMARK_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/navguard_benchmark"
+        const val NAVGUARD_ACCURACY_V2_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/navguard_accuracy_v2"
         const val LIVE_NAVGUARD_DEMO_METHOD_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/live_navguard_demo"
         const val LIVE_NAVGUARD_DEMO_EVENT_CHANNEL_NAME =
@@ -2457,6 +2616,18 @@ class MainActivity : FlutterActivity() {
             "runNavguardBenchmarkDiagnostic"
         const val METHOD_CANCEL_NAVGUARD_BENCHMARK_DIAGNOSTIC =
             "cancelNavguardBenchmarkDiagnostic"
+        const val METHOD_GET_ACCURACY_V2_PREFLIGHT =
+            "getAccuracyV2Preflight"
+        const val METHOD_GET_ACCURACY_V2_CALIBRATION_PROFILE =
+            "getCalibrationProfile"
+        const val METHOD_GET_ACCURACY_V2_OPERATION_STATUS =
+            "getAccuracyV2OperationStatus"
+        const val METHOD_RUN_ACCURACY_V2_CALIBRATION =
+            "runAccuracyV2Calibration"
+        const val METHOD_RUN_ACCURACY_V2_DEVELOPMENT_BENCHMARK =
+            "runAccuracyV2DevelopmentBenchmark"
+        const val METHOD_RESET_ACCURACY_V2_CALIBRATION =
+            "resetAccuracyV2Calibration"
         const val METHOD_GET_LIVE_NAVGUARD_DEMO_PREFLIGHT =
             "getLiveNavguardDemoPreflight"
         const val METHOD_START_LIVE_NAVGUARD_DEMO =
@@ -2508,6 +2679,8 @@ class MainActivity : FlutterActivity() {
             "navguard_benchmark_preflight"
         const val SNAPSHOT_KIND_NAVGUARD_BENCHMARK_CANCELLATION =
             "navguard_benchmark_cancellation"
+        const val SNAPSHOT_KIND_ACCURACY_V2_PREFLIGHT =
+            "navguard_accuracy_v2_preflight"
 
         const val HEADING_REQUESTED_SAMPLING_PERIOD_US = 20_000
 
@@ -2606,6 +2779,12 @@ class MainActivity : FlutterActivity() {
             "navguard_benchmark_anchor_required"
         const val ERROR_NAVGUARD_BENCHMARK_ALREADY_RUNNING =
             "navguard_benchmark_already_running"
+        const val ERROR_ACCURACY_V2_UNAVAILABLE =
+            "navguard_accuracy_v2_unavailable"
+        const val ERROR_ACCURACY_V2_ANCHOR_REQUIRED =
+            "navguard_accuracy_v2_anchor_required"
+        const val ERROR_ACCURACY_V2_ALREADY_RUNNING =
+            "navguard_accuracy_v2_already_running"
         const val ERROR_LIVE_NAVGUARD_DEMO_UNAVAILABLE =
             "live_navguard_demo_unavailable"
         const val ERROR_LIVE_NAVGUARD_DEMO_ALREADY_RUNNING =
