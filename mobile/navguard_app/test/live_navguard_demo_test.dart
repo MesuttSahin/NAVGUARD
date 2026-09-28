@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:navguard/demo/live_navguard_demo.dart';
 import 'package:navguard/demo/live_navguard_map_screen.dart';
@@ -78,6 +79,36 @@ void main() {
       expect(position.arcoreNisLast, 40.0);
       expect(position.arcorePostRobustNisLast, 6.0);
       expect(position.arcoreRejectedAfterMaxInflationCount, 1);
+    });
+
+    test('parses the experimental V3 AI safety contract', () {
+      final Map<String, Object?> payload =
+          _positionMap(
+            state: 'NAVGUARD_ACTIVE',
+            source: 'NAVGUARD',
+            east: 0,
+            north: 0,
+          )..addAll(<String, Object?>{
+            'fusionMode': LiveFusionMode.experimentalAiV3.wireName,
+            'aiExperimentalMode': true,
+            'aiRuntimeStatus': 'AI_ACTIVE',
+            'aiMotionState': 'STRAIGHT_WALK',
+            'aiMotionConfidence': 0.81,
+            'aiFallbackConfigId': LiveFusionMode.adaptiveV2.wireName,
+            'aiCoordinatesDirectlyPredicted': false,
+            'aiStrideDirectlyMutated': false,
+          });
+
+      final LiveNavguardPosition position = LiveNavguardEvent.fromRaw(
+        payload,
+      ).position!;
+      expect(position.fusionMode, LiveFusionMode.experimentalAiV3);
+      expect(position.aiRuntimeStatus, 'AI_ACTIVE');
+      expect(position.aiMotionState, 'STRAIGHT_WALK');
+      expect(position.aiMotionConfidence, 0.81);
+
+      payload['aiCoordinatesDirectlyPredicted'] = true;
+      expect(() => LiveNavguardEvent.fromRaw(payload), throwsFormatException);
     });
 
     test(
@@ -661,34 +692,245 @@ void main() {
     platform.emitState('NAVGUARD_ACTIVE');
     await tester.pumpAndSettle();
     expect(find.text('Recover GNSS'), findsOneWidget);
-    expect(
-      find.text(
-        'Software-defined GNSS denial / Estimator GNSS access: BLOCKED',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('GNSS DENIED'), findsOneWidget);
+    expect(find.text('Estimator GNSS access: BLOCKED'), findsOneWidget);
 
     platform.emitPosition();
     await tester.pumpAndSettle();
-    expect(
-      find.text('Steps received/applied/pending: 1 / 1 / 0'),
-      findsOneWidget,
-    );
-    expect(
-      find.text(
-        'Step callback latency: last/max/mean 450.0 / 450.0 / 450.0 ms',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.text('Fixed-lag step replays/history: 1 / 1 / 25'),
-      findsOneWidget,
-    );
     expect(find.text('Denied GNSS used: 0'), findsOneWidget);
+    expect(find.byKey(const Key('diagnostics-steps-group')), findsNothing);
+    await tester.tap(find.byKey(const Key('live-diagnostics-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('diagnostics-position-group')), findsOneWidget);
+    expect(find.byKey(const Key('diagnostics-quality-group')), findsOneWidget);
+    expect(find.byKey(const Key('diagnostics-updates-group')), findsOneWidget);
+    expect(find.byKey(const Key('diagnostics-steps-group')), findsOneWidget);
+    expect(find.byKey(const Key('diagnostics-gnss-group')), findsOneWidget);
+    expect(find.text('Callback latency last/max/mean'), findsOneWidget);
+    expect(find.text('Fixed-lag replay'), findsOneWidget);
 
     platform.emitRecoveryProgress(2);
     await tester.pumpAndSettle();
-    expect(find.text('Recovery progress: 2/3'), findsOneWidget);
+    expect(find.text('RECOVERING'), findsOneWidget);
+    expect(find.text('2/3'), findsOneWidget);
+    expect(find.text('Stop Demo'), findsOneWidget);
+  });
+
+  testWidgets('map-first chrome, legend, and diagnostics remain available', (
+    WidgetTester tester,
+  ) async {
+    final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LiveNavguardMapScreen(
+          anchor: const LiveNavguardAnchor(latitudeDeg: 41, longitudeDeg: 29),
+          platform: platform,
+          enableMapTiles: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('live-navguard-map')), findsOneWidget);
+    expect(
+      find.byKey(const Key('live-navigation-status-card')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('live-bottom-control-card')), findsOneWidget);
+    expect(find.byKey(const Key('live-recenter-control')), findsOneWidget);
+    expect(find.byKey(const Key('live-map-legend')), findsOneWidget);
+    expect(find.byKey(const Key('live-diagnostics-scroll')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('live-map-legend-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.text('GNSS'), findsOneWidget);
+    expect(find.text('NAVGUARD'), findsOneWidget);
+    expect(find.text('Denial point'), findsOneWidget);
+    expect(find.text('Recovered'), findsOneWidget);
+    expect(find.text('Trajectory'), findsOneWidget);
+    expect(find.text('Recovery link'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('live-diagnostics-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.text('Hide Diagnostics'), findsOneWidget);
+    expect(
+      find.text('Detailed runtime metrics appear after the demo starts.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'GNSS badges, recovery correction, and stopping state are clear',
+    (WidgetTester tester) async {
+      final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LiveNavguardMapScreen(
+            anchor: const LiveNavguardAnchor(latitudeDeg: 41, longitudeDeg: 29),
+            platform: platform,
+            enableMapTiles: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('IDLE'), findsOneWidget);
+
+      await tester.tap(find.text('Start Live Demo'));
+      await tester.pumpAndSettle();
+      platform.emitState('GNSS_ACTIVE');
+      await tester.pumpAndSettle();
+      expect(find.text('GNSS ACTIVE'), findsOneWidget);
+
+      platform.emitPosition();
+      await tester.pumpAndSettle();
+      expect(find.text('GNSS DENIED'), findsOneWidget);
+      expect(find.text('Estimator GNSS access: BLOCKED'), findsOneWidget);
+      expect(find.text('Denied GNSS used: 0'), findsOneWidget);
+
+      platform.emitRecoveryProgress(2);
+      await tester.pumpAndSettle();
+      expect(find.text('RECOVERING'), findsOneWidget);
+      expect(find.text('2/3'), findsOneWidget);
+      expect(find.text('Stop Demo'), findsOneWidget);
+
+      platform.emitRecoveryComplete(40.2);
+      await tester.pumpAndSettle();
+      expect(find.text('GNSS RECOVERED'), findsOneWidget);
+      expect(find.text('Recovery correction'), findsOneWidget);
+      expect(find.text('40.20 m'), findsOneWidget);
+
+      final Completer<void> stopBarrier = Completer<void>();
+      platform.stopBarrier = stopBarrier;
+      await tester.tap(find.text('Stop Demo'));
+      await tester.pump();
+      expect(find.text('Stopping…'), findsOneWidget);
+      stopBarrier.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('STOPPED'), findsOneWidget);
+    },
+  );
+
+  testWidgets('V3 presents ready, warming, active, and fallback states', (
+    WidgetTester tester,
+  ) async {
+    final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform(
+      aiModelStatus: 'MODEL_READY',
+      aiModelAvailable: true,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LiveNavguardMapScreen(
+          anchor: const LiveNavguardAnchor(latitudeDeg: 41, longitudeDeg: 29),
+          platform: platform,
+          enableMapTiles: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _selectFusionMode(tester, 'V3 · AI');
+    expect(find.text('Model Ready'), findsOneWidget);
+
+    await tester.tap(find.text('Start Live Demo'));
+    await tester.pumpAndSettle();
+    platform.emitPosition(
+      fusionMode: LiveFusionMode.experimentalAiV3,
+      aiRuntimeStatus: 'WARMING_UP',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Warming Up'), findsOneWidget);
+    expect(
+      find.textContaining('D-v2 active during transition'),
+      findsOneWidget,
+    );
+
+    platform.emitPosition(
+      fusionMode: LiveFusionMode.experimentalAiV3,
+      aiRuntimeStatus: 'AI_ACTIVE',
+      aiMotionState: 'TURNING',
+      aiMotionConfidence: 0.84,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('AI Active'), findsOneWidget);
+    expect(find.text('Turning · 84%'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('live-diagnostics-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('diagnostics-adaptive-group')), findsOneWidget);
+    expect(find.byKey(const Key('diagnostics-ai-group')), findsOneWidget);
+
+    platform.emitPosition(
+      fusionMode: LiveFusionMode.experimentalAiV3,
+      aiRuntimeStatus: 'HEURISTIC_FALLBACK',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('AI Fallback'), findsOneWidget);
+    expect(find.textContaining('D-v2 active'), findsOneWidget);
+  });
+
+  testWidgets('map UI has no overflow at representative phone widths', (
+    WidgetTester tester,
+  ) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    for (final Size size in <Size>[
+      const Size(360, 800),
+      const Size(393, 873),
+      const Size(430, 932),
+    ]) {
+      await tester.binding.setSurfaceSize(size);
+      final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform(
+        aiModelStatus: 'MODEL_READY',
+        aiModelAvailable: true,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LiveNavguardMapScreen(
+            key: ValueKey<Size>(size),
+            anchor: const LiveNavguardAnchor(latitudeDeg: 41, longitudeDeg: 29),
+            platform: platform,
+            enableMapTiles: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'Idle at $size');
+
+      await _selectFusionMode(tester, 'V3 · AI');
+      await tester.tap(find.text('Start Live Demo'));
+      await tester.pumpAndSettle();
+      platform.emitPosition(
+        fusionMode: LiveFusionMode.experimentalAiV3,
+        aiRuntimeStatus: 'AI_ACTIVE',
+        aiMotionState: 'TURNING',
+        aiMotionConfidence: 0.84,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('GNSS DENIED'), findsOneWidget);
+      expect(find.text('Turning · 84%'), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'Denied V3 at $size');
+
+      final Rect controls = tester.getRect(
+        find.byKey(const Key('live-bottom-control-card')),
+      );
+      final Rect recenter = tester.getRect(
+        find.byKey(const Key('live-recenter-control')),
+      );
+      expect(recenter.bottom, lessThan(controls.top));
+
+      platform.emitRecoveryComplete(12.34);
+      await tester.pumpAndSettle();
+      expect(find.text('GNSS RECOVERED'), findsOneWidget);
+      expect(find.text('12.34 m'), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'Recovered at $size');
+
+      await tester.tap(find.byKey(const Key('live-diagnostics-toggle')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('live-diagnostics-scroll')), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'Diagnostics at $size');
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }
   });
 
   testWidgets('no anchor shows preparation UI without creating a map', (
@@ -743,7 +985,7 @@ void main() {
     expect(platform.startCallCount, 0);
   });
 
-  testWidgets('adaptive v2 is selectable while v1 remains the default', (
+  testWidgets('V1 remains default while V2 and V3 AI are selectable', (
     WidgetTester tester,
   ) async {
     final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform();
@@ -759,28 +1001,363 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(platform.lastStartMode, isNull);
-    expect(find.text('NAVGUARD v1'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('live-fusion-mode-selector')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('NAVGUARD v2 (Adaptive)').last);
-    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('live-mode-config_d_navguard_ekf_v1')),
+      findsOneWidget,
+    );
+    expect(find.text('V3 · AI'), findsOneWidget);
+    await _selectFusionMode(tester, 'V2 Adaptive');
     await tester.tap(find.text('Start Live Demo'));
     await tester.pumpAndSettle();
 
     expect(platform.lastStartMode, LiveFusionMode.adaptiveV2);
     expect(platform.startCallCount, 1);
   });
+
+  testWidgets('V3 selects Config E and exposes AI ACTIVE', (
+    WidgetTester tester,
+  ) async {
+    final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform(
+      aiModelStatus: 'MODEL_READY',
+      aiModelAvailable: true,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LiveNavguardMapScreen(
+          anchor: const LiveNavguardAnchor(latitudeDeg: 41, longitudeDeg: 29),
+          platform: platform,
+          enableMapTiles: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _selectFusionMode(tester, 'V3 · AI');
+    expect(find.text('Model Ready'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('live-v3-ai-detail'))).data,
+      contains('Experimental AI'),
+    );
+    await tester.tap(find.text('Start Live Demo'));
+    await tester.pumpAndSettle();
+    expect(platform.lastStartMode, LiveFusionMode.experimentalAiV3);
+    expect(
+      platform.lastStartMode?.wireName,
+      'config_e_ai_assisted_navguard_v1',
+    );
+    expect(platform.startCallCount, 1);
+
+    platform.emitPosition(
+      fusionMode: LiveFusionMode.experimentalAiV3,
+      aiRuntimeStatus: 'AI_ACTIVE',
+      aiMotionState: 'STRAIGHT_WALK',
+      aiMotionConfidence: 0.81,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('AI Active'), findsOneWidget);
+    expect(find.text('Straight Walk · 81%'), findsOneWidget);
+  });
+
+  testWidgets('missing or invalid V3 model remains selectable with fallback', (
+    WidgetTester tester,
+  ) async {
+    for (final String status in <String>[
+      'MODEL_NOT_AVAILABLE',
+      'MODEL_INVALID',
+    ]) {
+      final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform(
+        aiModelStatus: status,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LiveNavguardMapScreen(
+            anchor: const LiveNavguardAnchor(latitudeDeg: 41, longitudeDeg: 29),
+            platform: platform,
+            enableMapTiles: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _selectFusionMode(tester, 'V3 · AI');
+      expect(find.text('AI Fallback'), findsOneWidget);
+      expect(
+        find.textContaining(
+          status == 'MODEL_INVALID'
+              ? 'Model Invalid · D-v2 active'
+              : 'AI Unavailable · D-v2 active',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Start Live Demo'));
+      await tester.pumpAndSettle();
+      expect(platform.lastStartMode, LiveFusionMode.experimentalAiV3);
+      expect(platform.startCallCount, 1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('selecting V2 after V3 removes AI mode before start', (
+    WidgetTester tester,
+  ) async {
+    final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform(
+      aiModelStatus: 'MODEL_READY',
+      aiModelAvailable: true,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LiveNavguardMapScreen(
+          anchor: const LiveNavguardAnchor(latitudeDeg: 41, longitudeDeg: 29),
+          platform: platform,
+          enableMapTiles: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _selectFusionMode(tester, 'V3 · AI');
+    await _selectFusionMode(tester, 'V2 Adaptive');
+    await tester.tap(find.text('Start Live Demo'));
+    await tester.pumpAndSettle();
+    expect(platform.lastStartMode, LiveFusionMode.adaptiveV2);
+    expect(platform.startCallCount, 1);
+  });
+
+  testWidgets(
+    'active demo hot-switches every V1 V2 V3 path in one map session',
+    (WidgetTester tester) async {
+      final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform(
+        aiModelStatus: 'MODEL_READY',
+        aiModelAvailable: true,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LiveNavguardMapScreen(
+            anchor: const LiveNavguardAnchor(latitudeDeg: 41, longitudeDeg: 29),
+            platform: platform,
+            enableMapTiles: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start Live Demo'));
+      await tester.pumpAndSettle();
+      platform.emitPosition(east: 1, north: 2);
+      await tester.pumpAndSettle();
+
+      for (final String label in <String>[
+        'V2 Adaptive',
+        'V3 · AI',
+        'V2 Adaptive',
+        'V3 · AI',
+        'V1',
+        'V3 · AI',
+      ]) {
+        await _selectFusionMode(tester, label);
+      }
+
+      expect(platform.startCallCount, 1);
+      expect(platform.maxConcurrentSwitches, 1);
+      expect(platform.switchedModes, <LiveFusionMode>[
+        LiveFusionMode.adaptiveV2,
+        LiveFusionMode.experimentalAiV3,
+        LiveFusionMode.adaptiveV2,
+        LiveFusionMode.experimentalAiV3,
+        LiveFusionMode.navguardV1,
+        LiveFusionMode.experimentalAiV3,
+      ]);
+      expect(
+        find.byKey(const Key('live-fusion-mode-selector')),
+        findsOneWidget,
+      );
+      expect(find.text('Stop Demo'), findsOneWidget);
+      expect(find.text('Denied GNSS used: 0'), findsOneWidget);
+
+      platform.emitPosition(
+        fusionMode: LiveFusionMode.experimentalAiV3,
+        aiRuntimeStatus: 'AI_ACTIVE',
+        aiMotionState: 'TURNING',
+        aiMotionConfidence: 0.84,
+        east: 3,
+        north: 4,
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('live-v3-ai-motion')), findsOneWidget);
+      await _selectFusionMode(tester, 'V2 Adaptive');
+      expect(find.byKey(const Key('live-v3-ai-status')), findsNothing);
+      expect(find.byKey(const Key('live-v3-ai-motion')), findsNothing);
+
+      final PolylineLayer<Object> routeLayer = tester
+          .widget<PolylineLayer<Object>>(find.byType(PolylineLayer<Object>));
+      expect(routeLayer.polylines, isNotEmpty);
+      expect(routeLayer.polylines.first.points.length, greaterThanOrEqualTo(2));
+    },
+  );
+
+  testWidgets(
+    'rapid active mode taps are serialized and latest selection wins',
+    (WidgetTester tester) async {
+      final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LiveNavguardMapScreen(
+            anchor: const LiveNavguardAnchor(latitudeDeg: 41, longitudeDeg: 29),
+            platform: platform,
+            enableMapTiles: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start Live Demo'));
+      await tester.pumpAndSettle();
+
+      final Completer<void> firstSwitch = Completer<void>();
+      platform.switchBarrier = firstSwitch;
+      await _selectFusionMode(tester, 'V2 Adaptive', settle: false);
+      await _selectFusionMode(tester, 'V3 · AI', settle: false);
+      expect(platform.switchCallCount, 1);
+      firstSwitch.complete();
+      await tester.pumpAndSettle();
+
+      expect(platform.switchedModes, <LiveFusionMode>[
+        LiveFusionMode.adaptiveV2,
+        LiveFusionMode.experimentalAiV3,
+      ]);
+      expect(platform.maxConcurrentSwitches, 1);
+      expect(platform.startCallCount, 1);
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('live-fusion-mode-status')))
+            .data,
+        'V3 · AI',
+      );
+    },
+  );
+
+  testWidgets('V3 recovery 3 of 3 stop completes and V3 can start again', (
+    WidgetTester tester,
+  ) async {
+    final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform(
+      aiModelStatus: 'MODEL_READY',
+      aiModelAvailable: true,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LiveNavguardMapScreen(
+          anchor: const LiveNavguardAnchor(latitudeDeg: 41, longitudeDeg: 29),
+          platform: platform,
+          enableMapTiles: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _selectFusionMode(tester, 'V3 · AI');
+    await tester.tap(find.text('Start Live Demo'));
+    await tester.pumpAndSettle();
+    platform.emitPosition(
+      fusionMode: LiveFusionMode.experimentalAiV3,
+      aiRuntimeStatus: 'AI_ACTIVE',
+      aiMotionState: 'TURNING',
+      aiMotionConfidence: 0.841,
+    );
+    platform.emitRecoveryProgress(3);
+    await tester.pumpAndSettle();
+
+    expect(find.text('3/3'), findsOneWidget);
+    await tester.tap(find.text('Stop Demo'));
+    await tester.pumpAndSettle();
+    expect(platform.stopCallCount, 1);
+    expect(find.text('Start Live Demo'), findsOneWidget);
+    expect(find.byKey(const Key('live-v3-ai-motion')), findsNothing);
+
+    await tester.tap(find.text('Start Live Demo'));
+    await tester.pumpAndSettle();
+    expect(platform.startCallCount, 2);
+    expect(platform.lastStartMode, LiveFusionMode.experimentalAiV3);
+  });
+
+  testWidgets('stop completes from normal denial and recovery for every mode', (
+    WidgetTester tester,
+  ) async {
+    for (final LiveFusionMode mode in LiveFusionMode.values) {
+      for (final String state in <String>[
+        'GNSS_ACTIVE',
+        'NAVGUARD_ACTIVE',
+        'RECOVERY_PENDING',
+      ]) {
+        final FakeLiveNavguardPlatform platform = FakeLiveNavguardPlatform();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: LiveNavguardMapScreen(
+              key: UniqueKey(),
+              anchor: const LiveNavguardAnchor(
+                latitudeDeg: 41,
+                longitudeDeg: 29,
+              ),
+              platform: platform,
+              enableMapTiles: false,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        if (mode != LiveFusionMode.navguardV1) {
+          await _selectFusionMode(tester, switch (mode) {
+            LiveFusionMode.navguardV1 => 'V1',
+            LiveFusionMode.adaptiveV2 => 'V2 Adaptive',
+            LiveFusionMode.experimentalAiV3 => 'V3 · AI',
+          });
+        }
+        await tester.tap(find.text('Start Live Demo'));
+        await tester.pumpAndSettle();
+        platform.emitState(state);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Stop Demo'));
+        await tester.pumpAndSettle();
+        expect(platform.stopCallCount, 1);
+        expect(find.text('Start Live Demo'), findsOneWidget);
+        await platform.stop();
+        expect(platform.stopCallCount, 2);
+      }
+    }
+  });
+}
+
+Future<void> _selectFusionMode(
+  WidgetTester tester,
+  String label, {
+  bool settle = true,
+}) async {
+  await tester.tap(find.text(label).last);
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+  }
 }
 
 class FakeLiveNavguardPlatform implements LiveNavguardPlatform {
-  FakeLiveNavguardPlatform({this.anchorAvailable = true});
+  FakeLiveNavguardPlatform({
+    this.anchorAvailable = true,
+    this.aiModelStatus = 'MODEL_NOT_AVAILABLE',
+    this.aiModelAvailable = false,
+  });
 
   final StreamController<Object?> _events =
       StreamController<Object?>.broadcast();
   final bool anchorAvailable;
+  final String aiModelStatus;
+  final bool aiModelAvailable;
   int preflightCallCount = 0;
   int startCallCount = 0;
+  int stopCallCount = 0;
+  int switchCallCount = 0;
+  int activeSwitches = 0;
+  int maxConcurrentSwitches = 0;
+  int _sequence = 0;
   LiveFusionMode? lastStartMode;
+  LiveFusionMode currentMode = LiveFusionMode.navguardV1;
+  final List<LiveFusionMode> switchedModes = <LiveFusionMode>[];
+  Completer<void>? switchBarrier;
+  Completer<void>? stopBarrier;
 
   @override
   Stream<Object?> get events => _events.stream;
@@ -791,6 +1368,9 @@ class FakeLiveNavguardPlatform implements LiveNavguardPlatform {
     final Map<String, Object?> value = _readyPreflightMap();
     value['anchorAvailable'] = anchorAvailable;
     value['nativeReady'] = anchorAvailable;
+    value['aiModelStatus'] = aiModelStatus;
+    value['aiModelAvailable'] = aiModelAvailable;
+    value['aiConfigESelectable'] = true;
     return LiveNavguardPreflight.fromMap(value);
   }
 
@@ -801,6 +1381,7 @@ class FakeLiveNavguardPlatform implements LiveNavguardPlatform {
   ]) async {
     startCallCount++;
     lastStartMode = fusionMode;
+    currentMode = fusionMode;
     emitState('PREPARING');
   }
 
@@ -811,7 +1392,33 @@ class FakeLiveNavguardPlatform implements LiveNavguardPlatform {
   Future<void> requestRecovery() async => emitRecoveryProgress(0);
 
   @override
-  Future<void> stop() async => emitState('STOPPED');
+  Future<void> setFusionMode(LiveFusionMode fusionMode) async {
+    switchCallCount++;
+    activeSwitches++;
+    maxConcurrentSwitches = math.max(maxConcurrentSwitches, activeSwitches);
+    switchedModes.add(fusionMode);
+    try {
+      await switchBarrier?.future;
+      currentMode = fusionMode;
+      emitPosition(
+        fusionMode: fusionMode,
+        aiRuntimeStatus: fusionMode == LiveFusionMode.experimentalAiV3
+            ? 'WARMING_UP'
+            : 'DISABLED',
+        east: _sequence + 1.0,
+        north: _sequence + 2.0,
+      );
+    } finally {
+      activeSwitches--;
+    }
+  }
+
+  @override
+  Future<void> stop() async {
+    stopCallCount++;
+    await stopBarrier?.future;
+    emitState('STOPPED');
+  }
 
   void emitState(String state) {
     _events.add(<String, Object?>{
@@ -831,14 +1438,47 @@ class FakeLiveNavguardPlatform implements LiveNavguardPlatform {
     });
   }
 
-  void emitPosition() {
+  void emitRecoveryComplete(double correctionM) {
+    _events.add(<String, Object?>{
+      'schemaVersion': 1,
+      'kind': 'completed',
+      'state': 'GNSS_RECOVERED',
+      'recoveryGoodFixCount': 3,
+      'recoveryRequiredFixCount': 3,
+      'preRecoveryEastM': 1.0,
+      'preRecoveryNorthM': 2.0,
+      'recoveredEastM': 3.0,
+      'recoveredNorthM': 4.0,
+      'recoveryCorrectionM': correctionM,
+    });
+  }
+
+  void emitPosition({
+    LiveFusionMode fusionMode = LiveFusionMode.navguardV1,
+    String aiRuntimeStatus = 'DISABLED',
+    String? aiMotionState,
+    double? aiMotionConfidence,
+    double east = 1,
+    double north = 2,
+  }) {
+    _sequence++;
     _events.add(
       _positionMap(
         state: 'NAVGUARD_ACTIVE',
         source: 'NAVGUARD',
-        east: 1,
-        north: 2,
-      ),
+        east: east,
+        north: north,
+      )..addAll(<String, Object?>{
+        'sequence': _sequence,
+        'fusionMode': fusionMode.wireName,
+        'aiExperimentalMode': fusionMode == LiveFusionMode.experimentalAiV3,
+        'aiRuntimeStatus': aiRuntimeStatus,
+        'aiMotionState': aiMotionState,
+        'aiMotionConfidence': aiMotionConfidence,
+        'aiFallbackConfigId': LiveFusionMode.adaptiveV2.wireName,
+        'aiCoordinatesDirectlyPredicted': false,
+        'aiStrideDirectlyMutated': false,
+      }),
     );
   }
 }
@@ -857,6 +1497,9 @@ Map<String, Object?> _readyPreflightMap() => <String, Object?>{
   'anchorAvailable': true,
   'nativeReady': true,
   'demoRunning': false,
+  'aiModelStatus': 'MODEL_NOT_AVAILABLE',
+  'aiModelAvailable': false,
+  'aiConfigESelectable': true,
 };
 
 Map<String, Object?> _positionMap({

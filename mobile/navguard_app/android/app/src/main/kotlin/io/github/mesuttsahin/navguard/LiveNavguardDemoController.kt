@@ -41,6 +41,57 @@ import kotlin.math.hypot
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+internal object LiveNavguardLifecycleContract {
+    const val STOP_TIMEOUT_MS = 3_000L
+
+    data class HandoverPose(
+        val eastM: Double,
+        val northM: Double,
+        val headingRad: Double,
+    )
+
+    fun handoverPose(
+        eastM: Double,
+        northM: Double,
+        headingRad: Double,
+    ): HandoverPose {
+        require(eastM.isFinite() && northM.isFinite() && headingRad.isFinite())
+        return HandoverPose(eastM, northM, headingRad)
+    }
+
+    fun finiteLifecycleTimestamp(nowNs: Long): Long {
+        require(nowNs >= 0L && nowNs != Long.MAX_VALUE)
+        return nowNs
+    }
+
+    fun supportsHotSwitch(
+        fromId: String,
+        toId: String,
+    ): Boolean = fromId in SUPPORTED_MODE_IDS && toId in SUPPORTED_MODE_IDS
+
+    fun runSelfTests(): Map<String, Boolean> {
+        val pose = handoverPose(12.5, -3.25, 1.75)
+        val ids = SUPPORTED_MODE_IDS.toList()
+        return linkedMapOf(
+            "liveHotSwitchMatrix" to ids.all { from -> ids.all { to -> supportsHotSwitch(from, to) } },
+            "liveHandoverPreservesPose" to
+                (pose.eastM == 12.5 && pose.northM == -3.25 && pose.headingRad == 1.75),
+            "liveHandoverExcludesProtectedGnss" to
+                (HandoverPose::class.java.declaredFields.map { it.name }.toSet() ==
+                    setOf("eastM", "northM", "headingRad")),
+            "liveRecoveryDrainUsesFiniteTime" to (finiteLifecycleTimestamp(42L) == 42L),
+            "liveStopTimeoutBounded" to (STOP_TIMEOUT_MS in 1_000L..5_000L),
+        )
+    }
+
+    private val SUPPORTED_MODE_IDS =
+        setOf(
+            "config_d_navguard_ekf_v1",
+            NavguardAdaptiveFusionV2.CONFIG_ID,
+            NavguardAiAssistedFusion.CONFIG_ID,
+        )
+}
+
 class LiveNavguardDemoController(
     private val applicationContext: Context,
     private val locationManager: LocationManager,
@@ -76,6 +127,8 @@ class LiveNavguardDemoController(
     fun createPreflightSnapshot(anchorAvailable: Boolean): Map<String, Any?> {
         val rotation = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
         val step = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         val availability = readArCoreAvailability()
         val gpsAvailable = runCatching { locationManager.allProviders.contains(LocationManager.GPS_PROVIDER) }.getOrDefault(false)
         val gpsEnabled = runCatching { locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) }.getOrDefault(false)
@@ -84,6 +137,7 @@ class LiveNavguardDemoController(
         val activityGranted =
             Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
                 hasPermission(Manifest.permission.ACTIVITY_RECOGNITION)
+        val aiModel = NavguardAiModelRuntime.loadFromAssets(applicationContext)
         val ready =
             gpsAvailable && gpsEnabled && locationGranted &&
                 rotation != null && step != null && activityGranted &&
@@ -97,6 +151,8 @@ class LiveNavguardDemoController(
             "fineLocationPermissionGranted" to locationGranted,
             "rotationVectorAvailable" to (rotation != null),
             "stepDetectorAvailable" to (step != null),
+            "accelerometerAvailable" to (accelerometer != null),
+            "gyroscopeAvailable" to (gyroscope != null),
             "activityRecognitionPermissionGranted" to activityGranted,
             "arCoreSupported" to availability.supported,
             "arCoreInstalled" to availability.installed,
@@ -116,9 +172,21 @@ class LiveNavguardDemoController(
             "arcorePositionAccuracyValidated" to false,
             "noiseParametersValidated" to false,
             "qualityThresholdsValidated" to false,
-            "availableFusionModes" to listOf(CONFIG_D1_ID, NavguardAdaptiveFusionV2.CONFIG_ID),
+            "availableFusionModes" to
+                listOf(
+                    CONFIG_D1_ID,
+                    NavguardAdaptiveFusionV2.CONFIG_ID,
+                    NavguardAiAssistedFusion.CONFIG_ID,
+                ),
             "defaultFusionMode" to CONFIG_D1_ID,
             "adaptiveModeExperimental" to true,
+            "aiModelStatus" to aiModel.status.name,
+            "aiModelAvailable" to (aiModel.status == NavguardAiRuntimeStatus.MODEL_READY),
+            "aiConfigEId" to NavguardAiAssistedFusion.CONFIG_ID,
+            "aiConfigESelectable" to true,
+            "aiRuntimeClassification" to "EXPERIMENTAL",
+            "aiIndependentHoldoutGate" to "FAIL",
+            "aiFallbackConfigId" to NavguardAdaptiveFusionV2.CONFIG_ID,
         )
     }
 
@@ -160,7 +228,23 @@ class LiveNavguardDemoController(
             postError(callback, ERROR_INVALID_STATE, "Unknown live NAVGUARD fusion mode.")
             return
         }
-        val session = LiveSession(anchor, declination, rotation, step, fusionMode)
+        val aiModel =
+            if (fusionMode == FusionMode.AI_V3) {
+                NavguardAiModelRuntime.loadFromAssets(applicationContext)
+            } else {
+                null
+            }
+        val session =
+            LiveSession(
+                anchor = anchor,
+                declinationRad = declination,
+                rotationVector = rotation,
+                stepDetector = step,
+                accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE),
+                initialFusionMode = fusionMode,
+                initialAiModelLoad = aiModel,
+            )
         synchronized(activeSessionLock) {
             if (activeSession != null) {
                 postError(callback, ERROR_ALREADY_RUNNING, "A live NAVGUARD demo is already running.")
@@ -186,6 +270,23 @@ class LiveNavguardDemoController(
             postError(callback, ERROR_INVALID_STATE, "The live demo is not running.")
         } else {
             session.requestRecovery(callback)
+        }
+    }
+
+    fun switchFusionMode(
+        fusionModeId: String,
+        callback: CommandCallback,
+    ) {
+        val target = FusionMode.fromId(fusionModeId)
+        if (target == null) {
+            postError(callback, ERROR_INVALID_STATE, "Unknown live NAVGUARD fusion mode.")
+            return
+        }
+        val session = synchronized(activeSessionLock) { activeSession }
+        if (session == null) {
+            postError(callback, ERROR_INVALID_STATE, "The live demo is not running.")
+        } else {
+            session.switchFusionMode(target, callback)
         }
     }
 
@@ -256,9 +357,18 @@ class LiveNavguardDemoController(
         private val declinationRad: Double,
         private val rotationVector: Sensor,
         private val stepDetector: Sensor,
-        private val fusionMode: FusionMode,
+        private val accelerometer: Sensor?,
+        private val gyroscope: Sensor?,
+        initialFusionMode: FusionMode,
+        initialAiModelLoad: NavguardAiModelLoadResult?,
     ) : SensorEventListener, LocationListener {
         private val terminal = AtomicBoolean(false)
+        private val stopRequested = AtomicBoolean(false)
+        private val stopFinalized = AtomicBoolean(false)
+        private val stopCallbackLock = Any()
+        private val stopCallbacks = mutableListOf<CommandCallback>()
+        private val modeSwitchCallbackLock = Any()
+        private val modeSwitchCallbacks = mutableSetOf<CommandCallback>()
         private val workerThread = HandlerThread(WORKER_THREAD_NAME)
         private val arThread = HandlerThread(AR_THREAD_NAME)
         private val glEnvironment = LiveGlEnvironment()
@@ -276,6 +386,8 @@ class LiveNavguardDemoController(
         private var locationRegistered = false
         private var denialStartPending = false
         private var state = DemoState.IDLE
+        private var fusionMode = initialFusionMode
+        private var aiModelLoad = initialAiModelLoad
         private var latestRotation: RotationSample? = null
         private var latestOperationalGnss: EnuFix? = null
         private var latestArPose: Pose? = null
@@ -285,6 +397,24 @@ class LiveNavguardDemoController(
         private var frozenEnuFromInitialDevice: DoubleArray? = null
         private var ekf: EkfState? = null
         private var adaptiveFusion: NavguardAdaptiveFusionV2? = null
+        private var aiLiveRuntime: NavguardAiLiveRuntime? =
+            if (initialFusionMode == FusionMode.AI_V3) {
+                aiModelLoad?.runtime?.let(::NavguardAiLiveRuntime)
+            } else {
+                null
+            }
+        private var aiRuntimeStatus: NavguardAiRuntimeStatus? =
+            if (initialFusionMode == FusionMode.AI_V3) {
+                if (aiLiveRuntime != null) {
+                    NavguardAiRuntimeStatus.WARMING_UP
+                } else {
+                    aiModelLoad?.status ?: NavguardAiRuntimeStatus.MODEL_NOT_AVAILABLE
+                }
+            } else {
+                null
+            }
+        private var latestAiDecision: NavguardAiFusionDecision? = null
+        private var aiSensorsReady = false
         private var stableGnssOrigin: AdaptiveStableGnssOrigin? = null
         private var committedWatermarkNs = -1L
         private var historyStartTimestampNs = -1L
@@ -356,7 +486,38 @@ class LiveNavguardDemoController(
                         0,
                         worker,
                     )
-                listenersRegistered = rotationRegistered || stepRegistered
+                val accelerometerRegistered =
+                    if (accelerometer != null) {
+                        sensorManager.registerListener(
+                            this,
+                            accelerometer,
+                            SensorManager.SENSOR_DELAY_GAME,
+                            0,
+                            worker,
+                        )
+                    } else {
+                        false
+                    }
+                val gyroscopeRegistered =
+                    if (gyroscope != null) {
+                        sensorManager.registerListener(
+                            this,
+                            gyroscope,
+                            SensorManager.SENSOR_DELAY_GAME,
+                            0,
+                            worker,
+                        )
+                    } else {
+                        false
+                    }
+                aiSensorsReady = accelerometerRegistered && gyroscopeRegistered
+                if (fusionMode == FusionMode.AI_V3 && aiLiveRuntime != null && !aiSensorsReady) {
+                    aiLiveRuntime = null
+                    aiRuntimeStatus = NavguardAiRuntimeStatus.HEURISTIC_FALLBACK
+                }
+                listenersRegistered =
+                    rotationRegistered || stepRegistered ||
+                        accelerometerRegistered || gyroscopeRegistered
                 if (!rotationRegistered || !stepRegistered) {
                     fail(ERROR_SENSOR_REGISTRATION, "Android rejected a required sensor registration.")
                     postError(callback, ERROR_SENSOR_REGISTRATION, "Android rejected a required sensor registration.")
@@ -399,7 +560,7 @@ class LiveNavguardDemoController(
             val latestGnss = latestOperationalGnss
             val rotation = latestRotation
             val robustOrigin =
-                if (fusionMode == FusionMode.ADAPTIVE_V2) {
+                if (fusionMode.usesAdaptiveBase) {
                     NavguardAdaptiveFusionV2.computeStableGnssOrigin(
                         gnssStabilizationCandidates,
                         SystemClock.elapsedRealtimeNanos(),
@@ -408,7 +569,7 @@ class LiveNavguardDemoController(
                     null
                 }
             val gnss =
-                if (fusionMode == FusionMode.ADAPTIVE_V2 && robustOrigin != null) {
+                if (fusionMode.usesAdaptiveBase && robustOrigin != null) {
                     EnuFix(
                         generationNs = gnssStabilizationCandidates.maxOfOrNull { it.timestampNs } ?: SystemClock.elapsedRealtimeNanos(),
                         eastM = robustOrigin.eastM,
@@ -418,7 +579,7 @@ class LiveNavguardDemoController(
                     latestGnss
                 }
             if (gnss == null || rotation == null || qualityMultiplier(rotation.quality) == null || !arTrackingReady ||
-                (fusionMode == FusionMode.ADAPTIVE_V2 && robustOrigin == null)
+                (fusionMode.usesAdaptiveBase && robustOrigin == null)
             ) {
                 postError(callback, ERROR_NOT_READY, "GNSS, true-north heading, and ARCore alignment must all be ready.")
                 return
@@ -466,7 +627,7 @@ class LiveNavguardDemoController(
                 return
             }
             denialOrigin = gnss.copy()
-            if (fusionMode == FusionMode.ADAPTIVE_V2) {
+            if (fusionMode.usesAdaptiveBase) {
                 adaptiveFusion =
                     NavguardAdaptiveFusionV2(
                         gnss.eastM,
@@ -486,6 +647,18 @@ class LiveNavguardDemoController(
             committedWatermarkNs = -1L
             historyStartTimestampNs = SystemClock.elapsedRealtimeNanos()
             historyBaseWatermarkNs = historyStartTimestampNs
+            latestAiDecision = null
+            if (fusionMode == FusionMode.AI_V3 && aiSensorsReady) {
+                aiLiveRuntime?.let { runtime ->
+                    runtime.start(historyStartTimestampNs)
+                    runtime.addHeading(
+                        historyStartTimestampNs,
+                        rotation.trueHeadingRad,
+                        qualityMultiplier(rotation.quality) != null,
+                    )
+                    aiRuntimeStatus = NavguardAiRuntimeStatus.WARMING_UP
+                }
+            }
             latestCausalHeading =
                 HeadingSample(rotation.timestampNs, rotation.trueHeadingRad, rotation.quality)
             previousArFusionTimestampNs = null
@@ -505,6 +678,8 @@ class LiveNavguardDemoController(
                 DemoState.NAVGUARD_ACTIVE,
                 if (fusionMode == FusionMode.ADAPTIVE_V2) {
                     "GNSS denied; experimental adaptive NAVGUARD v2 navigation is active."
+                } else if (fusionMode == FusionMode.AI_V3) {
+                    "GNSS denied; experimental AI-assisted NAVGUARD v3 navigation is active."
                 } else {
                     "GNSS denied; NAVGUARD v1 navigation is active."
                 },
@@ -528,16 +703,203 @@ class LiveNavguardDemoController(
             if (!accepted) postError(callback, ERROR_INVALID_STATE, "The live demo worker is unavailable.")
         }
 
+        fun switchFusionMode(
+            target: FusionMode,
+            callback: CommandCallback,
+        ) {
+            val registered =
+                synchronized(modeSwitchCallbackLock) {
+                    if (terminal.get()) {
+                        false
+                    } else {
+                        modeSwitchCallbacks.add(callback)
+                        true
+                    }
+                }
+            if (!registered) {
+                postError(callback, ERROR_INVALID_STATE, "The live demo is stopping.")
+                return
+            }
+            val accepted = worker?.post { switchFusionModeOnWorker(target, callback) } == true
+            if (!accepted) {
+                completeModeSwitchError(callback, "The live demo worker is unavailable.")
+            }
+        }
+
+        private fun switchFusionModeOnWorker(
+            target: FusionMode,
+            callback: CommandCallback,
+        ) {
+            if (terminal.get()) {
+                completeModeSwitchError(callback, "The live demo is stopping.")
+                return
+            }
+            if (target == fusionMode) {
+                completeModeSwitchSuccess(callback)
+                return
+            }
+            if (!LiveNavguardLifecycleContract.supportsHotSwitch(fusionMode.id, target.id)) {
+                completeModeSwitchError(callback, "Unsupported live NAVGUARD mode transition.")
+                return
+            }
+
+            val estimatorActive =
+                state == DemoState.NAVGUARD_ACTIVE || state == DemoState.RECOVERY_PENDING
+            if (estimatorActive) {
+                drainPendingEventsForLifecycleTransition()
+                if (terminal.get()) {
+                    completeModeSwitchError(callback, "The live demo is stopping.")
+                    return
+                }
+            }
+
+            val previous = fusionMode
+            val pose =
+                if (estimatorActive) {
+                    val adaptive = adaptiveFusion
+                    val filter = ekf
+                    LiveNavguardLifecycleContract.handoverPose(
+                        eastM = adaptive?.eastM ?: filter?.x?.get(0) ?: error("Missing live estimator position."),
+                        northM = adaptive?.northM ?: filter?.x?.get(1) ?: error("Missing live estimator position."),
+                        headingRad = adaptive?.headingRad ?: filter?.x?.get(2) ?: error("Missing live estimator heading."),
+                    )
+                } else {
+                    null
+                }
+
+            if (previous == FusionMode.AI_V3) exitAiMode()
+            fusionMode = target
+
+            if (pose != null) {
+                when {
+                    target == FusionMode.V1 -> {
+                        ekf = EkfState.initial(pose.eastM, pose.northM, pose.headingRad)
+                        adaptiveFusion = null
+                    }
+                    previous == FusionMode.V1 -> {
+                        adaptiveFusion =
+                            NavguardAdaptiveFusionV2(
+                                pose.eastM,
+                                pose.northM,
+                                pose.headingRad,
+                                NavguardCalibrationProfileStore.read(),
+                            )
+                        ekf = null
+                    }
+                    else -> {
+                        checkNotNull(adaptiveFusion)
+                        ekf = null
+                    }
+                }
+            }
+
+            pendingEvents.clear()
+            eventHistory.clear()
+            historyBaseWatermarkNs = committedWatermarkNs
+            if (target == FusionMode.AI_V3) enterAiMode()
+            historyBaseSnapshot = captureEstimatorSnapshot()
+
+            if (state == DemoState.GNSS_ACTIVE || state == DemoState.NAVGUARD_READY) {
+                updateReadyState()
+            }
+            if (estimatorActive) {
+                emitPosition(force = true)
+            } else {
+                latestOperationalGnss?.let { emitGnssPosition(it, force = true) }
+            }
+            completeModeSwitchSuccess(callback)
+        }
+
+        private fun enterAiMode() {
+            val model = aiModelLoad ?: NavguardAiModelRuntime.loadFromAssets(applicationContext).also { aiModelLoad = it }
+            val runtime = model.runtime?.let(::NavguardAiLiveRuntime)
+            aiLiveRuntime = runtime
+            latestAiDecision = null
+            aiRuntimeStatus =
+                when {
+                    runtime == null -> model.status
+                    !aiSensorsReady -> NavguardAiRuntimeStatus.HEURISTIC_FALLBACK
+                    else -> NavguardAiRuntimeStatus.WARMING_UP
+                }
+            if (runtime != null && aiSensorsReady &&
+                (state == DemoState.NAVGUARD_ACTIVE || state == DemoState.RECOVERY_PENDING)
+            ) {
+                val nowNs = LiveNavguardLifecycleContract.finiteLifecycleTimestamp(SystemClock.elapsedRealtimeNanos())
+                runtime.start(nowNs)
+                latestRotation?.let { rotation ->
+                    runtime.addHeading(
+                        nowNs,
+                        rotation.trueHeadingRad,
+                        qualityMultiplier(rotation.quality) != null,
+                    )
+                }
+            }
+        }
+
+        private fun exitAiMode() {
+            aiLiveRuntime = null
+            latestAiDecision = null
+            aiRuntimeStatus = null
+        }
+
+        private fun completeModeSwitchSuccess(callback: CommandCallback) {
+            val pending = synchronized(modeSwitchCallbackLock) { modeSwitchCallbacks.remove(callback) }
+            if (pending) postSuccess(callback, commandSnapshot(state))
+        }
+
+        private fun completeModeSwitchError(
+            callback: CommandCallback,
+            message: String,
+        ) {
+            val pending = synchronized(modeSwitchCallbackLock) { modeSwitchCallbacks.remove(callback) }
+            if (pending) postError(callback, ERROR_INVALID_STATE, message)
+        }
+
+        private fun cancelPendingModeSwitches() {
+            val callbacks =
+                synchronized(modeSwitchCallbackLock) {
+                    modeSwitchCallbacks.toList().also { modeSwitchCallbacks.clear() }
+                }
+            callbacks.forEach { callback ->
+                postError(callback, ERROR_INVALID_STATE, "The live demo was stopped before mode switching completed.")
+            }
+        }
+
         fun stop(
             reason: String,
             callback: CommandCallback?,
         ) {
-            val accepted = worker?.post { finishStopped(reason, callback) } == true
+            if (callback != null) {
+                val registered =
+                    synchronized(stopCallbackLock) {
+                        if (stopFinalized.get()) {
+                            false
+                        } else {
+                            stopCallbacks.add(callback)
+                            true
+                        }
+                    }
+                if (!registered) {
+                    postSuccess(callback, commandSnapshot(DemoState.STOPPED))
+                    return
+                }
+            }
+            if (!stopRequested.compareAndSet(false, true)) return
+
+            terminal.set(true)
+            detachExternalCallbacks()
+            cancelPendingModeSwitches()
+            val accepted = worker?.postAtFrontOfQueue { finishStopped(reason, timedOut = false) } == true
+            mainHandler.postDelayed(
+                {
+                    if (!stopFinalized.get()) {
+                        finishStopped("$reason Forced shutdown completed after timeout.", timedOut = true)
+                    }
+                },
+                LiveNavguardLifecycleContract.STOP_TIMEOUT_MS,
+            )
             if (!accepted) {
-                cleanupArCore()
-                terminal.set(true)
-                releaseSession(this)
-                callback?.let { postSuccess(it, commandSnapshot(DemoState.STOPPED)) }
+                finishStopped(reason, timedOut = true)
             }
         }
 
@@ -546,6 +908,24 @@ class LiveNavguardDemoController(
             when (event.sensor.type) {
                 Sensor.TYPE_ROTATION_VECTOR -> handleRotationVector(event)
                 Sensor.TYPE_STEP_DETECTOR -> handleStep(event)
+                Sensor.TYPE_ACCELEROMETER ->
+                    if (event.values.size >= 3 && event.timestamp > 0L) {
+                        aiLiveRuntime?.addAccelerometer(
+                            event.timestamp,
+                            event.values[0],
+                            event.values[1],
+                            event.values[2],
+                        )
+                    }
+                Sensor.TYPE_GYROSCOPE ->
+                    if (event.values.size >= 3 && event.timestamp > 0L) {
+                        aiLiveRuntime?.addGyroscope(
+                            event.timestamp,
+                            event.values[0],
+                            event.values[1],
+                            event.values[2],
+                        )
+                    }
             }
         }
 
@@ -563,6 +943,11 @@ class LiveNavguardDemoController(
                 return
             }
             latestRotation = sample
+            aiLiveRuntime?.addHeading(
+                sample.timestampNs,
+                sample.trueHeadingRad,
+                qualityMultiplier(sample.quality) != null,
+            )
             updateReadyState()
             if (state == DemoState.NAVGUARD_ACTIVE || state == DemoState.RECOVERY_PENDING) {
                 enqueueEvent(HeadingEvent(sample.timestampNs, nextInsertion(), sample.trueHeadingRad, sample.quality))
@@ -575,6 +960,7 @@ class LiveNavguardDemoController(
             if (event.timestamp <= 0L || value == null || !value.isFinite() || value != 1.0f) return
             receivedStepEventCount += 1L
             val callbackTimestampNs = SystemClock.elapsedRealtimeNanos()
+            aiLiveRuntime?.addStep(event.timestamp, callbackTimestampNs)
             val callbackLatencyMs =
                 (callbackTimestampNs - event.timestamp).coerceAtLeast(0L) / 1_000_000.0
             stepCallbackLatencyLastMs = callbackLatencyMs
@@ -719,7 +1105,8 @@ class LiveNavguardDemoController(
             recovered: EnuFix,
             accuracyM: Double,
         ) {
-            flushReorderBuffer(Long.MAX_VALUE)
+            drainPendingEventsForLifecycleTransition()
+            if (terminal.get()) return
             val adaptive = adaptiveFusion
             val filter = ekf
             val preEast = adaptive?.eastM ?: filter?.x?.get(0) ?: return
@@ -907,6 +1294,7 @@ class LiveNavguardDemoController(
                     is HeadingEvent -> lateHeadingEventCount += 1L
                     is StepEvent -> lateStepEventCount += 1L
                     is ArcoreEvent -> lateArcoreEventCount += 1L
+                    is AiContextEvent -> Unit
                 }
                 return
             }
@@ -934,6 +1322,7 @@ class LiveNavguardDemoController(
                         is HeadingEvent -> lateHeadingEventCount += 1L
                         is StepEvent -> lateStepEventCount += 1L
                         is ArcoreEvent -> lateArcoreEventCount += 1L
+                        is AiContextEvent -> Unit
                     }
                     continue
                 }
@@ -941,6 +1330,58 @@ class LiveNavguardDemoController(
                 applyEvent(event)
             }
             pruneFixedLagHistory(nowNs)
+            pollAiRuntime(nowNs)
+        }
+
+        private fun drainPendingEventsForLifecycleTransition() {
+            val nowNs =
+                LiveNavguardLifecycleContract.finiteLifecycleTimestamp(
+                    SystemClock.elapsedRealtimeNanos(),
+                )
+            while (pendingEvents.isNotEmpty() && !terminal.get()) {
+                val event = pendingEvents.remove()
+                if (event.timestampNs < committedWatermarkNs) {
+                    when (event) {
+                        is HeadingEvent -> lateHeadingEventCount += 1L
+                        is StepEvent -> lateStepEventCount += 1L
+                        is ArcoreEvent -> lateArcoreEventCount += 1L
+                        is AiContextEvent -> Unit
+                    }
+                    continue
+                }
+                committedWatermarkNs = event.timestampNs
+                applyEvent(event)
+            }
+            if (!terminal.get()) pruneFixedLagHistory(nowNs)
+        }
+
+        private fun pollAiRuntime(nowNs: Long) {
+            if (fusionMode != FusionMode.AI_V3 ||
+                (state != DemoState.NAVGUARD_ACTIVE && state != DemoState.RECOVERY_PENDING)
+            ) {
+                return
+            }
+            val runtime = aiLiveRuntime ?: return
+            val adaptive = adaptiveFusion ?: return
+            val diagnostics = adaptive.diagnostics()
+            val decisions =
+                runtime.poll(
+                    timestampNs = nowNs,
+                    heuristicTurning = adaptive.turnState == AdaptiveTurnState.TURNING,
+                    heuristicStationaryEvidence = adaptive.stationaryDetected,
+                    postRobustArcoreNis =
+                        (diagnostics["arcorePostRobustNisLast"] as? Number)
+                            ?.toDouble() ?: 0.0,
+                )
+            decisions.forEach { decision ->
+                enqueueEvent(
+                    AiContextEvent(
+                        timestampNs = nowNs,
+                        insertionIndex = nextInsertion(),
+                        decision = decision.fusion,
+                    ),
+                )
+            }
         }
 
         private fun applyEvent(event: InternalEvent) {
@@ -957,7 +1398,7 @@ class LiveNavguardDemoController(
         }
 
         private fun applyEventMutation(event: InternalEvent) {
-            if (fusionMode == FusionMode.ADAPTIVE_V2) {
+            if (fusionMode.usesAdaptiveBase) {
                 applyAdaptiveEventMutation(event)
             } else {
                 applyV1EventMutation(event)
@@ -1010,16 +1451,29 @@ class LiveNavguardDemoController(
                         arCoreUpdateCount += 1L
                     }
                 }
+                is AiContextEvent -> Unit
             }
         }
 
         private fun applyAdaptiveEventMutation(event: InternalEvent) {
             val filter = adaptiveFusion ?: error("Missing live v2 estimator state.")
+            val aiDecision =
+                latestAiDecision?.takeIf {
+                    fusionMode == FusionMode.AI_V3 &&
+                        it.status == NavguardAiRuntimeStatus.AI_ACTIVE
+                }
             when (event) {
                 is HeadingEvent -> {
                     headingQuality = event.quality
                     latestCausalHeading = HeadingSample(event.timestampNs, event.headingRad, event.quality)
-                    if (filter.updateHeading(event.timestampNs, event.headingRad, event.quality.toAdaptive())) {
+                    if (filter.updateHeading(
+                            event.timestampNs,
+                            event.headingRad,
+                            event.quality.toAdaptive(),
+                            externalUncertaintyMultiplier =
+                                aiDecision?.headingUncertaintyMultiplier ?: 1.0,
+                        )
+                    ) {
                         headingUpdateCount += 1L
                     }
                 }
@@ -1031,7 +1485,14 @@ class LiveNavguardDemoController(
                     } else {
                         val quality = classifyPdrQuality(heading.quality, event.timestampNs - heading.timestampNs)
                         pdrQuality = quality
-                        if (qualityMultiplier(quality) != null && filter.predictStep(event.timestampNs, quality.toAdaptive())) {
+                        if (qualityMultiplier(quality) != null &&
+                            filter.predictStep(
+                                event.timestampNs,
+                                quality.toAdaptive(),
+                                externalUncertaintyMultiplier =
+                                    aiDecision?.pdrUncertaintyMultiplier ?: 1.0,
+                            )
+                        ) {
                             pdrPredictionCount += 1L
                         } else {
                             stepEventsRejectedNoCausalHeading += 1L
@@ -1046,9 +1507,39 @@ class LiveNavguardDemoController(
                             event.eastM,
                             event.northM,
                             event.quality.toAdaptive(),
+                            externalUncertaintyMultiplier =
+                                aiDecision?.arcoreUncertaintyMultiplier ?: 1.0,
                         )
                     if (result.accepted) arCoreUpdateCount += 1L
+                    val diagnostics = filter.diagnostics()
+                    aiLiveRuntime?.addArcoreFrame(
+                        timestampNs = event.timestampNs,
+                        tracking = true,
+                        eastM = event.eastM,
+                        northM = event.northM,
+                        frameGapMs = null,
+                        preRobustNis =
+                            (diagnostics["arcoreNisLast"] as? Number)?.toDouble(),
+                        postRobustNis = result.nis,
+                        disagreementM = result.innovationNormM,
+                        robustSigmaM = result.sigmaM,
+                    )
                 }
+                is AiContextEvent -> {
+                    latestAiDecision = event.decision
+                    aiRuntimeStatus = event.decision.status
+                }
+            }
+            if (event !is AiContextEvent) {
+                aiLiveRuntime?.addAdaptiveState(
+                    timestampNs = event.timestampNs,
+                    strideEstimateM = filter.strideEstimateM,
+                    stationaryCandidate = filter.stationaryDetected,
+                    turning = filter.turnState == AdaptiveTurnState.TURNING,
+                    headingUnreliable =
+                        headingQuality == Quality.UNRELIABLE ||
+                            headingQuality == Quality.UNAVAILABLE,
+                )
             }
         }
 
@@ -1084,7 +1575,7 @@ class LiveNavguardDemoController(
         private fun captureEstimatorSnapshot(): EstimatorSnapshot? {
             val adaptive = adaptiveFusion
             val filter = ekf
-            if (fusionMode == FusionMode.ADAPTIVE_V2 && adaptive == null) return null
+            if (fusionMode.usesAdaptiveBase && adaptive == null) return null
             if (fusionMode == FusionMode.V1 && filter == null) return null
             return EstimatorSnapshot(
                 x =
@@ -1104,11 +1595,13 @@ class LiveNavguardDemoController(
                 pdrPredictionCount = pdrPredictionCount,
                 arCoreUpdateCount = arCoreUpdateCount,
                 stepEventsRejectedNoCausalHeading = stepEventsRejectedNoCausalHeading,
+                latestAiDecision = latestAiDecision,
+                aiRuntimeStatus = aiRuntimeStatus,
             )
         }
 
         private fun restoreEstimatorSnapshot(snapshot: EstimatorSnapshot) {
-            if (fusionMode == FusionMode.ADAPTIVE_V2) {
+            if (fusionMode.usesAdaptiveBase) {
                 val adaptiveSnapshot = checkNotNull(snapshot.adaptiveSnapshot)
                 val filter = adaptiveFusion ?: NavguardAdaptiveFusionV2(snapshot.x[0], snapshot.x[1], snapshot.x[2])
                 filter.restore(adaptiveSnapshot)
@@ -1127,6 +1620,8 @@ class LiveNavguardDemoController(
             pdrPredictionCount = snapshot.pdrPredictionCount
             arCoreUpdateCount = snapshot.arCoreUpdateCount
             stepEventsRejectedNoCausalHeading = snapshot.stepEventsRejectedNoCausalHeading
+            latestAiDecision = snapshot.latestAiDecision
+            aiRuntimeStatus = snapshot.aiRuntimeStatus
         }
 
         private fun pruneFixedLagHistory(nowNs: Long) {
@@ -1249,7 +1744,19 @@ class LiveNavguardDemoController(
                 "recoveryGoodFixCount" to recoveryGoodFixes,
                 "recoveryCorrectionM" to recoveryCorrectionM,
                 "fusionMode" to fusionMode.id,
-                "adaptiveMode" to (fusionMode == FusionMode.ADAPTIVE_V2),
+                "adaptiveMode" to fusionMode.usesAdaptiveBase,
+                "aiExperimentalMode" to (fusionMode == FusionMode.AI_V3),
+                "aiRuntimeStatus" to
+                    if (fusionMode == FusionMode.AI_V3) {
+                        aiRuntimeStatus?.name ?: NavguardAiRuntimeStatus.MODEL_NOT_AVAILABLE.name
+                    } else {
+                        "DISABLED"
+                    },
+                "aiMotionState" to latestAiDecision?.motionState?.name,
+                "aiMotionConfidence" to latestAiDecision?.motionConfidence,
+                "aiFallbackConfigId" to NavguardAdaptiveFusionV2.CONFIG_ID,
+                "aiCoordinatesDirectlyPredicted" to false,
+                "aiStrideDirectlyMutated" to false,
             )
             stableGnssOrigin?.toSanitizedMap()?.let(snapshot::putAll)
             adaptiveFusion?.diagnostics()?.let(snapshot::putAll)
@@ -1282,24 +1789,25 @@ class LiveNavguardDemoController(
 
         private fun finishStopped(
             reason: String,
-            callback: CommandCallback?,
+            timedOut: Boolean,
         ) {
-            if (!terminal.get() &&
-                (state == DemoState.NAVGUARD_ACTIVE || state == DemoState.RECOVERY_PENDING)
-            ) {
-                flushReorderBuffer(Long.MAX_VALUE)
-            }
-            if (!terminal.compareAndSet(false, true)) {
-                callback?.let { postSuccess(it, commandSnapshot(DemoState.STOPPED)) }
-                return
-            }
+            if (!stopFinalized.compareAndSet(false, true)) return
+            terminal.set(true)
             if (state != DemoState.STOPPED) {
                 state = DemoState.STOPPED
                 emitState(state, reason)
             }
-            cleanupRuntime()
+            if (timedOut) {
+                forceCleanupRuntime()
+            } else {
+                cleanupRuntime()
+            }
             releaseSession(this)
-            callback?.let { postSuccess(it, commandSnapshot(state)) }
+            val callbacks =
+                synchronized(stopCallbackLock) {
+                    stopCallbacks.toList().also { stopCallbacks.clear() }
+                }
+            callbacks.forEach { callback -> postSuccess(callback, commandSnapshot(state)) }
         }
 
         private fun fail(
@@ -1326,10 +1834,7 @@ class LiveNavguardDemoController(
         }
 
         private fun cleanupRuntime() {
-            if (locationRegistered) runCatching { locationManager.removeUpdates(this) }
-            locationRegistered = false
-            if (listenersRegistered) runCatching { sensorManager.unregisterListener(this) }
-            listenersRegistered = false
+            detachExternalCallbacks()
             pendingEvents.clear()
             eventHistory.clear()
             seenStepEventTimestamps.clear()
@@ -1342,12 +1847,38 @@ class LiveNavguardDemoController(
             latestArPose = null
             ekf = null
             adaptiveFusion = null
+            aiLiveRuntime = null
+            latestAiDecision = null
+            aiRuntimeStatus = null
+            aiSensorsReady = false
             stableGnssOrigin = null
             denialOrigin = null
             worker?.removeCallbacksAndMessages(null)
-            arWorker?.removeCallbacksAndMessages(null)
-            arWorker?.post(::cleanupArCore)
+            scheduleArCoreCleanup()
             workerThread.quitSafely()
+        }
+
+        private fun forceCleanupRuntime() {
+            detachExternalCallbacks()
+            aiLiveRuntime = null
+            latestAiDecision = null
+            aiRuntimeStatus = null
+            worker?.removeCallbacksAndMessages(null)
+            scheduleArCoreCleanup()
+            if (workerThread.isAlive) workerThread.quit()
+        }
+
+        private fun detachExternalCallbacks() {
+            if (locationRegistered) runCatching { locationManager.removeUpdates(this) }
+            locationRegistered = false
+            if (listenersRegistered) runCatching { sensorManager.unregisterListener(this) }
+            listenersRegistered = false
+        }
+
+        private fun scheduleArCoreCleanup() {
+            val handler = arWorker
+            handler?.removeCallbacksAndMessages(null)
+            if (handler?.postAtFrontOfQueue(::cleanupArCore) != true) cleanupArCore()
         }
 
         private fun cleanupArCore() {
@@ -1422,9 +1953,13 @@ class LiveNavguardDemoController(
             get() = this != IDLE && this != STOPPED && this != ERROR
     }
 
-    private enum class FusionMode(val id: String) {
-        V1(CONFIG_D1_ID),
-        ADAPTIVE_V2(NavguardAdaptiveFusionV2.CONFIG_ID),
+    private enum class FusionMode(
+        val id: String,
+        val usesAdaptiveBase: Boolean,
+    ) {
+        V1(CONFIG_D1_ID, false),
+        ADAPTIVE_V2(NavguardAdaptiveFusionV2.CONFIG_ID, true),
+        AI_V3(NavguardAiAssistedFusion.CONFIG_ID, true),
         ;
 
         companion object {
@@ -1484,6 +2019,8 @@ class LiveNavguardDemoController(
         val pdrPredictionCount: Long,
         val arCoreUpdateCount: Long,
         val stepEventsRejectedNoCausalHeading: Long,
+        val latestAiDecision: NavguardAiFusionDecision?,
+        val aiRuntimeStatus: NavguardAiRuntimeStatus?,
     )
 
     private data class HistoryEntry(
@@ -1516,6 +2053,12 @@ class LiveNavguardDemoController(
         val northM: Double,
         val quality: Quality,
     ) : InternalEvent(timestampNs, insertionIndex, 2)
+
+    private class AiContextEvent(
+        timestampNs: Long,
+        insertionIndex: Long,
+        val decision: NavguardAiFusionDecision,
+    ) : InternalEvent(timestampNs, insertionIndex, 3)
 
     private class EkfState(
         val x: DoubleArray,

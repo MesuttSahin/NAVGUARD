@@ -176,6 +176,9 @@ data/processed/*
 data/exports/*
 !data/exports/.gitkeep
 
+# Stage 11 physical AI datasets are private and must never be committed.
+/data/private_ai/
+
 
 # ------------------------------------------------------------
 # NAVGUARD raw experimental evidence
@@ -192,6 +195,10 @@ evidence/benchmarks/raw/*
 
 evidence/final_results/raw/*
 !evidence/final_results/raw/.gitkeep
+
+# Large legacy/development-only AI evidence retained locally, not published.
+/evidence/ai_motion_v2_development_cv.json
+/evidence/ai_motion_v2_24session_development.json
 
 
 # ------------------------------------------------------------

@@ -32,11 +32,17 @@ class _LiveNavguardMapScreenState extends State<LiveNavguardMapScreen>
   LiveNavguardPreflight? _preflight;
   LiveNavguardPosition? _latestPosition;
   LiveFusionMode _fusionMode = LiveFusionMode.navguardV1;
+  LiveFusionMode _confirmedFusionMode = LiveFusionMode.navguardV1;
+  LiveFusionMode? _queuedFusionMode;
   String? _error;
   bool _commandPending = false;
+  bool _modeSwitchPending = false;
+  bool _stopPending = false;
   bool _follow = true;
   bool _mapReady = false;
   bool _mapTilesUnavailable = false;
+  bool _diagnosticsExpanded = false;
+  bool _legendExpanded = false;
   int _recoveryGoodFixCount = 0;
   int _recoveryRequiredFixCount = 3;
   double? _recoveryCorrectionM;
@@ -154,7 +160,10 @@ class _LiveNavguardMapScreenState extends State<LiveNavguardMapScreen>
       }
       await widget.platform.start(anchor, _fusionMode);
       if (!mounted) return;
-      setState(() => _preflight = preflight);
+      setState(() {
+        _preflight = preflight;
+        _confirmedFusionMode = _fusionMode;
+      });
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -171,8 +180,83 @@ class _LiveNavguardMapScreenState extends State<LiveNavguardMapScreen>
   Future<void> _recover() => _runCommand(widget.platform.requestRecovery);
 
   Future<void> _stop({bool silent = false}) async {
-    if (_commandPending || !_state.isRunning) return;
-    await _runCommand(widget.platform.stop, silent: silent);
+    if (_stopPending || !_state.isRunning) return;
+    setState(() {
+      _stopPending = true;
+      _queuedFusionMode = null;
+    });
+    try {
+      await widget.platform.stop().timeout(const Duration(seconds: 5));
+      if (!mounted) return;
+      setState(() {
+        _state = LiveNavguardState.stopped;
+        _recoveryGoodFixCount = 0;
+        _latestPosition = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _state = LiveNavguardState.stopped;
+        _recoveryGoodFixCount = 0;
+        _latestPosition = null;
+        if (!silent) {
+          _error = 'Stop completed with lifecycle timeout protection: $error';
+        }
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _stopPending = false;
+          _commandPending = false;
+        });
+      }
+    }
+  }
+
+  void _selectFusionMode(LiveFusionMode mode) {
+    if (_stopPending || mode == _fusionMode) return;
+    setState(() {
+      _fusionMode = mode;
+      _error = null;
+      if (_state.isRunning) {
+        _queuedFusionMode = mode;
+      } else {
+        _confirmedFusionMode = mode;
+      }
+    });
+    if (_state.isRunning && !_modeSwitchPending) {
+      unawaited(_drainFusionModeSwitches());
+    }
+  }
+
+  Future<void> _drainFusionModeSwitches() async {
+    if (_modeSwitchPending || _stopPending || !_state.isRunning) return;
+    setState(() => _modeSwitchPending = true);
+    try {
+      while (mounted && _state.isRunning && !_stopPending) {
+        final LiveFusionMode? target = _queuedFusionMode;
+        _queuedFusionMode = null;
+        if (target == null) break;
+        if (target == _confirmedFusionMode) continue;
+        try {
+          await widget.platform
+              .setFusionMode(target)
+              .timeout(const Duration(seconds: 5));
+          if (!mounted || _stopPending || !_state.isRunning) return;
+          setState(() => _confirmedFusionMode = target);
+        } catch (error) {
+          if (!mounted || _stopPending || !_state.isRunning) return;
+          setState(() {
+            _fusionMode = _confirmedFusionMode;
+            _queuedFusionMode = null;
+            _error = 'Unable to switch fusion mode: $error';
+          });
+          break;
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _modeSwitchPending = false);
+    }
   }
 
   Future<void> _runCommand(
@@ -362,49 +446,37 @@ class _LiveNavguardMapScreenState extends State<LiveNavguardMapScreen>
               ],
             ),
             Positioned(
-              left: 8,
-              right: 8,
-              top: 8,
-              child: _buildStatusCard(context),
+              left: 12,
+              right: 12,
+              top: 10,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: _buildStatusCard(context),
+              ),
             ),
+            Positioned(left: 12, bottom: 234, child: _buildMapLegend(context)),
             Positioned(
-              left: 8,
-              bottom: 8,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withAlpha(230),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Text(
-                    '© OpenStreetMap contributors',
-                    key: Key('osm-attribution'),
-                    style: TextStyle(fontSize: 11),
-                  ),
-                ),
+              right: 12,
+              bottom: 234,
+              child: FloatingActionButton.small(
+                heroTag: 'live-follow',
+                key: const Key('live-recenter-control'),
+                onPressed: () {
+                  setState(() => _follow = true);
+                  _followLatest();
+                },
+                tooltip: 'Follow position',
+                child: Icon(_follow ? Icons.gps_fixed : Icons.gps_not_fixed),
               ),
             ),
             Positioned(
-              right: 8,
-              bottom: 8,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  FloatingActionButton.small(
-                    heroTag: 'live-follow',
-                    onPressed: () {
-                      setState(() => _follow = true);
-                      _followLatest();
-                    },
-                    tooltip: 'Follow position',
-                    child: Icon(
-                      _follow ? Icons.gps_fixed : Icons.gps_not_fixed,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildPrimaryControl(),
-                ],
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                minimum: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                child: _buildPrimaryControl(context),
               ),
             ),
           ],
@@ -479,226 +551,1125 @@ class _LiveNavguardMapScreenState extends State<LiveNavguardMapScreen>
 
   Widget _buildStatusCard(BuildContext context) {
     final LiveNavguardPosition? position = _latestPosition;
-    return Card(
-      color: Theme.of(context).colorScheme.surface.withAlpha(238),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Text(
-              _statusText,
-              key: const Key('live-demo-status'),
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            if (_state == LiveNavguardState.navguardActive ||
-                _state == LiveNavguardState.recoveryPending) ...<Widget>[
-              const SizedBox(height: 4),
-              const Text(
-                'Software-defined GNSS denial / Estimator GNSS access: BLOCKED',
-                key: Key('live-integrity-banner'),
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-            if (_mapTilesUnavailable) ...<Widget>[
-              const SizedBox(height: 4),
-              const Text(
-                'Map tiles unavailable — NAVGUARD estimator is still running',
-                key: Key('map-unavailable-banner'),
-                style: TextStyle(color: Colors.orange),
-              ),
-            ],
-            if (_state == LiveNavguardState.recoveryPending) ...<Widget>[
-              const SizedBox(height: 4),
-              Text(
-                'Recovery progress: $_recoveryGoodFixCount/$_recoveryRequiredFixCount',
-                key: const Key('recovery-progress'),
-              ),
-            ],
-            if (_recoveryCorrectionM case final double correction) ...<Widget>[
-              const SizedBox(height: 4),
-              Text('Recovery correction: ${correction.toStringAsFixed(2)} m'),
-            ],
-            if (position != null) ...<Widget>[
-              const SizedBox(height: 6),
-              Text(
-                'Fusion mode: ${position.fusionMode.displayName}',
-                key: const Key('live-fusion-mode-status'),
-              ),
-              Text(
-                'Source ${position.navigationSource.wireName} · '
-                'E ${position.eastM.toStringAsFixed(2)} m · '
-                'N ${position.northM.toStringAsFixed(2)} m · '
-                'Heading ${(position.headingRad * 180 / 3.141592653589793).toStringAsFixed(1)}°',
-              ),
-              Text(
-                'Quality H/P/AR/F: ${position.headingQuality.wireName} / '
-                '${position.pdrQuality.wireName} / '
-                '${position.arCoreQuality.wireName} / '
-                '${position.fusionQuality.wireName}',
-              ),
-              Text(
-                'Updates H/PDR/AR: ${position.headingUpdateCount} / '
-                '${position.pdrPredictionCount} / ${position.arCoreUpdateCount}',
-              ),
-              Text(
-                'Steps received/applied/pending: '
-                '${position.receivedStepEventCount} / '
-                '${position.pdrPredictionsApplied} / '
-                '${position.pendingStepEventCount}',
-                key: const Key('live-step-counters'),
-              ),
-              Text(
-                'Step rejected no-heading/late/duplicate: '
-                '${position.stepEventsRejectedNoCausalHeading} / '
-                '${position.lateStepEventCount} / '
-                '${position.duplicateStepEventCount}',
-              ),
-              Text(
-                'Fixed-lag step replays/history: '
-                '${position.historicalStepReplayCount} / '
-                '${position.fixedLagReplayCount} / '
-                '${position.fixedLagHistoryEventCount}',
-                key: const Key('live-fixed-lag-replay'),
-              ),
-              if (position.stepCallbackLatencyLastMs case final double lastMs)
-                Text(
-                  'Step callback latency: last/max/mean '
-                  '${lastMs.toStringAsFixed(1)} / '
-                  '${position.stepCallbackLatencyMaxMs!.toStringAsFixed(1)} / '
-                  '${position.stepCallbackLatencyMeanMs!.toStringAsFixed(1)} ms',
-                  key: const Key('live-step-latency'),
-                ),
-              Text(
-                'GNSS accepted/quarantined: '
-                '${position.normalGnssAcceptedFixCount} / '
-                '${position.deniedGnssQuarantinedFixCount}',
-              ),
-              Text(
-                'Denied GNSS used: ${position.deniedGnssUsedByEstimatorCount}',
-                key: const Key('live-denied-gnss-used'),
-              ),
-              Text(
-                'Late H/Step/AR: ${position.lateHeadingEventCount} / '
-                '${position.lateStepEventCount} / '
-                '${position.lateArcoreEventCount}',
-              ),
-              if (position.fusionMode == LiveFusionMode.adaptiveV2) ...<Widget>[
-                Text(
-                  'Adaptive stride/heading offset: '
-                  '${position.strideEstimateM?.toStringAsFixed(3) ?? '—'} m / '
-                  '${position.walkingHeadingOffsetDeg?.toStringAsFixed(2) ?? '—'}°',
-                  key: const Key('live-v2-calibration-status'),
-                ),
-                Text(
-                  'Stationary: ${position.stationaryDetected == true ? 'YES' : 'NO'} · '
-                  'entries/duration: ${position.stationaryEntryCount} / ${position.stationaryDurationMs} ms · '
-                  'AR sigma/NIS/disagreement: '
-                  '${position.adaptiveArcoreSigmaM?.toStringAsFixed(2) ?? '—'} / '
-                  '${position.arcoreNisLast?.toStringAsFixed(2) ?? '—'}→${position.arcorePostRobustNisLast?.toStringAsFixed(2) ?? '—'} / '
-                  '${position.sourceDisagreementM?.toStringAsFixed(2) ?? '—'} m',
-                  key: const Key('live-v2-adaptive-status'),
-                ),
-                Text(
-                  'Stationary candidates/blockers step-heading-AR: '
-                  '${position.stationaryCandidateCount} / '
-                  '${position.stationaryBlockedRecentStepCount}-'
-                  '${position.stationaryBlockedHeadingMotionCount}-'
-                  '${position.stationaryBlockedArcoreMotionCount}',
-                  key: const Key('live-v2-stationary-diagnostics'),
-                ),
-              ],
-            ],
-            if (_error case final String error) ...<Widget>[
-              const SizedBox(height: 4),
-              Text(error, style: const TextStyle(color: Colors.red)),
-            ],
-            if (_preflight != null && !_preflight!.nativeReady) ...<Widget>[
-              const SizedBox(height: 4),
-              Text(_preflightFailure(_preflight!)),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPrimaryControl() {
-    final bool busy = _commandPending;
-    return SizedBox(
-      width: 220,
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final _StatusPresentation status = _statusPresentation(colors);
+    final double diagnosticsHeight = (MediaQuery.sizeOf(context).height * 0.3)
+        .clamp(180.0, 300.0);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 520),
       child: Card(
+        key: const Key('live-navigation-status-card'),
+        margin: EdgeInsets.zero,
+        elevation: 1,
+        color: colors.surface.withAlpha(250),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: colors.outlineVariant.withAlpha(130)),
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(6),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              if (!_state.isRunning) ...<Widget>[
-                DropdownButtonFormField<LiveFusionMode>(
-                  key: const Key('live-fusion-mode-selector'),
-                  initialValue: _fusionMode,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Fusion Mode',
-                    isDense: true,
+              Row(
+                children: <Widget>[
+                  Flexible(
+                    child: Semantics(
+                      label: 'Navigation status ${status.label}',
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: status.background,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Icon(
+                                status.icon,
+                                size: 15,
+                                color: status.foreground,
+                              ),
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(
+                                  status.label,
+                                  key: const Key('live-gnss-status-badge'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: status.foreground,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                  items: LiveFusionMode.values
-                      .map(
-                        (LiveFusionMode mode) =>
-                            DropdownMenuItem<LiveFusionMode>(
-                              value: mode,
-                              child: Text(mode.displayName),
+                  const SizedBox(width: 8),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: _fusionMode == LiveFusionMode.experimentalAiV3
+                          ? const Color(0xFFEDE9FE)
+                          : colors.primaryContainer,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      child: Text(
+                        _modeLabel(_fusionMode),
+                        key: const Key('live-fusion-mode-status'),
+                        style: TextStyle(
+                          color: _fusionMode == LiveFusionMode.experimentalAiV3
+                              ? const Color(0xFF5B21B6)
+                              : colors.onPrimaryContainer,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 7),
+              Text(
+                _statusText,
+                key: const Key('live-demo-status'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: _summaryMetric(
+                      context,
+                      'Source',
+                      position?.navigationSource.wireName ?? '—',
+                      key: const Key('live-source-summary'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _summaryMetric(
+                      context,
+                      'Heading',
+                      position == null
+                          ? '—'
+                          : '${_headingDeg(position).toStringAsFixed(1)}°',
+                      key: const Key('live-heading-summary'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _summaryMetric(
+                      context,
+                      'Fusion quality',
+                      position?.fusionQuality.wireName ?? 'UNKNOWN',
+                      valueColor: _qualityColor(
+                        position?.fusionQuality ?? LiveQuality.unknown,
+                      ),
+                      key: const Key('live-fusion-quality-summary'),
+                    ),
+                  ),
+                ],
+              ),
+              if (_state == LiveNavguardState.navguardActive ||
+                  _state == LiveNavguardState.recoveryPending) ...<Widget>[
+                const SizedBox(height: 10),
+                Container(
+                  key: const Key('live-integrity-banner'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEBEE),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      const Icon(
+                        Icons.shield_outlined,
+                        size: 18,
+                        color: Color(0xFFB91C1C),
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Text(
+                              'Estimator GNSS access: BLOCKED',
+                              style: TextStyle(
+                                color: Color(0xFF991B1B),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                      )
-                      .toList(growable: false),
-                  onChanged: busy
-                      ? null
-                      : (LiveFusionMode? value) {
-                          if (value != null) {
-                            setState(() => _fusionMode = value);
-                          }
-                        },
+                            Text(
+                              'Denied GNSS used: ${position?.deniedGnssUsedByEstimatorCount ?? '—'}',
+                              key: const Key('live-denied-gnss-used'),
+                              style: const TextStyle(
+                                color: Color(0xFF991B1B),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 6),
               ],
-              if (_state == LiveNavguardState.navguardReady)
-                FilledButton.icon(
-                  onPressed: busy ? null : _beginDenial,
-                  icon: const Icon(Icons.gps_off),
-                  label: const Text('Start GNSS Denial'),
+              if (_state == LiveNavguardState.recoveryPending) ...<Widget>[
+                const SizedBox(height: 8),
+                _recoveryProgress(context),
+              ],
+              if (_recoveryCorrectionM
+                  case final double correction) ...<Widget>[
+                const SizedBox(height: 8),
+                Row(
+                  children: <Widget>[
+                    Icon(Icons.compare_arrows, size: 17, color: colors.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Recovery correction',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${correction.toStringAsFixed(2)} m',
+                      key: const Key('recovery-correction'),
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
-              if (_state == LiveNavguardState.navguardActive)
-                FilledButton.icon(
-                  onPressed: busy ? null : _recover,
-                  icon: const Icon(Icons.gps_fixed),
-                  label: const Text('Recover GNSS'),
+              ],
+              if (_fusionMode == LiveFusionMode.experimentalAiV3) ...<Widget>[
+                const SizedBox(height: 10),
+                _buildAiStatus(context, position),
+              ],
+              if (_mapTilesUnavailable) ...<Widget>[
+                const SizedBox(height: 7),
+                const Text(
+                  'Map tiles unavailable — NAVGUARD estimator is still running',
+                  key: Key('map-unavailable-banner'),
+                  style: TextStyle(color: Color(0xFF9A6700), fontSize: 12),
                 ),
-              if (_state.isRunning) ...<Widget>[
-                if (_state == LiveNavguardState.navguardReady ||
-                    _state == LiveNavguardState.navguardActive)
-                  const SizedBox(height: 4),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : _stop,
-                  icon: const Icon(Icons.stop),
-                  label: const Text('Stop Demo'),
+              ],
+              if (_error case final String error) ...<Widget>[
+                const SizedBox(height: 7),
+                Text(
+                  error,
+                  key: const Key('live-error-message'),
+                  style: TextStyle(color: colors.error, fontSize: 12),
                 ),
-              ] else
-                FilledButton.icon(
-                  onPressed: busy ? null : _start,
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Start Live Demo'),
+              ],
+              if (_preflight != null && !_preflight!.nativeReady) ...<Widget>[
+                const SizedBox(height: 7),
+                Text(
+                  _preflightFailure(_preflight!),
+                  style: TextStyle(color: colors.error, fontSize: 12),
                 ),
+              ],
+              AnimatedSize(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                child: _diagnosticsExpanded
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: SizedBox(
+                          height: diagnosticsHeight,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: colors.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: colors.outlineVariant),
+                            ),
+                            child: position == null
+                                ? const Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: Text(
+                                        'Detailed runtime metrics appear after the demo starts.',
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  )
+                                : SingleChildScrollView(
+                                    key: const Key('live-diagnostics-scroll'),
+                                    padding: const EdgeInsets.all(12),
+                                    child: _buildDiagnostics(context, position),
+                                  ),
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
             ],
           ),
         ),
       ),
     );
   }
+
+  Widget _buildPrimaryControl(BuildContext context) {
+    final bool busy = _commandPending;
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Card(
+        key: const Key('live-bottom-control-card'),
+        margin: EdgeInsets.zero,
+        elevation: 2,
+        color: colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: colors.outlineVariant.withAlpha(150)),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Text(
+                      'Fusion Mode',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (_modeSwitchPending) ...<Widget>[
+                      const SizedBox.square(
+                        dimension: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Switching',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                SegmentedButton<LiveFusionMode>(
+                  key: const Key('live-fusion-mode-selector'),
+                  showSelectedIcon: false,
+                  segments: LiveFusionMode.values
+                      .map(
+                        (LiveFusionMode mode) => ButtonSegment<LiveFusionMode>(
+                          value: mode,
+                          label: Text(
+                            _modeLabel(mode),
+                            key: Key('live-mode-${mode.wireName}'),
+                            maxLines: 1,
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
+                  selected: <LiveFusionMode>{_fusionMode},
+                  onSelectionChanged: _stopPending
+                      ? null
+                      : (Set<LiveFusionMode> selection) {
+                          if (selection.isNotEmpty) {
+                            _selectFusionMode(selection.first);
+                          }
+                        },
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+                      EdgeInsets.symmetric(horizontal: 7),
+                    ),
+                    textStyle: WidgetStatePropertyAll<TextStyle>(
+                      TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        _modeDescription,
+                        key: const Key('live-ai-model-status'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    if (!_state.isRunning) ...<Widget>[
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 15,
+                        color: colors.primary,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Anchor locked',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(color: colors.primary),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _buildRuntimeActions(context, busy),
+                SizedBox(
+                  height: 48,
+                  child: TextButton.icon(
+                    key: const Key('live-diagnostics-toggle'),
+                    onPressed: () => setState(
+                      () => _diagnosticsExpanded = !_diagnosticsExpanded,
+                    ),
+                    icon: Icon(
+                      _diagnosticsExpanded
+                          ? Icons.expand_less
+                          : Icons.expand_more,
+                    ),
+                    label: Text(
+                      _diagnosticsExpanded ? 'Hide Diagnostics' : 'Diagnostics',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRuntimeActions(BuildContext context, bool busy) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    Widget? primary;
+    if (_state == LiveNavguardState.navguardReady) {
+      primary = FilledButton.icon(
+        key: const Key('live-start-denial'),
+        onPressed: busy ? null : _beginDenial,
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        ),
+        icon: const Icon(Icons.gps_off, size: 18),
+        label: const Text('Start GNSS Denial', maxLines: 1),
+      );
+    } else if (_state == LiveNavguardState.navguardActive) {
+      primary = FilledButton.icon(
+        key: const Key('live-recover-gnss'),
+        onPressed: busy ? null : _recover,
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        ),
+        icon: const Icon(Icons.gps_fixed, size: 18),
+        label: const Text('Recover GNSS', maxLines: 1),
+      );
+    }
+    final Widget stopButton = OutlinedButton.icon(
+      key: const Key('live-stop-demo'),
+      onPressed: _stopPending ? null : _stop,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: colors.error,
+        side: BorderSide(color: colors.error.withAlpha(150)),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+      ),
+      icon: _stopPending
+          ? const SizedBox.square(
+              dimension: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.stop_circle_outlined, size: 18),
+      label: Text(_stopPending ? 'Stopping…' : 'Stop Demo', maxLines: 1),
+    );
+    if (_state.isRunning) {
+      return SizedBox(
+        height: 48,
+        child: primary == null
+            ? stopButton
+            : Row(
+                children: <Widget>[
+                  Expanded(child: primary),
+                  const SizedBox(width: 8),
+                  Expanded(child: stopButton),
+                ],
+              ),
+      );
+    }
+    return SizedBox(
+      height: 48,
+      child: FilledButton.icon(
+        key: const Key('live-start-demo'),
+        onPressed: busy ? null : _start,
+        icon: const Icon(Icons.play_arrow),
+        label: const Text('Start Live Demo'),
+      ),
+    );
+  }
+
+  Widget _buildMapLegend(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Card(
+      key: const Key('live-map-legend'),
+      margin: EdgeInsets.zero,
+      elevation: 1,
+      color: colors.surface.withAlpha(248),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: InkWell(
+        key: const Key('live-map-legend-toggle'),
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => setState(() => _legendExpanded = !_legendExpanded),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 160),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Icon(Icons.map_outlined, size: 16, color: colors.primary),
+                      const SizedBox(width: 5),
+                      const Text(
+                        'Map legend',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Icon(
+                        _legendExpanded ? Icons.expand_less : Icons.expand_more,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                  if (_legendExpanded) ...<Widget>[
+                    const SizedBox(height: 7),
+                    _legendItem(Colors.blue, Icons.my_location, 'GNSS'),
+                    _legendItem(
+                      Colors.deepPurple,
+                      Icons.navigation,
+                      'NAVGUARD',
+                    ),
+                    _legendItem(Colors.red, Icons.gps_off, 'Denial point'),
+                    _legendItem(Colors.green, Icons.gps_fixed, 'Recovered'),
+                    _legendLine(Colors.indigo, 'Trajectory'),
+                    _legendLine(Colors.orange, 'Recovery link'),
+                  ],
+                  const SizedBox(height: 3),
+                  const Text(
+                    '© OpenStreetMap contributors',
+                    key: Key('osm-attribution'),
+                    style: TextStyle(fontSize: 9),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _legendItem(Color color, IconData icon, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          DecoratedBox(
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: Padding(
+              padding: const EdgeInsets.all(3),
+              child: Icon(icon, color: Colors.white, size: 11),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendLine(Color color, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          SizedBox(
+            width: 17,
+            child: Divider(height: 2, thickness: 3, color: color),
+          ),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryMetric(
+    BuildContext context,
+    String label,
+    String value, {
+    Color? valueColor,
+    Key? key,
+  }) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Column(
+      key: key,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: valueColor,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _recoveryProgress(BuildContext context) {
+    final int required = _recoveryRequiredFixCount <= 0
+        ? 1
+        : _recoveryRequiredFixCount;
+    final double progress = (_recoveryGoodFixCount / required).clamp(0.0, 1.0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Text(
+              'Recovery progress',
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+            const Spacer(),
+            Text(
+              '$_recoveryGoodFixCount/$_recoveryRequiredFixCount',
+              key: const Key('recovery-progress'),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF92400E),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        LinearProgressIndicator(
+          value: progress,
+          minHeight: 5,
+          borderRadius: BorderRadius.circular(999),
+          color: const Color(0xFFF59E0B),
+          backgroundColor: const Color(0xFFFFF3C4),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiStatus(BuildContext context, LiveNavguardPosition? position) {
+    final _AiPresentation ai = _aiPresentation(position);
+    return Container(
+      key: const Key('live-ai-status-card'),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: ai.background,
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: ai.accent.withAlpha(70)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(ai.icon, size: 18, color: ai.accent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  ai.title,
+                  key: const Key('live-v3-ai-status'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: ai.accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  'Experimental AI · ${ai.detail}',
+                  key: const Key('live-v3-ai-detail'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          if (ai.motion != null || ai.confidence != null) ...<Widget>[
+            const SizedBox(width: 8),
+            Text(
+              <String>[
+                if (ai.motion != null) ai.motion!,
+                if (ai.confidence != null) '${(ai.confidence! * 100).round()}%',
+              ].join(' · '),
+              key: const Key('live-v3-ai-motion'),
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                color: ai.accent,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiagnostics(
+    BuildContext context,
+    LiveNavguardPosition position,
+  ) {
+    final double? latencyLast = position.stepCallbackLatencyLastMs;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _diagnosticSection(
+          context,
+          'POSITION',
+          const Key('diagnostics-position-group'),
+          <Widget>[
+            _diagnosticRow('Source', position.navigationSource.wireName),
+            _diagnosticRow('East', '${position.eastM.toStringAsFixed(2)} m'),
+            _diagnosticRow('North', '${position.northM.toStringAsFixed(2)} m'),
+            _diagnosticRow(
+              'Heading',
+              '${_headingDeg(position).toStringAsFixed(1)}°',
+            ),
+            _diagnosticRow(
+              'Displacement',
+              '${position.displacementM.toStringAsFixed(2)} m',
+            ),
+            if (_recoveryCorrectionM case final double correction)
+              _diagnosticRow(
+                'Recovery correction',
+                '${correction.toStringAsFixed(2)} m',
+              ),
+          ],
+        ),
+        _diagnosticSection(
+          context,
+          'QUALITY',
+          const Key('diagnostics-quality-group'),
+          <Widget>[
+            _diagnosticRow('Heading quality', position.headingQuality.wireName),
+            _diagnosticRow('PDR quality', position.pdrQuality.wireName),
+            _diagnosticRow('ARCore quality', position.arCoreQuality.wireName),
+            _diagnosticRow('Fusion quality', position.fusionQuality.wireName),
+          ],
+        ),
+        _diagnosticSection(
+          context,
+          'UPDATES',
+          const Key('diagnostics-updates-group'),
+          <Widget>[
+            _diagnosticRow('Heading updates', '${position.headingUpdateCount}'),
+            _diagnosticRow('PDR updates', '${position.pdrPredictionCount}'),
+            _diagnosticRow('ARCore updates', '${position.arCoreUpdateCount}'),
+            _diagnosticRow('Late heading', '${position.lateHeadingEventCount}'),
+            _diagnosticRow('Late step', '${position.lateStepEventCount}'),
+            _diagnosticRow('Late ARCore', '${position.lateArcoreEventCount}'),
+          ],
+        ),
+        _diagnosticSection(context, 'STEPS', const Key('diagnostics-steps-group'), <
+          Widget
+        >[
+          _diagnosticRow('Received', '${position.receivedStepEventCount}'),
+          _diagnosticRow('Applied', '${position.pdrPredictionsApplied}'),
+          _diagnosticRow('Pending', '${position.pendingStepEventCount}'),
+          _diagnosticRow(
+            'Rejected no-heading',
+            '${position.stepEventsRejectedNoCausalHeading}',
+          ),
+          _diagnosticRow('Rejected late', '${position.lateStepEventCount}'),
+          _diagnosticRow(
+            'Rejected duplicate',
+            '${position.duplicateStepEventCount}',
+          ),
+          _diagnosticRow(
+            'Historical replay',
+            '${position.historicalStepReplayCount}',
+          ),
+          _diagnosticRow('Fixed-lag replay', '${position.fixedLagReplayCount}'),
+          _diagnosticRow(
+            'History events',
+            '${position.fixedLagHistoryEventCount}',
+          ),
+          _diagnosticRow(
+            'History window',
+            '${position.fixedLagHistoryWindowMs} ms',
+          ),
+          _diagnosticRow(
+            'Callback latency last/max/mean',
+            latencyLast == null
+                ? '—'
+                : '${latencyLast.toStringAsFixed(1)} / '
+                      '${position.stepCallbackLatencyMaxMs!.toStringAsFixed(1)} / '
+                      '${position.stepCallbackLatencyMeanMs!.toStringAsFixed(1)} ms',
+          ),
+        ]),
+        _diagnosticSection(
+          context,
+          'GNSS',
+          const Key('diagnostics-gnss-group'),
+          <Widget>[
+            _diagnosticRow(
+              'Accepted',
+              '${position.normalGnssAcceptedFixCount}',
+            ),
+            _diagnosticRow(
+              'Quarantined',
+              '${position.deniedGnssQuarantinedFixCount}',
+            ),
+            _diagnosticRow(
+              'Denied GNSS used',
+              '${position.deniedGnssUsedByEstimatorCount}',
+            ),
+            _diagnosticRow(
+              'Recovery good fixes',
+              '${position.recoveryGoodFixCount}',
+            ),
+          ],
+        ),
+        if (_fusionMode != LiveFusionMode.navguardV1)
+          _diagnosticSection(
+            context,
+            'ADAPTIVE',
+            const Key('diagnostics-adaptive-group'),
+            <Widget>[
+              _diagnosticRow(
+                'Stride estimate',
+                '${position.strideEstimateM?.toStringAsFixed(3) ?? '—'} m',
+              ),
+              _diagnosticRow(
+                'Heading offset',
+                '${position.walkingHeadingOffsetDeg?.toStringAsFixed(2) ?? '—'}°',
+              ),
+              _diagnosticRow(
+                'Stationary',
+                position.stationaryDetected == true ? 'YES' : 'NO',
+              ),
+              _diagnosticRow(
+                'Stationary entries',
+                '${position.stationaryEntryCount}',
+              ),
+              _diagnosticRow(
+                'Stationary duration',
+                '${position.stationaryDurationMs} ms',
+              ),
+              _diagnosticRow(
+                'Stationary candidates',
+                '${position.stationaryCandidateCount}',
+              ),
+              _diagnosticRow(
+                'Blockers step / heading / AR',
+                '${position.stationaryBlockedRecentStepCount} / '
+                    '${position.stationaryBlockedHeadingMotionCount} / '
+                    '${position.stationaryBlockedArcoreMotionCount}',
+              ),
+              _diagnosticRow(
+                'AR sigma',
+                position.adaptiveArcoreSigmaM?.toStringAsFixed(2) ?? '—',
+              ),
+              _diagnosticRow(
+                'NIS before → after',
+                '${position.arcoreNisLast?.toStringAsFixed(2) ?? '—'} → '
+                    '${position.arcorePostRobustNisLast?.toStringAsFixed(2) ?? '—'}',
+              ),
+              _diagnosticRow(
+                'Robust accept / reject',
+                '${position.arcoreAcceptedAfterRobustInflationCount} / '
+                    '${position.arcoreRejectedAfterMaxInflationCount}',
+              ),
+              _diagnosticRow(
+                'Source disagreement',
+                '${position.sourceDisagreementM?.toStringAsFixed(2) ?? '—'} m',
+              ),
+            ],
+          ),
+        if (_fusionMode == LiveFusionMode.experimentalAiV3)
+          _diagnosticSection(
+            context,
+            'AI',
+            const Key('diagnostics-ai-group'),
+            <Widget>[
+              _diagnosticRow('Runtime status', position.aiRuntimeStatus),
+              _diagnosticRow('Motion', position.aiMotionState ?? '—'),
+              _diagnosticRow(
+                'Confidence',
+                position.aiMotionConfidence?.toStringAsFixed(3) ?? '—',
+              ),
+              _diagnosticRow('Fallback config', position.aiFallbackConfigId),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _diagnosticSection(
+    BuildContext context,
+    String title,
+    Key key,
+    List<Widget> rows,
+  ) {
+    return Padding(
+      key: key,
+      padding: const EdgeInsets.only(bottom: 13),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            title,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 4),
+          ...rows,
+        ],
+      ),
+    );
+  }
+
+  Widget _diagnosticRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF596273)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  _StatusPresentation _statusPresentation(ColorScheme colors) {
+    return switch (_state) {
+      LiveNavguardState.gnssActive ||
+      LiveNavguardState.navguardReady => const _StatusPresentation(
+        'GNSS ACTIVE',
+        Color(0xFFE7F7EE),
+        Color(0xFF166534),
+        Icons.gps_fixed,
+      ),
+      LiveNavguardState.navguardActive => const _StatusPresentation(
+        'GNSS DENIED',
+        Color(0xFFFFE7E7),
+        Color(0xFFB91C1C),
+        Icons.gps_off,
+      ),
+      LiveNavguardState.recoveryPending => const _StatusPresentation(
+        'RECOVERING',
+        Color(0xFFFFF3D6),
+        Color(0xFF92400E),
+        Icons.sync,
+      ),
+      LiveNavguardState.gnssRecovered => const _StatusPresentation(
+        'GNSS RECOVERED',
+        Color(0xFFE6F4FF),
+        Color(0xFF075985),
+        Icons.check_circle_outline,
+      ),
+      LiveNavguardState.preparing => _StatusPresentation(
+        'PREPARING',
+        colors.primaryContainer,
+        colors.onPrimaryContainer,
+        Icons.tune,
+      ),
+      LiveNavguardState.error => _StatusPresentation(
+        'ERROR',
+        colors.errorContainer,
+        colors.onErrorContainer,
+        Icons.error_outline,
+      ),
+      LiveNavguardState.stopped => _StatusPresentation(
+        'STOPPED',
+        colors.surfaceContainerHighest,
+        colors.onSurfaceVariant,
+        Icons.stop_circle_outlined,
+      ),
+      LiveNavguardState.idle => _StatusPresentation(
+        'IDLE',
+        colors.surfaceContainerHighest,
+        colors.onSurfaceVariant,
+        Icons.pause_circle_outline,
+      ),
+    };
+  }
+
+  _AiPresentation _aiPresentation(LiveNavguardPosition? position) {
+    final String rawStatus;
+    if (_modeSwitchPending ||
+        (position != null && position.fusionMode != _fusionMode)) {
+      rawStatus = 'WARMING_UP';
+    } else if (position != null) {
+      rawStatus = position.aiRuntimeStatus;
+    } else {
+      rawStatus = _preflight?.aiModelStatus ?? 'MODEL_NOT_AVAILABLE';
+    }
+    final String? motion = position?.fusionMode == _fusionMode
+        ? _motionLabel(position?.aiMotionState)
+        : null;
+    final double? confidence = position?.fusionMode == _fusionMode
+        ? position?.aiMotionConfidence
+        : null;
+    return switch (rawStatus) {
+      'AI_ACTIVE' => _AiPresentation(
+        title: 'AI Active',
+        detail: 'AI-assisted motion reliability active',
+        background: const Color(0xFFF3E8FF),
+        accent: const Color(0xFF6D28D9),
+        icon: Icons.auto_awesome,
+        motion: motion,
+        confidence: confidence,
+      ),
+      'WARMING_UP' => const _AiPresentation(
+        title: 'Warming Up',
+        detail: 'D-v2 active during transition',
+        background: Color(0xFFF5F3FF),
+        accent: Color(0xFF6D28D9),
+        icon: Icons.hourglass_top,
+      ),
+      'MODEL_READY' => const _AiPresentation(
+        title: 'Model Ready',
+        detail: 'Ready for runtime inference',
+        background: Color(0xFFF5F3FF),
+        accent: Color(0xFF5B21B6),
+        icon: Icons.memory,
+      ),
+      'MODEL_INVALID' => const _AiPresentation(
+        title: 'AI Fallback',
+        detail: 'Model Invalid · D-v2 active',
+        background: Color(0xFFFFF7E6),
+        accent: Color(0xFF9A6700),
+        icon: Icons.warning_amber_rounded,
+      ),
+      'MODEL_NOT_AVAILABLE' => const _AiPresentation(
+        title: 'AI Fallback',
+        detail: 'AI Unavailable · D-v2 active',
+        background: Color(0xFFFFF7E6),
+        accent: Color(0xFF9A6700),
+        icon: Icons.info_outline,
+      ),
+      _ => const _AiPresentation(
+        title: 'AI Fallback',
+        detail: 'D-v2 active',
+        background: Color(0xFFFFF7E6),
+        accent: Color(0xFF9A6700),
+        icon: Icons.alt_route,
+      ),
+    };
+  }
+
+  String get _modeDescription => switch (_fusionMode) {
+    LiveFusionMode.navguardV1 => 'Baseline EKF',
+    LiveFusionMode.adaptiveV2 => 'Adaptive deterministic',
+    LiveFusionMode.experimentalAiV3 => 'Experimental AI-assisted',
+  };
+
+  String _modeLabel(LiveFusionMode mode) => switch (mode) {
+    LiveFusionMode.navguardV1 => 'V1',
+    LiveFusionMode.adaptiveV2 => 'V2 Adaptive',
+    LiveFusionMode.experimentalAiV3 => 'V3 · AI',
+  };
+
+  String? _motionLabel(String? motion) => switch (motion) {
+    'STATIONARY' => 'Stationary',
+    'STRAIGHT_WALK' => 'Straight Walk',
+    'TURNING' => 'Turning',
+    'UNSTABLE_MOTION' => 'Unstable Motion',
+    null => null,
+    _ => motion,
+  };
+
+  double _headingDeg(LiveNavguardPosition position) =>
+      position.headingRad * 180 / 3.141592653589793;
+
+  Color _qualityColor(LiveQuality quality) => switch (quality) {
+    LiveQuality.good => const Color(0xFF15803D),
+    LiveQuality.usable => const Color(0xFF0369A1),
+    LiveQuality.degraded => const Color(0xFFB45309),
+    LiveQuality.unreliable => const Color(0xFFB91C1C),
+    LiveQuality.unavailable => const Color(0xFF6B7280),
+    LiveQuality.unknown => const Color(0xFF6B7280),
+  };
 
   Marker _marker({
     required Key key,
@@ -725,4 +1696,38 @@ class _LiveNavguardMapScreenState extends State<LiveNavguardMapScreen>
       ),
     );
   }
+}
+
+class _StatusPresentation {
+  const _StatusPresentation(
+    this.label,
+    this.background,
+    this.foreground,
+    this.icon,
+  );
+
+  final String label;
+  final Color background;
+  final Color foreground;
+  final IconData icon;
+}
+
+class _AiPresentation {
+  const _AiPresentation({
+    required this.title,
+    required this.detail,
+    required this.background,
+    required this.accent,
+    required this.icon,
+    this.motion,
+    this.confidence,
+  });
+
+  final String title;
+  final String detail;
+  final Color background;
+  final Color accent;
+  final IconData icon;
+  final String? motion;
+  final double? confidence;
 }

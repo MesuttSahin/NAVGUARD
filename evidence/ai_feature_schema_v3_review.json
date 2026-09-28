@@ -1,0 +1,316 @@
+{
+  "schemaVersion": "navguard_ai_feature_schema_v3_review_v1",
+  "reviewOnly": true,
+  "sanitized": true,
+  "developmentOnly": true,
+  "finalHoldoutLoaded": false,
+  "rawRowsReturned": false,
+  "privatePathsReturned": false,
+  "currentLimitation": {
+    "featureSchemaVersion": "navguard_ai_features_v2",
+    "featureCount": 34,
+    "physicalSessionCount": 24,
+    "windowCount": 576,
+    "sessionsPerMotionClass": {
+      "STATIONARY": 5,
+      "STRAIGHT_WALK": 7,
+      "TURNING": 7,
+      "UNSTABLE_MOTION": 5
+    },
+    "logisticLongTailEma": {
+      "macroF1": 0.885746,
+      "foldRobustness": "PASS",
+      "maxDelayWindows": 6,
+      "latency": "FAIL"
+    },
+    "logisticBoundedDecoder": {
+      "macroF1": 0.824657,
+      "worstStraightFoldRecall": 0.291667,
+      "worstTurningFoldRecall": 0.375,
+      "robustness": "FAIL"
+    },
+    "smallMlpBoundedDecoder": {
+      "macroF1": 0.861517,
+      "straightRecall": 0.839286,
+      "turningRecall": 0.72619,
+      "worstStraightFoldRecall": 0.5,
+      "worstTurningFoldRecall": 0.5,
+      "persistentStraightFailure": true,
+      "persistentTurningFailure": false,
+      "latency": "PASS",
+      "interpretation": "MLP_CAPACITY_CLEARLY_HELPS"
+    },
+    "robustBoundedCandidateExists": false,
+    "primaryLimit": "FEATURE_REPRESENTATION"
+  },
+  "v2FeatureSemantics": [
+    {
+      "index": 27,
+      "name": "heading_net_change_abs_rad",
+      "formula": "abs(sum(wrap_pi(heading_i-heading_i_minus_1))) over reliable heading samples",
+      "retains": "net device-heading turn magnitude",
+      "discards": "turn sign, oscillatory path length, and unreliable heading intervals"
+    },
+    {
+      "index": 28,
+      "name": "heading_turn_consistency",
+      "formula": "abs(signed_heading_sum)/sum(abs(heading_delta)) with zero for a tiny denominator",
+      "retains": "fractional unidirectionality in [0,1]",
+      "discards": "turn sign and turn magnitude"
+    },
+    {
+      "index": 29,
+      "name": "sustained_turn_fraction",
+      "formula": "count(intervals with abs(turn_rate)>=0.20 rad/s and dominant sign)/valid_interval_count",
+      "retains": "interval-count support for sustained dominant device rotation",
+      "discards": "dominant sign, exact rate magnitude, and time-weighted duration"
+    },
+    {
+      "index": 30,
+      "name": "arcore_path_length_m",
+      "formula": "sum(horizontal tracked-segment lengths)",
+      "retains": "total tracked horizontal travel",
+      "discards": "shape, bearing, and turn direction"
+    },
+    {
+      "index": 31,
+      "name": "arcore_straightness_ratio",
+      "formula": "end_to_end_distance/path_length when path_length>=0.05 m, otherwise 0",
+      "retains": "path efficiency in [0,1]",
+      "discards": "lateral side, turn direction, and direct cross-track deviation"
+    },
+    {
+      "index": 32,
+      "name": "arcore_net_turn_abs_rad",
+      "formula": "abs(sum(wrap_pi(path_bearing_i-path_bearing_i_minus_1))) using segments>=0.03 m",
+      "retains": "net trajectory-turn magnitude",
+      "discards": "turn sign and absolute accumulated curvature"
+    },
+    {
+      "index": 33,
+      "name": "arcore_turn_consistency",
+      "formula": "abs(signed_path_turn)/sum(abs(path_bearing_delta)) with zero for insufficient evidence",
+      "retains": "trajectory-turn unidirectionality in [0,1]",
+      "discards": "turn sign and turn magnitude"
+    },
+    {
+      "index": 34,
+      "name": "arcore_curvature_abs_rad_per_m",
+      "formula": "sum(abs(path_bearing_delta))/path_length when path_length>=0.25 m, otherwise 0",
+      "retains": "unsigned path tortuosity per metre",
+      "discards": "net direction, heading/path agreement, and chord-relative lateral deviation"
+    }
+  ],
+  "v2InformationGap": {
+    "phoneOnlyRotationExplicitlyRepresented": false,
+    "headingPathTurnAgreementExplicitlyRepresented": false,
+    "trajectoryLateralCurvatureExplicitlyRepresented": false,
+    "signedTurnDirectionPreserved": false,
+    "longerCausalTurnContextRepresented": false
+  },
+  "failureAnalysis": {
+    "source": "SANITIZED_AGGREGATES_FROM_V2_DEVELOPMENT_ONLY",
+    "strongTurnThresholdRad": 0.2,
+    "weakTurningSessionCriterion": "selected bounded-MLP session accuracy <= 2/3",
+    "straight": {
+      "persistentFailureCount": 1,
+      "primaryCategory": "A_HIGH_HEADING_LOW_PATH",
+      "aggregateObservation": {
+        "headingNetTurnMeanRad": 0.3379,
+        "pathNetTurnMeanRad": 0.1317,
+        "headingStrongPathWeakWindowFraction": 0.542,
+        "bothStrongWindowFraction": 0.125
+      }
+    },
+    "turning": {
+      "weakSessionCount": 4,
+      "primaryCategories": [
+        "D_BOTH_WEAK_OR_AMBIGUOUS",
+        "E_SHORT_TURN_EVIDENCE_DILUTED"
+      ],
+      "aggregateRanges": {
+        "bothWeakWindowFraction": [
+          0.292,
+          0.583
+        ],
+        "bothStrongWindowFraction": [
+          0.167,
+          0.292
+        ],
+        "headingEvidenceTopThreeWindowShare": [
+          0.46,
+          0.553
+        ],
+        "pathEvidenceTopThreeWindowShare": [
+          0.483,
+          0.616
+        ]
+      },
+      "interpretation": "Turn evidence is sparse and concentrated in a few two-second windows; dilution is consistent with the aggregates but cannot be causally proven without raw intra-window history."
+    },
+    "categoryAssessment": {
+      "A": "OBSERVED_PRIMARY_STRAIGHT_PATTERN",
+      "B": "NOT_A_PRIMARY_FAILED_SESSION_PATTERN",
+      "C": "UNDETERMINABLE_BECAUSE_V2_DISCARDS_SIGN",
+      "D": "OBSERVED_IN_WEAK_TURNING_SESSIONS",
+      "E": "CONSISTENT_WITH_AGGREGATES_NOT_PROVEN"
+    },
+    "primaryMissingPhysicalSignal": "DIRECT_SIGNED_COHERENCE_BETWEEN_DEVICE_HEADING_CHANGE_AND_TRAJECTORY_TURN"
+  },
+  "proposedV3": {
+    "datasetSchemaVersion": "navguard_ai_dataset_v3",
+    "featureSchemaVersion": "navguard_ai_features_v3",
+    "preserveFirstFeatureCount": 34,
+    "appendOnly": true,
+    "turnEvidenceReferenceRad": 0.35,
+    "features": [
+      {
+        "index": 35,
+        "name": "heading_signed_net_turn_rad",
+        "algorithm": "clamp(sum(wrap_pi(heading_i-heading_i_minus_1)),-2*pi,2*pi) over reliable heading samples in the same trailing 2 s window",
+        "units": "rad",
+        "range": [
+          -6.283185307179586,
+          6.283185307179586
+        ],
+        "insufficientData": 0.0,
+        "purpose": "preserve device-heading turn direction for cross-source comparison"
+      },
+      {
+        "index": 36,
+        "name": "arcore_signed_net_turn_rad",
+        "algorithm": "clamp(sum(wrap_pi(path_bearing_i-path_bearing_i_minus_1)),-2*pi,2*pi) for consecutive horizontal segments of at least 0.03 m in the same trailing 2 s window",
+        "units": "rad",
+        "range": [
+          -6.283185307179586,
+          6.283185307179586
+        ],
+        "insufficientData": 0.0,
+        "purpose": "preserve trajectory-turn direction for cross-source comparison"
+      },
+      {
+        "index": 37,
+        "name": "heading_path_turn_direction_agreement",
+        "algorithm": "0 if min(abs(h),abs(a))<0.20 rad; otherwise sign(h*a)*min(1,min(abs(h),abs(a))/0.35), where h and a are features 35 and 36",
+        "units": "unitless",
+        "range": [
+          -1.0,
+          1.0
+        ],
+        "insufficientData": 0.0,
+        "purpose": "separate same-direction physical turns from opposing or unsupported device/path rotation"
+      },
+      {
+        "index": 38,
+        "name": "heading_path_turn_magnitude_difference_ratio",
+        "algorithm": "abs(abs(v2_heading_net_turn)-abs(v2_arcore_net_turn))/max(abs(v2_heading_net_turn)+abs(v2_arcore_net_turn),0.20)",
+        "units": "unitless",
+        "range": [
+          0.0,
+          1.0
+        ],
+        "insufficientData": 0.0,
+        "purpose": "expose phone-only heading rotation or path-only turning without division by a tiny value"
+      },
+      {
+        "index": 39,
+        "name": "heading_path_turn_coherence",
+        "algorithm": "min(min(abs(h)/0.35,1),min(abs(a)/0.35,1),heading_turn_consistency,sustained_turn_fraction,arcore_turn_consistency,max(direction_agreement,0))",
+        "units": "unitless",
+        "range": [
+          0.0,
+          1.0
+        ],
+        "insufficientData": 0.0,
+        "purpose": "provide conservative joint turn evidence that is high only when both sources are strong, sustained, consistent, and same-direction; minimum avoids multiplicative noise attenuation"
+      },
+      {
+        "index": 40,
+        "name": "arcore_cross_track_rms_m",
+        "algorithm": "retain the first tracked point and each later point at least 0.03 m from the last retained point; when at least three points and a chord of at least 0.05 m exist, compute RMS perpendicular distance of retained intermediate points from the first-to-last chord and clamp to [0,5] m",
+        "units": "m",
+        "range": [
+          0.0,
+          5.0
+        ],
+        "insufficientData": 0.0,
+        "purpose": "detect broad or shallow trajectory curvature that end-to-end/path-length ratio can understate"
+      }
+    ],
+    "newFeatureCount": 6,
+    "totalFeatureCount": 40,
+    "crossTrackMaxRejectedAsRedundant": true,
+    "fourSecondFeaturesSelected": []
+  },
+  "crossSourceAgreement": {
+    "signedTurnComparison": "SAFE",
+    "scope": "SIGNED_CHANGES_ONLY",
+    "reason": "Heading and ARCore path bearings use the same ENU angular convention, and a constant body/device offset cancels in signed changes. Absolute device-heading versus path-bearing delta remains risky because device yaw is not guaranteed to equal walking direction.",
+    "absoluteHeadingPathBearingDelta": "NOT_RECOMMENDED",
+    "phoneOnlyRotationDiscriminationExpected": "HIGH"
+  },
+  "trajectoryGeometry": {
+    "crossTrackRecommended": true,
+    "selected": "arcore_cross_track_rms_m",
+    "maxVariantSelected": false,
+    "reason": "RMS uses the whole retained path and is less single-frame-sensitive than maximum deviation."
+  },
+  "multiScale": {
+    "fourSecondTrailingFeaturesRecommended": false,
+    "selected": [],
+    "responsivenessCost": "NONE_FROM_V3_FEATURES",
+    "selectedDesignLongLatencyRisk": "LOW",
+    "candidateRisk": "HIGH",
+    "reason": "A trailing 4 s summary can retain pre-transition turn evidence for several hops and, when combined with a bounded decoder, can recreate the latency problem. Test direct 2 s cross-source representation first."
+  },
+  "dataReuse": {
+    "existingV2SessionsCanGenerateFullV3": false,
+    "reconstructableFromV2Csv": [
+      "heading_path_turn_magnitude_difference_ratio"
+    ],
+    "requiresNewPhysicalCapture": [
+      "heading_signed_net_turn_rad",
+      "arcore_signed_net_turn_rad",
+      "heading_path_turn_direction_agreement",
+      "heading_path_turn_coherence",
+      "arcore_cross_track_rms_m"
+    ]
+  },
+  "dataCollectionPlan": {
+    "smokeSessions": {
+      "STATIONARY": 0,
+      "STRAIGHT_WALK": 1,
+      "TURNING": 1,
+      "UNSTABLE_MOTION": 0,
+      "total": 2
+    },
+    "developmentTargetSessions": {
+      "STATIONARY": 5,
+      "STRAIGHT_WALK": 5,
+      "TURNING": 5,
+      "UNSTABLE_MOTION": 5,
+      "total": 20
+    },
+    "smokeCanCountTowardDevelopmentIfProtocolValid": true,
+    "justification": "Five independent sessions per class is the minimum balanced target for grouped five-fold development CV; start with two targeted smoke sessions before incurring the remaining collection cost."
+  },
+  "modelCompatibility": {
+    "logisticRegression": true,
+    "singleHiddenLayerMlp": true,
+    "existingKotlinRuntimeModelFamilies": true,
+    "sequenceModelRequired": false
+  },
+  "recommendation": "IMPLEMENT_V3_MINIMAL",
+  "recommendationReason": "Bounded decoding meets latency but not session robustness, added MLP capacity improves aggregate metrics without closing the worst-fold gap, and V2 discards the signed cross-source relation needed to distinguish phone rotation from physical turning.",
+  "researchStatus": {
+    "v3Implemented": false,
+    "newDataRequiredNow": false,
+    "developmentCandidateFrozen": false,
+    "configEActive": false,
+    "navigationAccuracyValidated": false,
+    "productionModelExported": false,
+    "androidChangedByReview": false,
+    "dartChangedByReview": false,
+    "docsChangedByReview": false
+  }
+}

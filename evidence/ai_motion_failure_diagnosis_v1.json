@@ -1,0 +1,4150 @@
+{
+  "accuracyValidated": false,
+  "causalTemporalStudy": {
+    "bestTemporalCandidate": {
+      "aggregateGatePassed": true,
+      "aggregateMetrics": {
+        "accuracy": 0.8916666666666667,
+        "confusionMatrix": [
+          [
+            120,
+            0,
+            0,
+            0
+          ],
+          [
+            4,
+            89,
+            27,
+            0
+          ],
+          [
+            1,
+            14,
+            102,
+            3
+          ],
+          [
+            0,
+            0,
+            3,
+            117
+          ]
+        ],
+        "macroF1": 0.8905804810713523,
+        "macroPrecision": 0.8929512356575463,
+        "macroRecall": 0.8916666666666667,
+        "perClass": {
+          "STATIONARY": {
+            "f1": 0.9795918367346939,
+            "precision": 0.96,
+            "recall": 1.0,
+            "support": 120
+          },
+          "STRAIGHT_WALK": {
+            "f1": 0.7982062780269058,
+            "precision": 0.8640776699029126,
+            "recall": 0.7416666666666667,
+            "support": 120
+          },
+          "TURNING": {
+            "f1": 0.8095238095238095,
+            "precision": 0.7727272727272727,
+            "recall": 0.85,
+            "support": 120
+          },
+          "UNSTABLE_MOTION": {
+            "f1": 0.975,
+            "precision": 0.975,
+            "recall": 0.975,
+            "support": 120
+          }
+        }
+      },
+      "complexity": 3,
+      "consecutiveWindows": 1,
+      "emaAlpha": 0.5,
+      "foldMetrics": [
+        {
+          "fold": 1,
+          "macroF1": 0.9371201814058957,
+          "straightWalkRecall": 0.8333333333333334,
+          "turningRecall": 0.9166666666666666
+        },
+        {
+          "fold": 2,
+          "macroF1": 0.8937122490069107,
+          "straightWalkRecall": 0.8333333333333334,
+          "turningRecall": 0.75
+        },
+        {
+          "fold": 3,
+          "macroF1": 0.9162701668033908,
+          "straightWalkRecall": 1.0,
+          "turningRecall": 0.7916666666666666
+        },
+        {
+          "fold": 4,
+          "macroF1": 0.7653113741636645,
+          "straightWalkRecall": 0.20833333333333334,
+          "turningRecall": 1.0
+        },
+        {
+          "fold": 5,
+          "macroF1": 0.9057810959804315,
+          "straightWalkRecall": 0.8333333333333334,
+          "turningRecall": 0.7916666666666666
+        }
+      ],
+      "foldRobust": false,
+      "hysteresisMargin": 0.15,
+      "latencyRequirementPassed": true,
+      "minimumClassRecall": 0.7416666666666667,
+      "name": "ema_0.50_hyst_0.15_1",
+      "robust": false,
+      "switchDelayProxy": {
+        "maxWindows": 2,
+        "meanWindows": 0.6153846153846154,
+        "p90Windows": 1.5
+      }
+    },
+    "candidateCount": 28,
+    "candidates": [
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8333333333333334,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              71,
+              43,
+              2
+            ],
+            [
+              1,
+              19,
+              97,
+              3
+            ],
+            [
+              0,
+              0,
+              8,
+              112
+            ]
+          ],
+          "macroF1": 0.8312026473162475,
+          "macroPrecision": 0.8403898128898128,
+          "macroRecall": 0.8333333333333335,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.6761904761904762,
+              "precision": 0.7888888888888889,
+              "recall": 0.5916666666666667,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7238805970149254,
+              "precision": 0.6554054054054054,
+              "recall": 0.8083333333333333,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9451476793248945,
+              "precision": 0.9572649572649573,
+              "recall": 0.9333333333333333,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 0,
+        "consecutiveWindows": null,
+        "emaAlpha": null,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.840809908869208,
+            "straightWalkRecall": 0.5833333333333334,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8080848153214775,
+            "straightWalkRecall": 0.5833333333333334,
+            "turningRecall": 0.6666666666666666
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8662464985994398,
+            "straightWalkRecall": 0.9166666666666666,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7467058787533005,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8595936345552714,
+            "straightWalkRecall": 0.6666666666666666,
+            "turningRecall": 0.7916666666666666
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": null,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.5916666666666667,
+        "name": "raw_argmax",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 0,
+          "meanWindows": 0.0,
+          "p90Windows": 0.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8729166666666667,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              85,
+              31,
+              0
+            ],
+            [
+              1,
+              19,
+              99,
+              1
+            ],
+            [
+              0,
+              0,
+              5,
+              115
+            ]
+          ],
+          "macroF1": 0.87239181689625,
+          "macroPrecision": 0.8755050839964633,
+          "macroRecall": 0.8729166666666667,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7589285714285714,
+              "precision": 0.8173076923076923,
+              "recall": 0.7083333333333334,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7764705882352941,
+              "precision": 0.7333333333333333,
+              "recall": 0.825,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9745762711864406,
+              "precision": 0.9913793103448276,
+              "recall": 0.9583333333333334,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 1,
+        "consecutiveWindows": null,
+        "emaAlpha": 0.25,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.9048260813759466,
+            "straightWalkRecall": 0.7083333333333334,
+            "turningRecall": 0.9166666666666666
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8949422854248081,
+            "straightWalkRecall": 0.7916666666666666,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8629937246216317,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.6666666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7653113741636645,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8950549450549451,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.75
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": null,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.7083333333333334,
+        "name": "ema_0.25",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 5,
+          "meanWindows": 0.8333333333333334,
+          "p90Windows": 2.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8666666666666667,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              82,
+              34,
+              0
+            ],
+            [
+              1,
+              18,
+              98,
+              3
+            ],
+            [
+              0,
+              0,
+              4,
+              116
+            ]
+          ],
+          "macroF1": 0.8653456698150922,
+          "macroPrecision": 0.868844537815126,
+          "macroRecall": 0.8666666666666667,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7454545454545455,
+              "precision": 0.82,
+              "recall": 0.6833333333333333,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.765625,
+              "precision": 0.7205882352941176,
+              "recall": 0.8166666666666667,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9707112970711297,
+              "precision": 0.9747899159663865,
+              "recall": 0.9666666666666667,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 1,
+        "consecutiveWindows": null,
+        "emaAlpha": 0.5,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8834873572070338,
+            "straightWalkRecall": 0.6666666666666666,
+            "turningRecall": 0.875
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8402894923001578,
+            "straightWalkRecall": 0.7083333333333334,
+            "turningRecall": 0.6666666666666666
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.9162701668033908,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.77378532867577,
+            "straightWalkRecall": 0.25,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8839491073710343,
+            "straightWalkRecall": 0.7916666666666666,
+            "turningRecall": 0.75
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": null,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.6833333333333333,
+        "name": "ema_0.50",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 2,
+          "meanWindows": 0.25,
+          "p90Windows": 1.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8479166666666667,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              74,
+              40,
+              2
+            ],
+            [
+              1,
+              18,
+              98,
+              3
+            ],
+            [
+              0,
+              0,
+              5,
+              115
+            ]
+          ],
+          "macroF1": 0.8453213814760426,
+          "macroPrecision": 0.8519989611837439,
+          "macroRecall": 0.8479166666666668,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.6981132075471698,
+              "precision": 0.8043478260869565,
+              "recall": 0.6166666666666667,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7452471482889734,
+              "precision": 0.6853146853146853,
+              "recall": 0.8166666666666667,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9583333333333334,
+              "precision": 0.9583333333333334,
+              "recall": 0.9583333333333334,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 1,
+        "consecutiveWindows": null,
+        "emaAlpha": 0.75,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8508148516859317,
+            "straightWalkRecall": 0.5833333333333334,
+            "turningRecall": 0.8333333333333334
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8405816872203427,
+            "straightWalkRecall": 0.6666666666666666,
+            "turningRecall": 0.7083333333333334
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8972727272727272,
+            "straightWalkRecall": 0.9166666666666666,
+            "turningRecall": 0.8333333333333334
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7548901844111676,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8500518695850433,
+            "straightWalkRecall": 0.7083333333333334,
+            "turningRecall": 0.7083333333333334
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": null,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.6166666666666667,
+        "name": "ema_0.75",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 1,
+          "meanWindows": 0.09836065573770492,
+          "p90Windows": 0.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8354166666666667,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              72,
+              42,
+              2
+            ],
+            [
+              1,
+              19,
+              97,
+              3
+            ],
+            [
+              0,
+              0,
+              8,
+              112
+            ]
+          ],
+          "macroF1": 0.8334489328338793,
+          "macroPrecision": 0.842084423512995,
+          "macroRecall": 0.8354166666666667,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.6824644549763034,
+              "precision": 0.7912087912087912,
+              "recall": 0.6,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7265917602996255,
+              "precision": 0.6598639455782312,
+              "recall": 0.8083333333333333,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9451476793248945,
+              "precision": 0.9572649572649573,
+              "recall": 0.9333333333333333,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 2,
+        "consecutiveWindows": 1,
+        "emaAlpha": null,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8508148516859317,
+            "straightWalkRecall": 0.5833333333333334,
+            "turningRecall": 0.8333333333333334
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8082107843137254,
+            "straightWalkRecall": 0.625,
+            "turningRecall": 0.625
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8662464985994398,
+            "straightWalkRecall": 0.9166666666666666,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7467058787533005,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8595936345552714,
+            "straightWalkRecall": 0.6666666666666666,
+            "turningRecall": 0.7916666666666666
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.05,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.6,
+        "name": "raw_hyst_0.05_1",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 1,
+          "meanWindows": 0.015151515151515152,
+          "p90Windows": 0.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8520833333333333,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              77,
+              39,
+              0
+            ],
+            [
+              2,
+              19,
+              97,
+              2
+            ],
+            [
+              0,
+              0,
+              5,
+              115
+            ]
+          ],
+          "macroF1": 0.8505829683096773,
+          "macroPrecision": 0.856328382757904,
+          "macroRecall": 0.8520833333333334,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.975609756097561,
+              "precision": 0.9523809523809523,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7129629629629629,
+              "precision": 0.8020833333333334,
+              "recall": 0.6416666666666667,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7432950191570882,
+              "precision": 0.6879432624113475,
+              "recall": 0.8083333333333333,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9704641350210971,
+              "precision": 0.9829059829059829,
+              "recall": 0.9583333333333334,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 2,
+        "consecutiveWindows": 2,
+        "emaAlpha": null,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8408891928864569,
+            "straightWalkRecall": 0.625,
+            "turningRecall": 0.75
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8297435897435896,
+            "straightWalkRecall": 0.5833333333333334,
+            "turningRecall": 0.75
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8952619935644288,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7818181818181817,
+            "straightWalkRecall": 0.25,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8728146853146853,
+            "straightWalkRecall": 0.75,
+            "turningRecall": 0.75
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.05,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.6416666666666667,
+        "name": "raw_hyst_0.05_2",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 3,
+          "meanWindows": 1.0606060606060606,
+          "p90Windows": 1.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8395833333333333,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              72,
+              42,
+              2
+            ],
+            [
+              1,
+              18,
+              98,
+              3
+            ],
+            [
+              0,
+              0,
+              7,
+              113
+            ]
+          ],
+          "macroF1": 0.8372420878463744,
+          "macroPrecision": 0.8460734463276837,
+          "macroRecall": 0.8395833333333333,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.6857142857142857,
+              "precision": 0.8,
+              "recall": 0.6,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7340823970037453,
+              "precision": 0.6666666666666666,
+              "recall": 0.8166666666666667,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9495798319327731,
+              "precision": 0.9576271186440678,
+              "recall": 0.9416666666666667,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 2,
+        "consecutiveWindows": 1,
+        "emaAlpha": null,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8508148516859317,
+            "straightWalkRecall": 0.5833333333333334,
+            "turningRecall": 0.8333333333333334
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8186274509803921,
+            "straightWalkRecall": 0.5833333333333334,
+            "turningRecall": 0.7083333333333334
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8766165070679435,
+            "straightWalkRecall": 0.9166666666666666,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7467058787533005,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8606906360223007,
+            "straightWalkRecall": 0.7083333333333334,
+            "turningRecall": 0.75
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.1,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.6,
+        "name": "raw_hyst_0.10_1",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 1,
+          "meanWindows": 0.0625,
+          "p90Windows": 0.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8541666666666666,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              76,
+              40,
+              0
+            ],
+            [
+              2,
+              19,
+              97,
+              2
+            ],
+            [
+              0,
+              0,
+              3,
+              117
+            ]
+          ],
+          "macroF1": 0.8519549610863508,
+          "macroPrecision": 0.857107843137255,
+          "macroRecall": 0.8541666666666666,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.975609756097561,
+              "precision": 0.9523809523809523,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7069767441860465,
+              "precision": 0.8,
+              "recall": 0.6333333333333333,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7461538461538462,
+              "precision": 0.6928571428571428,
+              "recall": 0.8083333333333333,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9790794979079498,
+              "precision": 0.9831932773109243,
+              "recall": 0.975,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 2,
+        "consecutiveWindows": 2,
+        "emaAlpha": null,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8408891928864569,
+            "straightWalkRecall": 0.625,
+            "turningRecall": 0.75
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8183479061205706,
+            "straightWalkRecall": 0.5416666666666666,
+            "turningRecall": 0.75
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.9162701668033908,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7818181818181817,
+            "straightWalkRecall": 0.25,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8728146853146853,
+            "straightWalkRecall": 0.75,
+            "turningRecall": 0.75
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.1,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.6333333333333333,
+        "name": "raw_hyst_0.10_2",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 3,
+          "meanWindows": 1.096774193548387,
+          "p90Windows": 1.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8333333333333334,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              71,
+              43,
+              2
+            ],
+            [
+              1,
+              20,
+              96,
+              3
+            ],
+            [
+              0,
+              0,
+              7,
+              113
+            ]
+          ],
+          "macroF1": 0.8309904904840459,
+          "macroPrecision": 0.8388452863597976,
+          "macroRecall": 0.8333333333333333,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.6729857819905213,
+              "precision": 0.7802197802197802,
+              "recall": 0.5916666666666667,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7218045112781954,
+              "precision": 0.6575342465753424,
+              "recall": 0.8,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9495798319327731,
+              "precision": 0.9576271186440678,
+              "recall": 0.9416666666666667,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 2,
+        "consecutiveWindows": 1,
+        "emaAlpha": null,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.829360470475453,
+            "straightWalkRecall": 0.5416666666666666,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8186274509803921,
+            "straightWalkRecall": 0.5833333333333334,
+            "turningRecall": 0.7083333333333334
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.867204742362061,
+            "straightWalkRecall": 0.875,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7467058787533005,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8613485394157663,
+            "straightWalkRecall": 0.75,
+            "turningRecall": 0.7083333333333334
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.15,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.5916666666666667,
+        "name": "raw_hyst_0.15_1",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 1,
+          "meanWindows": 0.12698412698412698,
+          "p90Windows": 1.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8729166666666667,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              3,
+              86,
+              31,
+              0
+            ],
+            [
+              2,
+              20,
+              96,
+              2
+            ],
+            [
+              0,
+              0,
+              3,
+              117
+            ]
+          ],
+          "macroF1": 0.8719333203863247,
+          "macroPrecision": 0.873243892622361,
+          "macroRecall": 0.8729166666666667,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7610619469026548,
+              "precision": 0.8113207547169812,
+              "recall": 0.7166666666666667,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.768,
+              "precision": 0.7384615384615385,
+              "recall": 0.8,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9790794979079498,
+              "precision": 0.9831932773109243,
+              "recall": 0.975,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 2,
+        "consecutiveWindows": 2,
+        "emaAlpha": null,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8408891928864569,
+            "straightWalkRecall": 0.625,
+            "turningRecall": 0.75
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8939855072463768,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.75
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.9162701668033908,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7818181818181817,
+            "straightWalkRecall": 0.25,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8945342677408674,
+            "straightWalkRecall": 0.875,
+            "turningRecall": 0.7083333333333334
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.15,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.7166666666666667,
+        "name": "raw_hyst_0.15_2",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 3,
+          "meanWindows": 1.1153846153846154,
+          "p90Windows": 1.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.88125,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              88,
+              28,
+              0
+            ],
+            [
+              1,
+              18,
+              100,
+              1
+            ],
+            [
+              0,
+              0,
+              5,
+              115
+            ]
+          ],
+          "macroF1": 0.880860750965033,
+          "macroPrecision": 0.8833619222095577,
+          "macroRecall": 0.8812500000000001,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7787610619469026,
+              "precision": 0.8301886792452831,
+              "recall": 0.7333333333333333,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7905138339920948,
+              "precision": 0.7518796992481203,
+              "recall": 0.8333333333333334,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9745762711864406,
+              "precision": 0.9913793103448276,
+              "recall": 0.9583333333333334,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 1,
+        "emaAlpha": 0.25,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.9048260813759466,
+            "straightWalkRecall": 0.7083333333333334,
+            "turningRecall": 0.9166666666666666
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.9260090702947845,
+            "straightWalkRecall": 0.9166666666666666,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8629937246216317,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.6666666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7653113741636645,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.9057810959804315,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.7916666666666666
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.05,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.7333333333333333,
+        "name": "ema_0.25_hyst_0.05_1",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 5,
+          "meanWindows": 1.0952380952380953,
+          "p90Windows": 2.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.86875,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              5,
+              87,
+              28,
+              0
+            ],
+            [
+              3,
+              21,
+              96,
+              0
+            ],
+            [
+              0,
+              0,
+              6,
+              114
+            ]
+          ],
+          "macroF1": 0.8683147011449219,
+          "macroPrecision": 0.8703792735042735,
+          "macroRecall": 0.8687500000000001,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.967741935483871,
+              "precision": 0.9375,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7631578947368421,
+              "precision": 0.8055555555555556,
+              "recall": 0.725,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.768,
+              "precision": 0.7384615384615385,
+              "recall": 0.8,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9743589743589743,
+              "precision": 1.0,
+              "recall": 0.95,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 2,
+        "emaAlpha": 0.25,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8834073251942287,
+            "straightWalkRecall": 0.6666666666666666,
+            "turningRecall": 0.875
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.958041958041958,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.8333333333333334
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8414786967418546,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.625
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7478991596638656,
+            "straightWalkRecall": 0.16666666666666666,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8626896041435442,
+            "straightWalkRecall": 0.7916666666666666,
+            "turningRecall": 0.6666666666666666
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.05,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.725,
+        "name": "ema_0.25_hyst_0.05_2",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 6,
+          "meanWindows": 2.3636363636363638,
+          "p90Windows": 3.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8791666666666667,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              90,
+              26,
+              0
+            ],
+            [
+              1,
+              22,
+              97,
+              0
+            ],
+            [
+              0,
+              0,
+              5,
+              115
+            ]
+          ],
+          "macroF1": 0.8791088436179147,
+          "macroPrecision": 0.8803459821428572,
+          "macroRecall": 0.8791666666666668,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7758620689655172,
+              "precision": 0.8035714285714286,
+              "recall": 0.75,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.782258064516129,
+              "precision": 0.7578125,
+              "recall": 0.8083333333333333,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9787234042553191,
+              "precision": 1.0,
+              "recall": 0.9583333333333334,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 1,
+        "emaAlpha": 0.25,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.9048260813759466,
+            "straightWalkRecall": 0.7083333333333334,
+            "turningRecall": 0.9166666666666666
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.9473453268977622,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8519110938021586,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.625
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7653113741636645,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8841647353125115,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.7083333333333334
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.1,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.75,
+        "name": "ema_0.25_hyst_0.10_1",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 6,
+          "meanWindows": 1.6428571428571428,
+          "p90Windows": 3.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.86875,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              5,
+              87,
+              28,
+              0
+            ],
+            [
+              3,
+              21,
+              96,
+              0
+            ],
+            [
+              0,
+              0,
+              6,
+              114
+            ]
+          ],
+          "macroF1": 0.8683147011449219,
+          "macroPrecision": 0.8703792735042735,
+          "macroRecall": 0.8687500000000001,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.967741935483871,
+              "precision": 0.9375,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7631578947368421,
+              "precision": 0.8055555555555556,
+              "recall": 0.725,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.768,
+              "precision": 0.7384615384615385,
+              "recall": 0.8,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9743589743589743,
+              "precision": 1.0,
+              "recall": 0.95,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 2,
+        "emaAlpha": 0.25,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8834073251942287,
+            "straightWalkRecall": 0.6666666666666666,
+            "turningRecall": 0.875
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.9473453268977622,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8524844720496895,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.6666666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7478991596638656,
+            "straightWalkRecall": 0.16666666666666666,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8626896041435442,
+            "straightWalkRecall": 0.7916666666666666,
+            "turningRecall": 0.6666666666666666
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.1,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.725,
+        "name": "ema_0.25_hyst_0.10_2",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 7,
+          "meanWindows": 2.888888888888889,
+          "p90Windows": 4.6000000000000005
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.88125,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              5,
+              89,
+              26,
+              0
+            ],
+            [
+              2,
+              18,
+              100,
+              0
+            ],
+            [
+              0,
+              0,
+              6,
+              114
+            ]
+          ],
+          "macroF1": 0.880952664050276,
+          "macroPrecision": 0.8835583370685292,
+          "macroRecall": 0.8812500000000001,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.97165991902834,
+              "precision": 0.9448818897637795,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7841409691629956,
+              "precision": 0.8317757009345794,
+              "recall": 0.7416666666666667,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7936507936507936,
+              "precision": 0.7575757575757576,
+              "recall": 0.8333333333333334,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9743589743589743,
+              "precision": 1.0,
+              "recall": 0.95,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 1,
+        "emaAlpha": 0.25,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8937037037037037,
+            "straightWalkRecall": 0.6666666666666666,
+            "turningRecall": 0.9166666666666666
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.958041958041958,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.8333333333333334
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8633185962973197,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7083333333333334
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7818181818181817,
+            "straightWalkRecall": 0.25,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8737321675103543,
+            "straightWalkRecall": 0.7916666666666666,
+            "turningRecall": 0.7083333333333334
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.15,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.7416666666666667,
+        "name": "ema_0.25_hyst_0.15_1",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 6,
+          "meanWindows": 2.3636363636363638,
+          "p90Windows": 3.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8708333333333333,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              6,
+              84,
+              30,
+              0
+            ],
+            [
+              3,
+              16,
+              101,
+              0
+            ],
+            [
+              0,
+              0,
+              7,
+              113
+            ]
+          ],
+          "macroF1": 0.8700986508255709,
+          "macroPrecision": 0.8755291540276373,
+          "macroRecall": 0.8708333333333333,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.963855421686747,
+              "precision": 0.9302325581395349,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7636363636363637,
+              "precision": 0.84,
+              "recall": 0.7,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7829457364341085,
+              "precision": 0.7318840579710145,
+              "recall": 0.8416666666666667,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9699570815450643,
+              "precision": 1.0,
+              "recall": 0.9416666666666667,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 2,
+        "emaAlpha": 0.25,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8484697933227345,
+            "straightWalkRecall": 0.5416666666666666,
+            "turningRecall": 0.875
+          },
+          {
+            "fold": 2,
+            "macroF1": 1.0,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8418155534138928,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.6666666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7653113741636645,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8522222222222222,
+            "straightWalkRecall": 0.75,
+            "turningRecall": 0.6666666666666666
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.15,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.7,
+        "name": "ema_0.25_hyst_0.15_2",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 7,
+          "meanWindows": 3.2857142857142856,
+          "p90Windows": 5.200000000000001
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.875,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              83,
+              33,
+              0
+            ],
+            [
+              1,
+              16,
+              100,
+              3
+            ],
+            [
+              0,
+              0,
+              3,
+              117
+            ]
+          ],
+          "macroF1": 0.8734581760786506,
+          "macroPrecision": 0.8771694890077243,
+          "macroRecall": 0.875,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7579908675799086,
+              "precision": 0.8383838383838383,
+              "recall": 0.6916666666666667,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.78125,
+              "precision": 0.7352941176470589,
+              "recall": 0.8333333333333334,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.975,
+              "precision": 0.975,
+              "recall": 0.975,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 1,
+        "emaAlpha": 0.5,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8944954547114015,
+            "straightWalkRecall": 0.7083333333333334,
+            "turningRecall": 0.875
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.851266339869281,
+            "straightWalkRecall": 0.7083333333333334,
+            "turningRecall": 0.7083333333333334
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.9162701668033908,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7818181818181817,
+            "straightWalkRecall": 0.25,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8945949883449884,
+            "straightWalkRecall": 0.7916666666666666,
+            "turningRecall": 0.7916666666666666
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.05,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.6916666666666667,
+        "name": "ema_0.50_hyst_0.05_1",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 2,
+          "meanWindows": 0.4,
+          "p90Windows": 1.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.88125,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              88,
+              28,
+              0
+            ],
+            [
+              2,
+              18,
+              98,
+              2
+            ],
+            [
+              0,
+              0,
+              3,
+              117
+            ]
+          ],
+          "macroF1": 0.8801497275824808,
+          "macroPrecision": 0.881363207854445,
+          "macroRecall": 0.88125,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.975609756097561,
+              "precision": 0.9523809523809523,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7787610619469026,
+              "precision": 0.8301886792452831,
+              "recall": 0.7333333333333333,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7871485943775101,
+              "precision": 0.7596899224806202,
+              "recall": 0.8166666666666667,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9790794979079498,
+              "precision": 0.9831932773109243,
+              "recall": 0.975,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 2,
+        "emaAlpha": 0.5,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8837528499772002,
+            "straightWalkRecall": 0.7083333333333334,
+            "turningRecall": 0.8333333333333334
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.9048936170212766,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.9162701668033908,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7975186104218362,
+            "straightWalkRecall": 0.2916666666666667,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8730769230769231,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.6666666666666666
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.05,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.7333333333333333,
+        "name": "ema_0.50_hyst_0.05_2",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 3,
+          "meanWindows": 1.3333333333333333,
+          "p90Windows": 2.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8833333333333333,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              85,
+              31,
+              0
+            ],
+            [
+              1,
+              15,
+              102,
+              2
+            ],
+            [
+              0,
+              0,
+              3,
+              117
+            ]
+          ],
+          "macroF1": 0.8820684018424791,
+          "macroPrecision": 0.8857983193277311,
+          "macroRecall": 0.8833333333333334,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7727272727272727,
+              "precision": 0.85,
+              "recall": 0.7083333333333334,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.796875,
+              "precision": 0.75,
+              "recall": 0.85,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9790794979079498,
+              "precision": 0.9831932773109243,
+              "recall": 0.975,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 1,
+        "emaAlpha": 0.5,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8937236141068894,
+            "straightWalkRecall": 0.6666666666666666,
+            "turningRecall": 0.9166666666666666
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8836170212765957,
+            "straightWalkRecall": 0.7916666666666666,
+            "turningRecall": 0.75
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.9162701668033908,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7818181818181817,
+            "straightWalkRecall": 0.25,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.9057810959804315,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.7916666666666666
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.1,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.7083333333333334,
+        "name": "ema_0.50_hyst_0.10_1",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 2,
+          "meanWindows": 0.5172413793103449,
+          "p90Windows": 1.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.875,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              87,
+              29,
+              0
+            ],
+            [
+              2,
+              17,
+              99,
+              2
+            ],
+            [
+              0,
+              0,
+              6,
+              114
+            ]
+          ],
+          "macroF1": 0.8745061810884119,
+          "macroPrecision": 0.8776210011895808,
+          "macroRecall": 0.875,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.975609756097561,
+              "precision": 0.9523809523809523,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7767857142857143,
+              "precision": 0.8365384615384616,
+              "recall": 0.725,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7795275590551181,
+              "precision": 0.7388059701492538,
+              "recall": 0.825,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9661016949152542,
+              "precision": 0.9827586206896551,
+              "recall": 0.95,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 2,
+        "emaAlpha": 0.5,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8937037037037037,
+            "straightWalkRecall": 0.6666666666666666,
+            "turningRecall": 0.9166666666666666
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.9048936170212766,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8740079365079365,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.75
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7975186104218362,
+            "straightWalkRecall": 0.2916666666666667,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8730769230769231,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.6666666666666666
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.1,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.725,
+        "name": "ema_0.50_hyst_0.10_2",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 3,
+          "meanWindows": 1.4736842105263157,
+          "p90Windows": 2.1999999999999993
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8916666666666667,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              89,
+              27,
+              0
+            ],
+            [
+              1,
+              14,
+              102,
+              3
+            ],
+            [
+              0,
+              0,
+              3,
+              117
+            ]
+          ],
+          "macroF1": 0.8905804810713523,
+          "macroPrecision": 0.8929512356575463,
+          "macroRecall": 0.8916666666666667,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7982062780269058,
+              "precision": 0.8640776699029126,
+              "recall": 0.7416666666666667,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.8095238095238095,
+              "precision": 0.7727272727272727,
+              "recall": 0.85,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.975,
+              "precision": 0.975,
+              "recall": 0.975,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 1,
+        "emaAlpha": 0.5,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.9371201814058957,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.9166666666666666
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8937122490069107,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.75
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.9162701668033908,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7653113741636645,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.9057810959804315,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.7916666666666666
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.15,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.7416666666666667,
+        "name": "ema_0.50_hyst_0.15_1",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 2,
+          "meanWindows": 0.6153846153846154,
+          "p90Windows": 1.5
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8770833333333333,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              88,
+              28,
+              0
+            ],
+            [
+              2,
+              16,
+              99,
+              3
+            ],
+            [
+              0,
+              0,
+              6,
+              114
+            ]
+          ],
+          "macroF1": 0.8764895134799291,
+          "macroPrecision": 0.879313668787353,
+          "macroRecall": 0.8770833333333334,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.975609756097561,
+              "precision": 0.9523809523809523,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7857142857142857,
+              "precision": 0.8461538461538461,
+              "recall": 0.7333333333333333,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.782608695652174,
+              "precision": 0.7443609022556391,
+              "recall": 0.825,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9620253164556962,
+              "precision": 0.9743589743589743,
+              "recall": 0.95,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 2,
+        "emaAlpha": 0.5,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8937037037037037,
+            "straightWalkRecall": 0.6666666666666666,
+            "turningRecall": 0.9166666666666666
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.9255718954248366,
+            "straightWalkRecall": 0.9166666666666666,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8740079365079365,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.75
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7818181818181817,
+            "straightWalkRecall": 0.25,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8730769230769231,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.6666666666666666
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.15,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.7333333333333333,
+        "name": "ema_0.50_hyst_0.15_2",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 3,
+          "meanWindows": 1.6470588235294117,
+          "p90Windows": 3.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8458333333333333,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              74,
+              41,
+              1
+            ],
+            [
+              1,
+              19,
+              97,
+              3
+            ],
+            [
+              0,
+              0,
+              5,
+              115
+            ]
+          ],
+          "macroF1": 0.843603299817877,
+          "macroPrecision": 0.8501017894186775,
+          "macroRecall": 0.8458333333333333,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.6948356807511737,
+              "precision": 0.7956989247311828,
+              "recall": 0.6166666666666667,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7376425855513308,
+              "precision": 0.6783216783216783,
+              "recall": 0.8083333333333333,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9623430962343096,
+              "precision": 0.9663865546218487,
+              "recall": 0.9583333333333334,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 1,
+        "emaAlpha": 0.75,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8508148516859317,
+            "straightWalkRecall": 0.5833333333333334,
+            "turningRecall": 0.8333333333333334
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8297127222982217,
+            "straightWalkRecall": 0.625,
+            "turningRecall": 0.7083333333333334
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8963432400932401,
+            "straightWalkRecall": 0.9583333333333334,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7374779699113688,
+            "straightWalkRecall": 0.16666666666666666,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8615399648231385,
+            "straightWalkRecall": 0.75,
+            "turningRecall": 0.7083333333333334
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.05,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.6166666666666667,
+        "name": "ema_0.75_hyst_0.05_1",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 1,
+          "meanWindows": 0.15517241379310345,
+          "p90Windows": 1.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8520833333333333,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              76,
+              40,
+              0
+            ],
+            [
+              2,
+              20,
+              96,
+              2
+            ],
+            [
+              0,
+              0,
+              3,
+              117
+            ]
+          ],
+          "macroF1": 0.849926424755489,
+          "macroPrecision": 0.854472094593233,
+          "macroRecall": 0.8520833333333334,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.975609756097561,
+              "precision": 0.9523809523809523,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7037037037037037,
+              "precision": 0.7916666666666666,
+              "recall": 0.6333333333333333,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7413127413127413,
+              "precision": 0.6906474820143885,
+              "recall": 0.8,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9790794979079498,
+              "precision": 0.9831932773109243,
+              "recall": 0.975,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 2,
+        "emaAlpha": 0.75,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8616060745513116,
+            "straightWalkRecall": 0.625,
+            "turningRecall": 0.8333333333333334
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8297435897435896,
+            "straightWalkRecall": 0.5833333333333334,
+            "turningRecall": 0.75
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.9162701668033908,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7653113741636645,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8401666482728176,
+            "straightWalkRecall": 0.75,
+            "turningRecall": 0.625
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.05,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.6333333333333333,
+        "name": "ema_0.75_hyst_0.05_2",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 2,
+          "meanWindows": 1.1875,
+          "p90Windows": 2.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8520833333333333,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              77,
+              38,
+              1
+            ],
+            [
+              1,
+              19,
+              97,
+              3
+            ],
+            [
+              0,
+              0,
+              5,
+              115
+            ]
+          ],
+          "macroF1": 0.8502629355214532,
+          "macroPrecision": 0.8553317577030812,
+          "macroRecall": 0.8520833333333334,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7129629629629629,
+              "precision": 0.8020833333333334,
+              "recall": 0.6416666666666667,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7461538461538462,
+              "precision": 0.6928571428571428,
+              "recall": 0.8083333333333333,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9623430962343096,
+              "precision": 0.9663865546218487,
+              "recall": 0.9583333333333334,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 1,
+        "emaAlpha": 0.75,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8722692328964106,
+            "straightWalkRecall": 0.625,
+            "turningRecall": 0.875
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8297385620915032,
+            "straightWalkRecall": 0.6666666666666666,
+            "turningRecall": 0.6666666666666666
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.8963432400932401,
+            "straightWalkRecall": 0.9583333333333334,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7374779699113688,
+            "straightWalkRecall": 0.16666666666666666,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8725730292116847,
+            "straightWalkRecall": 0.7916666666666666,
+            "turningRecall": 0.7083333333333334
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.1,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.6416666666666667,
+        "name": "ema_0.75_hyst_0.10_1",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 2,
+          "meanWindows": 0.2222222222222222,
+          "p90Windows": 1.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8708333333333333,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              84,
+              32,
+              0
+            ],
+            [
+              2,
+              19,
+              97,
+              2
+            ],
+            [
+              0,
+              0,
+              3,
+              117
+            ]
+          ],
+          "macroF1": 0.869473438136583,
+          "macroPrecision": 0.8714891737807214,
+          "macroRecall": 0.8708333333333333,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.975609756097561,
+              "precision": 0.9523809523809523,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7533632286995515,
+              "precision": 0.8155339805825242,
+              "recall": 0.7,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7698412698412699,
+              "precision": 0.7348484848484849,
+              "recall": 0.8083333333333333,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9790794979079498,
+              "precision": 0.9831932773109243,
+              "recall": 0.975,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 2,
+        "emaAlpha": 0.75,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8616060745513116,
+            "straightWalkRecall": 0.625,
+            "turningRecall": 0.8333333333333334
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8829705215419501,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.7083333333333334
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.9162701668033908,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7653113741636645,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8841647353125115,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.7083333333333334
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.1,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.7,
+        "name": "ema_0.75_hyst_0.10_2",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 2,
+          "meanWindows": 1.1538461538461537,
+          "p90Windows": 2.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8708333333333333,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              84,
+              31,
+              1
+            ],
+            [
+              1,
+              17,
+              99,
+              3
+            ],
+            [
+              0,
+              0,
+              5,
+              115
+            ]
+          ],
+          "macroF1": 0.8696466291698527,
+          "macroPrecision": 0.8728507640680034,
+          "macroRecall": 0.8708333333333333,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.9795918367346939,
+              "precision": 0.96,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7601809954751131,
+              "precision": 0.8316831683168316,
+              "recall": 0.7,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7764705882352941,
+              "precision": 0.7333333333333333,
+              "recall": 0.825,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9623430962343096,
+              "precision": 0.9663865546218487,
+              "recall": 0.9583333333333334,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 1,
+        "emaAlpha": 0.75,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.8944954547114015,
+            "straightWalkRecall": 0.7083333333333334,
+            "turningRecall": 0.875
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.8722043859171791,
+            "straightWalkRecall": 0.7916666666666666,
+            "turningRecall": 0.7083333333333334
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.905815481186818,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7548901844111676,
+            "straightWalkRecall": 0.20833333333333334,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8833719534325357,
+            "straightWalkRecall": 0.7916666666666666,
+            "turningRecall": 0.75
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.15,
+        "latencyRequirementPassed": true,
+        "minimumClassRecall": 0.7,
+        "name": "ema_0.75_hyst_0.15_1",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 1,
+          "meanWindows": 0.2608695652173913,
+          "p90Windows": 1.0
+        }
+      },
+      {
+        "aggregateGatePassed": true,
+        "aggregateMetrics": {
+          "accuracy": 0.8770833333333333,
+          "confusionMatrix": [
+            [
+              120,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              87,
+              29,
+              0
+            ],
+            [
+              2,
+              19,
+              97,
+              2
+            ],
+            [
+              0,
+              0,
+              3,
+              117
+            ]
+          ],
+          "macroF1": 0.8759293060734359,
+          "macroPrecision": 0.8770667327922832,
+          "macroRecall": 0.8770833333333333,
+          "perClass": {
+            "STATIONARY": {
+              "f1": 0.975609756097561,
+              "precision": 0.9523809523809523,
+              "recall": 1.0,
+              "support": 120
+            },
+            "STRAIGHT_WALK": {
+              "f1": 0.7699115044247787,
+              "precision": 0.8207547169811321,
+              "recall": 0.725,
+              "support": 120
+            },
+            "TURNING": {
+              "f1": 0.7791164658634538,
+              "precision": 0.751937984496124,
+              "recall": 0.8083333333333333,
+              "support": 120
+            },
+            "UNSTABLE_MOTION": {
+              "f1": 0.9790794979079498,
+              "precision": 0.9831932773109243,
+              "recall": 0.975,
+              "support": 120
+            }
+          }
+        },
+        "complexity": 3,
+        "consecutiveWindows": 2,
+        "emaAlpha": 0.75,
+        "foldMetrics": [
+          {
+            "fold": 1,
+            "macroF1": 0.862562358276644,
+            "straightWalkRecall": 0.7083333333333334,
+            "turningRecall": 0.75
+          },
+          {
+            "fold": 2,
+            "macroF1": 0.9048936170212766,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 3,
+            "macroF1": 0.9162701668033908,
+            "straightWalkRecall": 1.0,
+            "turningRecall": 0.7916666666666666
+          },
+          {
+            "fold": 4,
+            "macroF1": 0.7818181818181817,
+            "straightWalkRecall": 0.25,
+            "turningRecall": 1.0
+          },
+          {
+            "fold": 5,
+            "macroF1": 0.8841647353125115,
+            "straightWalkRecall": 0.8333333333333334,
+            "turningRecall": 0.7083333333333334
+          }
+        ],
+        "foldRobust": false,
+        "hysteresisMargin": 0.15,
+        "latencyRequirementPassed": false,
+        "minimumClassRecall": 0.725,
+        "name": "ema_0.75_hyst_0.15_2",
+        "robust": false,
+        "switchDelayProxy": {
+          "maxWindows": 3,
+          "meanWindows": 1.3181818181818181,
+          "p90Windows": 2.0
+        }
+      }
+    ],
+    "causalOnly": true,
+    "foldRobustnessRule": "every fold macroF1 >= 0.75 and STRAIGHT/TURNING recall >= 0.55",
+    "futureWindowsAccessed": false,
+    "materiallyImprovesRobustness": false,
+    "rawBaseline": {
+      "aggregateGatePassed": true,
+      "aggregateMetrics": {
+        "accuracy": 0.8333333333333334,
+        "confusionMatrix": [
+          [
+            120,
+            0,
+            0,
+            0
+          ],
+          [
+            4,
+            71,
+            43,
+            2
+          ],
+          [
+            1,
+            19,
+            97,
+            3
+          ],
+          [
+            0,
+            0,
+            8,
+            112
+          ]
+        ],
+        "macroF1": 0.8312026473162475,
+        "macroPrecision": 0.8403898128898128,
+        "macroRecall": 0.8333333333333335,
+        "perClass": {
+          "STATIONARY": {
+            "f1": 0.9795918367346939,
+            "precision": 0.96,
+            "recall": 1.0,
+            "support": 120
+          },
+          "STRAIGHT_WALK": {
+            "f1": 0.6761904761904762,
+            "precision": 0.7888888888888889,
+            "recall": 0.5916666666666667,
+            "support": 120
+          },
+          "TURNING": {
+            "f1": 0.7238805970149254,
+            "precision": 0.6554054054054054,
+            "recall": 0.8083333333333333,
+            "support": 120
+          },
+          "UNSTABLE_MOTION": {
+            "f1": 0.9451476793248945,
+            "precision": 0.9572649572649573,
+            "recall": 0.9333333333333333,
+            "support": 120
+          }
+        }
+      },
+      "complexity": 0,
+      "consecutiveWindows": null,
+      "emaAlpha": null,
+      "foldMetrics": [
+        {
+          "fold": 1,
+          "macroF1": 0.840809908869208,
+          "straightWalkRecall": 0.5833333333333334,
+          "turningRecall": 0.7916666666666666
+        },
+        {
+          "fold": 2,
+          "macroF1": 0.8080848153214775,
+          "straightWalkRecall": 0.5833333333333334,
+          "turningRecall": 0.6666666666666666
+        },
+        {
+          "fold": 3,
+          "macroF1": 0.8662464985994398,
+          "straightWalkRecall": 0.9166666666666666,
+          "turningRecall": 0.7916666666666666
+        },
+        {
+          "fold": 4,
+          "macroF1": 0.7467058787533005,
+          "straightWalkRecall": 0.20833333333333334,
+          "turningRecall": 1.0
+        },
+        {
+          "fold": 5,
+          "macroF1": 0.8595936345552714,
+          "straightWalkRecall": 0.6666666666666666,
+          "turningRecall": 0.7916666666666666
+        }
+      ],
+      "foldRobust": false,
+      "hysteresisMargin": null,
+      "latencyRequirementPassed": true,
+      "minimumClassRecall": 0.5916666666666667,
+      "name": "raw_argmax",
+      "robust": false,
+      "switchDelayProxy": {
+        "maxWindows": 0,
+        "meanWindows": 0.0,
+        "p90Windows": 0.0
+      }
+    },
+    "robustCandidateCount": 0,
+    "switchDelayDefinition": "candidate-transition delay relative to the start of the same contiguous raw-argmax class run; no true within-session transitions exist in the single-label dataset"
+  },
+  "consumedFinalHoldoutMetricsUpdated": false,
+  "crossValidation": {
+    "foldCount": 5,
+    "folds": [
+      {
+        "allMotionClassesRepresented": true,
+        "fold": 1,
+        "normalizationFit": "FOLD_TRAIN_ONLY",
+        "sessionLeakage": false,
+        "trainSessionCount": 16,
+        "validationSessionCount": 4,
+        "validationWindowCount": 96
+      },
+      {
+        "allMotionClassesRepresented": true,
+        "fold": 2,
+        "normalizationFit": "FOLD_TRAIN_ONLY",
+        "sessionLeakage": false,
+        "trainSessionCount": 16,
+        "validationSessionCount": 4,
+        "validationWindowCount": 96
+      },
+      {
+        "allMotionClassesRepresented": true,
+        "fold": 3,
+        "normalizationFit": "FOLD_TRAIN_ONLY",
+        "sessionLeakage": false,
+        "trainSessionCount": 16,
+        "validationSessionCount": 4,
+        "validationWindowCount": 96
+      },
+      {
+        "allMotionClassesRepresented": true,
+        "fold": 4,
+        "normalizationFit": "FOLD_TRAIN_ONLY",
+        "sessionLeakage": false,
+        "trainSessionCount": 16,
+        "validationSessionCount": 4,
+        "validationWindowCount": 96
+      },
+      {
+        "allMotionClassesRepresented": true,
+        "fold": 5,
+        "normalizationFit": "FOLD_TRAIN_ONLY",
+        "sessionLeakage": false,
+        "trainSessionCount": 16,
+        "validationSessionCount": 4,
+        "validationWindowCount": 96
+      }
+    ],
+    "normalizationFit": "EACH_FOLD_TRAIN_ONLY",
+    "strategy": "DeterministicClassAwareGroupKFold"
+  },
+  "dataIsolation": {
+    "developmentSessionCount": 20,
+    "developmentSessionsPerClass": {
+      "STATIONARY": 5,
+      "STRAIGHT_WALK": 5,
+      "TURNING": 5,
+      "UNSTABLE_MOTION": 5
+    },
+    "developmentWindowCount": 480,
+    "freshFinalHoldoutCountMethod": "ONE_SESSION_PER_CSV_FILE_INVENTORY_WITHOUT_ROW_READ",
+    "freshFinalHoldoutCsvFileCount": 4,
+    "freshFinalHoldoutDirectoryDistinctFromDevelopment": true,
+    "freshFinalHoldoutExcluded": true,
+    "freshFinalHoldoutLoaded": false,
+    "freshFinalHoldoutRowsRead": 0,
+    "freshFinalHoldoutSessionCount": 4,
+    "loadedFreshFinalHoldoutOverlapCount": 0,
+    "oldExposedHoldoutExcluded": true,
+    "oldExposedHoldoutSessionCount": 4,
+    "sessionLeakage": false
+  },
+  "datasetSchemaVersion": "navguard_ai_dataset_v1",
+  "featureSchemaVersion": "navguard_ai_features_v1",
+  "featureSeparability": {
+    "allFeatures": [
+      {
+        "absoluteEffectSize": 0.020544946828820652,
+        "feature": "accel_mag_mean",
+        "iqrOverlapFraction": 0.6778890628401459,
+        "standardizedMeanDifference": -0.020544946828820652,
+        "straightMean": 9.784119935213376,
+        "straightStd": 0.19638869378404505,
+        "turningMean": 9.787681527264995,
+        "turningStd": 0.14675204372875744
+      },
+      {
+        "absoluteEffectSize": 0.19462773363210792,
+        "feature": "accel_mag_std",
+        "iqrOverlapFraction": 0.4208231193588906,
+        "standardizedMeanDifference": 0.19462773363210792,
+        "straightMean": 2.484109261299094,
+        "straightStd": 0.8149072431008678,
+        "turningMean": 2.356035382831242,
+        "turningStd": 0.449414726098577
+      },
+      {
+        "absoluteEffectSize": 0.23265416648930162,
+        "feature": "accel_mag_rms",
+        "iqrOverlapFraction": 0.6063694136019069,
+        "standardizedMeanDifference": 0.23265416648930162,
+        "straightMean": 10.126185434099837,
+        "straightStd": 0.2506244537957743,
+        "turningMean": 10.077037367889085,
+        "turningStd": 0.16260396322658086
+      },
+      {
+        "absoluteEffectSize": 0.37079912696837936,
+        "feature": "gyro_mag_mean",
+        "iqrOverlapFraction": 0.8049679330262248,
+        "standardizedMeanDifference": -0.37079912696837936,
+        "straightMean": 0.5572037348670508,
+        "straightStd": 0.14974716750974193,
+        "turningMean": 0.619819084424417,
+        "turningStd": 0.186030129068834
+      },
+      {
+        "absoluteEffectSize": 0.5299608321338883,
+        "feature": "gyro_mag_std",
+        "iqrOverlapFraction": 0.5999686994595348,
+        "standardizedMeanDifference": -0.5299608321338883,
+        "straightMean": 0.25672056542181537,
+        "straightStd": 0.06464548120394951,
+        "turningMean": 0.312520899798479,
+        "turningStd": 0.1341399740342189
+      },
+      {
+        "absoluteEffectSize": 0.4253945942215679,
+        "feature": "gyro_mag_rms",
+        "iqrOverlapFraction": 0.6997847433417956,
+        "standardizedMeanDifference": -0.4253945942215679,
+        "straightMean": 0.6150362559145067,
+        "straightStd": 0.15721039147662494,
+        "turningMean": 0.6967199028796138,
+        "turningStd": 0.22142070525193203
+      },
+      {
+        "absoluteEffectSize": 0.5966421939950728,
+        "feature": "heading_circular_std_rad",
+        "iqrOverlapFraction": 0.5099162489786098,
+        "standardizedMeanDifference": -0.5966421939950728,
+        "straightMean": 0.09344059995883656,
+        "straightStd": 0.0364174987934011,
+        "turningMean": 0.15801756433731368,
+        "turningStd": 0.14867063706647973
+      },
+      {
+        "absoluteEffectSize": 0.452353536024926,
+        "feature": "heading_rate_abs_mean_rad_s",
+        "iqrOverlapFraction": 0.7153417495963204,
+        "standardizedMeanDifference": -0.452353536024926,
+        "straightMean": 0.38590004111044945,
+        "straightStd": 0.11304291507636255,
+        "turningMean": 0.45429680937289024,
+        "turningStd": 0.18150867987452485
+      },
+      {
+        "absoluteEffectSize": 0.5580981328167145,
+        "feature": "heading_rate_abs_max_rad_s",
+        "iqrOverlapFraction": 0.45684428463019255,
+        "standardizedMeanDifference": -0.5580981328167145,
+        "straightMean": 1.0598151348283362,
+        "straightStd": 0.2766928030566115,
+        "turningMean": 1.2789710125359333,
+        "turningStd": 0.48149933867868644
+      },
+      {
+        "absoluteEffectSize": 0.04969899019138672,
+        "feature": "step_count",
+        "iqrOverlapFraction": 0.0,
+        "standardizedMeanDifference": -0.04969899019138672,
+        "straightMean": 2.95,
+        "straightStd": 0.9819198881103623,
+        "turningMean": 2.9916666666666667,
+        "turningStd": 0.6645278189979876
+      },
+      {
+        "absoluteEffectSize": 0.04969899019138672,
+        "feature": "step_cadence_hz",
+        "iqrOverlapFraction": 0.0,
+        "standardizedMeanDifference": -0.04969899019138672,
+        "straightMean": 1.475,
+        "straightStd": 0.4909599440551812,
+        "turningMean": 1.4958333333333333,
+        "turningStd": 0.3322639094989938
+      },
+      {
+        "absoluteEffectSize": 0.009746048953062466,
+        "feature": "step_interval_std_s",
+        "iqrOverlapFraction": 0.6666666666666667,
+        "standardizedMeanDifference": -0.009746048953062466,
+        "straightMean": 0.037684586565168564,
+        "straightStd": 0.03435600236314287,
+        "turningMean": 0.03806495109418004,
+        "turningStd": 0.043196831837423004
+      },
+      {
+        "absoluteEffectSize": 0.08433089593434283,
+        "feature": "arcore_displacement_m",
+        "iqrOverlapFraction": 0.34750582461131974,
+        "standardizedMeanDifference": 0.08433089593434283,
+        "straightMean": 2.004704654631976,
+        "straightStd": 0.7106458023629715,
+        "turningMean": 1.9532018420682045,
+        "turningStd": 0.4908640938021734
+      },
+      {
+        "absoluteEffectSize": 0.09431150117138176,
+        "feature": "arcore_speed_mean_mps",
+        "iqrOverlapFraction": 0.3313364608547169,
+        "standardizedMeanDifference": 0.09431150117138176,
+        "straightMean": 1.095614007723257,
+        "straightStd": 0.3246891047850324,
+        "turningMean": 1.069820255077267,
+        "turningStd": 0.21018170095933553
+      },
+      {
+        "absoluteEffectSize": 0.3323851862285752,
+        "feature": "arcore_speed_std_mps",
+        "iqrOverlapFraction": 0.778929888382199,
+        "standardizedMeanDifference": 0.3323851862285752,
+        "straightMean": 0.2758642741915473,
+        "straightStd": 0.28370605652444086,
+        "turningMean": 0.2060569194017108,
+        "turningStd": 0.08790457465073946
+      },
+      {
+        "absoluteEffectSize": 0.0026990449169426427,
+        "feature": "arcore_tracking_fraction",
+        "iqrOverlapFraction": 1.0,
+        "standardizedMeanDifference": -0.0026990449169426427,
+        "straightMean": 0.9460251769630383,
+        "straightStd": 0.18731715287130704,
+        "turningMean": 0.9465336072984869,
+        "turningStd": 0.1894252811396105
+      },
+      {
+        "absoluteEffectSize": 0.010906440214592533,
+        "feature": "arcore_frame_gap_mean_ms",
+        "iqrOverlapFraction": 0.7739706084585051,
+        "standardizedMeanDifference": 0.010906440214592533,
+        "straightMean": 33.71716714545782,
+        "straightStd": 1.7746011094221763,
+        "turningMean": 33.6980350001949,
+        "turningStd": 1.7335714081874816
+      },
+      {
+        "absoluteEffectSize": 0.10061923604802211,
+        "feature": "arcore_pre_robust_nis_mean",
+        "iqrOverlapFraction": 0.9014245412181834,
+        "standardizedMeanDifference": 0.10061923604802211,
+        "straightMean": 40.928581754317676,
+        "straightStd": 55.90018862576932,
+        "turningMean": 35.6652942378627,
+        "turningStd": 48.4522790341855
+      },
+      {
+        "absoluteEffectSize": 0.17860713095453892,
+        "feature": "arcore_post_robust_nis_mean",
+        "iqrOverlapFraction": 0.9959282861105793,
+        "standardizedMeanDifference": 0.17860713095453892,
+        "straightMean": 3.4925795974238003,
+        "straightStd": 2.2774748232138027,
+        "turningMean": 3.085538063802459,
+        "turningStd": 2.2804780769478614
+      },
+      {
+        "absoluteEffectSize": 0.12334362637219241,
+        "feature": "source_disagreement_mean_m",
+        "iqrOverlapFraction": 0.8938187433431196,
+        "standardizedMeanDifference": 0.12334362637219241,
+        "straightMean": 2.534390269083843,
+        "straightStd": 2.987424227622368,
+        "turningMean": 2.1934766266403902,
+        "turningStd": 2.520706008580527
+      },
+      {
+        "absoluteEffectSize": 0.21968078460707058,
+        "feature": "source_disagreement_max_m",
+        "iqrOverlapFraction": 0.8676292349736762,
+        "standardizedMeanDifference": 0.21968078460707058,
+        "straightMean": 3.950133200025678,
+        "straightStd": 4.214116561343778,
+        "turningMean": 3.1536439253602455,
+        "turningStd": 2.9209823037328007
+      },
+      {
+        "absoluteEffectSize": 0.0,
+        "feature": "stride_estimate_m",
+        "iqrOverlapFraction": 1.0,
+        "standardizedMeanDifference": 0.0,
+        "straightMean": 0.7523730395965736,
+        "straightStd": 0.0,
+        "turningMean": 0.7523730395965736,
+        "turningStd": 0.0
+      },
+      {
+        "absoluteEffectSize": 0.703958936773827,
+        "feature": "stationary_candidate_fraction",
+        "iqrOverlapFraction": 1.0,
+        "standardizedMeanDifference": 0.703958936773827,
+        "straightMean": 0.19227990310394816,
+        "straightStd": 0.3862794156539759,
+        "turningMean": 0.0,
+        "turningStd": 0.0
+      },
+      {
+        "absoluteEffectSize": 0.33471319182230264,
+        "feature": "turning_heuristic_fraction",
+        "iqrOverlapFraction": 0.706209171579417,
+        "standardizedMeanDifference": -0.33471319182230264,
+        "straightMean": 0.20661890092062213,
+        "straightStd": 0.1174563853083586,
+        "turningMean": 0.25284057211631256,
+        "turningStd": 0.156024205939503
+      },
+      {
+        "absoluteEffectSize": 0.09779829160820498,
+        "feature": "arcore_robust_sigma_mean_m",
+        "iqrOverlapFraction": 0.8899161554554254,
+        "standardizedMeanDifference": 0.09779829160820498,
+        "straightMean": 1.1302014466842882,
+        "straightStd": 1.111433451983002,
+        "turningMean": 1.0296122296410475,
+        "turningStd": 0.9383468127434046
+      },
+      {
+        "absoluteEffectSize": 0.0,
+        "feature": "heading_unreliable_fraction",
+        "iqrOverlapFraction": 1.0,
+        "standardizedMeanDifference": 0.0,
+        "straightMean": 0.0,
+        "straightStd": 0.0,
+        "turningMean": 0.0,
+        "turningStd": 0.0
+      }
+    ],
+    "signal": "FEATURE_SIGNAL_MODERATE",
+    "signalRule": {
+      "featuresAtOrAbove0.30": 9,
+      "featuresAtOrAbove0.50": 4,
+      "maximumAbsoluteEffectSize": 0.703958936773827
+    },
+    "topFeatures": [
+      {
+        "absoluteEffectSize": 0.703958936773827,
+        "feature": "stationary_candidate_fraction",
+        "iqrOverlapFraction": 1.0,
+        "standardizedMeanDifference": 0.703958936773827,
+        "straightMean": 0.19227990310394816,
+        "straightStd": 0.3862794156539759,
+        "turningMean": 0.0,
+        "turningStd": 0.0
+      },
+      {
+        "absoluteEffectSize": 0.5966421939950728,
+        "feature": "heading_circular_std_rad",
+        "iqrOverlapFraction": 0.5099162489786098,
+        "standardizedMeanDifference": -0.5966421939950728,
+        "straightMean": 0.09344059995883656,
+        "straightStd": 0.0364174987934011,
+        "turningMean": 0.15801756433731368,
+        "turningStd": 0.14867063706647973
+      },
+      {
+        "absoluteEffectSize": 0.5580981328167145,
+        "feature": "heading_rate_abs_max_rad_s",
+        "iqrOverlapFraction": 0.45684428463019255,
+        "standardizedMeanDifference": -0.5580981328167145,
+        "straightMean": 1.0598151348283362,
+        "straightStd": 0.2766928030566115,
+        "turningMean": 1.2789710125359333,
+        "turningStd": 0.48149933867868644
+      },
+      {
+        "absoluteEffectSize": 0.5299608321338883,
+        "feature": "gyro_mag_std",
+        "iqrOverlapFraction": 0.5999686994595348,
+        "standardizedMeanDifference": -0.5299608321338883,
+        "straightMean": 0.25672056542181537,
+        "straightStd": 0.06464548120394951,
+        "turningMean": 0.312520899798479,
+        "turningStd": 0.1341399740342189
+      },
+      {
+        "absoluteEffectSize": 0.452353536024926,
+        "feature": "heading_rate_abs_mean_rad_s",
+        "iqrOverlapFraction": 0.7153417495963204,
+        "standardizedMeanDifference": -0.452353536024926,
+        "straightMean": 0.38590004111044945,
+        "straightStd": 0.11304291507636255,
+        "turningMean": 0.45429680937289024,
+        "turningStd": 0.18150867987452485
+      },
+      {
+        "absoluteEffectSize": 0.4253945942215679,
+        "feature": "gyro_mag_rms",
+        "iqrOverlapFraction": 0.6997847433417956,
+        "standardizedMeanDifference": -0.4253945942215679,
+        "straightMean": 0.6150362559145067,
+        "straightStd": 0.15721039147662494,
+        "turningMean": 0.6967199028796138,
+        "turningStd": 0.22142070525193203
+      },
+      {
+        "absoluteEffectSize": 0.37079912696837936,
+        "feature": "gyro_mag_mean",
+        "iqrOverlapFraction": 0.8049679330262248,
+        "standardizedMeanDifference": -0.37079912696837936,
+        "straightMean": 0.5572037348670508,
+        "straightStd": 0.14974716750974193,
+        "turningMean": 0.619819084424417,
+        "turningStd": 0.186030129068834
+      },
+      {
+        "absoluteEffectSize": 0.33471319182230264,
+        "feature": "turning_heuristic_fraction",
+        "iqrOverlapFraction": 0.706209171579417,
+        "standardizedMeanDifference": -0.33471319182230264,
+        "straightMean": 0.20661890092062213,
+        "straightStd": 0.1174563853083586,
+        "turningMean": 0.25284057211631256,
+        "turningStd": 0.156024205939503
+      },
+      {
+        "absoluteEffectSize": 0.3323851862285752,
+        "feature": "arcore_speed_std_mps",
+        "iqrOverlapFraction": 0.778929888382199,
+        "standardizedMeanDifference": 0.3323851862285752,
+        "straightMean": 0.2758642741915473,
+        "straightStd": 0.28370605652444086,
+        "turningMean": 0.2060569194017108,
+        "turningStd": 0.08790457465073946
+      },
+      {
+        "absoluteEffectSize": 0.23265416648930162,
+        "feature": "accel_mag_rms",
+        "iqrOverlapFraction": 0.6063694136019069,
+        "standardizedMeanDifference": 0.23265416648930162,
+        "straightMean": 10.126185434099837,
+        "straightStd": 0.2506244537957743,
+        "turningMean": 10.077037367889085,
+        "turningStd": 0.16260396322658086
+      }
+    ]
+  },
+  "frozenBaselineOofMetrics": {
+    "accuracy": 0.8333333333333334,
+    "confusionMatrix": [
+      [
+        120,
+        0,
+        0,
+        0
+      ],
+      [
+        4,
+        71,
+        43,
+        2
+      ],
+      [
+        1,
+        19,
+        97,
+        3
+      ],
+      [
+        0,
+        0,
+        8,
+        112
+      ]
+    ],
+    "macroF1": 0.8312026473162475,
+    "macroPrecision": 0.8403898128898128,
+    "macroRecall": 0.8333333333333335,
+    "perClass": {
+      "STATIONARY": {
+        "f1": 0.9795918367346939,
+        "precision": 0.96,
+        "recall": 1.0,
+        "support": 120
+      },
+      "STRAIGHT_WALK": {
+        "f1": 0.6761904761904762,
+        "precision": 0.7888888888888889,
+        "recall": 0.5916666666666667,
+        "support": 120
+      },
+      "TURNING": {
+        "f1": 0.7238805970149254,
+        "precision": 0.6554054054054054,
+        "recall": 0.8083333333333333,
+        "support": 120
+      },
+      "UNSTABLE_MOTION": {
+        "f1": 0.9451476793248945,
+        "precision": 0.9572649572649573,
+        "recall": 0.9333333333333333,
+        "support": 120
+      }
+    }
+  },
+  "frozenModel": {
+    "C": 30.0,
+    "classWeights": {
+      "STATIONARY": 1.0,
+      "STRAIGHT_WALK": 1.0,
+      "TURNING": 1.25,
+      "UNSTABLE_MOTION": 1.0
+    },
+    "family": "logistic_regression",
+    "featureOrder": [
+      "accel_mag_mean",
+      "accel_mag_std",
+      "accel_mag_rms",
+      "gyro_mag_mean",
+      "gyro_mag_std",
+      "gyro_mag_rms",
+      "heading_circular_std_rad",
+      "heading_rate_abs_mean_rad_s",
+      "heading_rate_abs_max_rad_s",
+      "step_count",
+      "step_cadence_hz",
+      "step_interval_std_s",
+      "arcore_displacement_m",
+      "arcore_speed_mean_mps",
+      "arcore_speed_std_mps",
+      "arcore_tracking_fraction",
+      "arcore_frame_gap_mean_ms",
+      "arcore_pre_robust_nis_mean",
+      "arcore_post_robust_nis_mean",
+      "source_disagreement_mean_m",
+      "source_disagreement_max_m",
+      "stride_estimate_m",
+      "stationary_candidate_fraction",
+      "turning_heuristic_fraction",
+      "arcore_robust_sigma_mean_m",
+      "heading_unreliable_fraction"
+    ],
+    "motionClasses": [
+      "STATIONARY",
+      "STRAIGHT_WALK",
+      "TURNING",
+      "UNSTABLE_MOTION"
+    ],
+    "parametersChanged": false
+  },
+  "probabilitySeparation": {
+    "STRAIGHT_WALK": {
+      "straightProbability": {
+        "mean": 0.5365950176691288,
+        "median": 0.5965094974975744,
+        "p10": 0.02178269163983953,
+        "p25": 0.33071124172938315,
+        "p75": 0.7718805956317607,
+        "p90": 0.9364526746383763
+      },
+      "straightVsTurningMargin": {
+        "mean": 0.129009494752112,
+        "median": 0.261521123892245,
+        "p10": -0.9031861929581291,
+        "p25": -0.27870496258799143,
+        "p75": 0.5485814175276866,
+        "p90": 0.8742694679447216
+      },
+      "trueVsBestOtherMargin": {
+        "mean": 0.09461067562249488,
+        "median": 0.21246420863444646,
+        "p10": -0.9511520706992418,
+        "p25": -0.2894611794081011,
+        "p75": 0.5485814175276866,
+        "p90": 0.8742694679447216
+      },
+      "turningProbability": {
+        "mean": 0.4075855229170167,
+        "median": 0.33620283165251463,
+        "p10": 0.02388167786063253,
+        "p25": 0.15725520243110352,
+        "p75": 0.6389055590281598,
+        "p90": 0.9286192793654455
+      }
+    },
+    "TURNING": {
+      "straightProbability": {
+        "mean": 0.26134445678444523,
+        "median": 0.1996813007236038,
+        "p10": 0.004239724009545558,
+        "p25": 0.03175793084117709,
+        "p75": 0.397252534727623,
+        "p90": 0.6174580171742667
+      },
+      "straightVsTurningMargin": {
+        "mean": -0.438461185854181,
+        "median": -0.5454891783597173,
+        "p10": -0.9856508174436555,
+        "p25": -0.8659584867525786,
+        "p75": -0.11315089492051313,
+        "p90": 0.23594162953178735
+      },
+      "trueVsBestOtherMargin": {
+        "mean": 0.4082872083973605,
+        "median": 0.5267610476608486,
+        "p10": -0.4153415036038919,
+        "p25": 0.11315089492051313,
+        "p75": 0.8564852343681897,
+        "p90": 0.9856508174436556
+      },
+      "turningProbability": {
+        "mean": 0.6998056426386263,
+        "median": 0.7542555500341969,
+        "p10": 0.2856495372408453,
+        "p25": 0.5565566007213559,
+        "p75": 0.9254513809076543,
+        "p90": 0.9928154789734654
+      }
+    }
+  },
+  "productionModelExported": false,
+  "recommendation": {
+    "additionalDevelopmentSessionTotal": 2,
+    "additionalDevelopmentSessions": {
+      "STATIONARY": 0,
+      "STRAIGHT_WALK": 2,
+      "TURNING": 0,
+      "UNSTABLE_MOTION": 0
+    },
+    "featureSchemaV2Implemented": false,
+    "primary": "MORE_DEVELOPMENT_DATA_NEEDED"
+  },
+  "researchStatus": "DEVELOPMENT_ONLY",
+  "rootDevelopmentLimitation": "STRAIGHT_SESSION_GENERALIZATION_GAP_PERSISTS_AFTER_TEMPORAL_DECODING",
+  "sessionDomainShift": {
+    "STRAIGHT_WALK": {
+      "maxDistance": 0.5508132901169631,
+      "meanDistance": 0.31356777274573255,
+      "sessions": [
+        {
+          "rmsStandardizedDistanceToPeerCentroid": 0.28661320521994776,
+          "session": "STRAIGHT_WALK_DEV_1"
+        },
+        {
+          "rmsStandardizedDistanceToPeerCentroid": 0.5508132901169631,
+          "session": "STRAIGHT_WALK_DEV_2"
+        },
+        {
+          "rmsStandardizedDistanceToPeerCentroid": 0.24901584328648801,
+          "session": "STRAIGHT_WALK_DEV_3"
+        },
+        {
+          "rmsStandardizedDistanceToPeerCentroid": 0.23030212776111014,
+          "session": "STRAIGHT_WALK_DEV_4"
+        },
+        {
+          "rmsStandardizedDistanceToPeerCentroid": 0.25109439734415373,
+          "session": "STRAIGHT_WALK_DEV_5"
+        }
+      ],
+      "thresholds": {
+        "lowBelow": 0.5,
+        "moderateBelow": 1.0
+      },
+      "variability": "MODERATE"
+    },
+    "TURNING": {
+      "maxDistance": 0.19799114129940437,
+      "meanDistance": 0.1379029422144744,
+      "sessions": [
+        {
+          "rmsStandardizedDistanceToPeerCentroid": 0.06649923215159961,
+          "session": "TURNING_DEV_1"
+        },
+        {
+          "rmsStandardizedDistanceToPeerCentroid": 0.19097841380044772,
+          "session": "TURNING_DEV_2"
+        },
+        {
+          "rmsStandardizedDistanceToPeerCentroid": 0.14123679797635816,
+          "session": "TURNING_DEV_3"
+        },
+        {
+          "rmsStandardizedDistanceToPeerCentroid": 0.09280912584456223,
+          "session": "TURNING_DEV_4"
+        },
+        {
+          "rmsStandardizedDistanceToPeerCentroid": 0.19799114129940437,
+          "session": "TURNING_DEV_5"
+        }
+      ],
+      "thresholds": {
+        "lowBelow": 0.5,
+        "moderateBelow": 1.0
+      },
+      "variability": "LOW"
+    }
+  },
+  "sessionErrorTopology": {
+    "dominantStraightFailurePattern": "SHORT_RUNS",
+    "dominantTurningFailurePattern": "SHORT_RUNS",
+    "sessions": [
+      {
+        "accuracy": 1.0,
+        "correctWindows": 24,
+        "dominantPredictedClass": "STATIONARY",
+        "failurePattern": "TRANSIENT",
+        "longestConsecutiveWrongRun": 0,
+        "longestStraightToTurningRun": 0,
+        "session": "STATIONARY_DEV_1",
+        "trueClass": "STATIONARY",
+        "windows": 24
+      },
+      {
+        "accuracy": 1.0,
+        "correctWindows": 24,
+        "dominantPredictedClass": "STATIONARY",
+        "failurePattern": "TRANSIENT",
+        "longestConsecutiveWrongRun": 0,
+        "longestStraightToTurningRun": 0,
+        "session": "STATIONARY_DEV_2",
+        "trueClass": "STATIONARY",
+        "windows": 24
+      },
+      {
+        "accuracy": 1.0,
+        "correctWindows": 24,
+        "dominantPredictedClass": "STATIONARY",
+        "failurePattern": "TRANSIENT",
+        "longestConsecutiveWrongRun": 0,
+        "longestStraightToTurningRun": 0,
+        "session": "STATIONARY_DEV_3",
+        "trueClass": "STATIONARY",
+        "windows": 24
+      },
+      {
+        "accuracy": 1.0,
+        "correctWindows": 24,
+        "dominantPredictedClass": "STATIONARY",
+        "failurePattern": "TRANSIENT",
+        "longestConsecutiveWrongRun": 0,
+        "longestStraightToTurningRun": 0,
+        "session": "STATIONARY_DEV_4",
+        "trueClass": "STATIONARY",
+        "windows": 24
+      },
+      {
+        "accuracy": 1.0,
+        "correctWindows": 24,
+        "dominantPredictedClass": "STATIONARY",
+        "failurePattern": "TRANSIENT",
+        "longestConsecutiveWrongRun": 0,
+        "longestStraightToTurningRun": 0,
+        "session": "STATIONARY_DEV_5",
+        "trueClass": "STATIONARY",
+        "windows": 24
+      },
+      {
+        "accuracy": 0.9166666666666666,
+        "correctWindows": 22,
+        "dominantPredictedClass": "STRAIGHT_WALK",
+        "failurePattern": "TRANSIENT",
+        "longestConsecutiveWrongRun": 1,
+        "longestStraightToTurningRun": 1,
+        "session": "STRAIGHT_DEV_1",
+        "trueClass": "STRAIGHT_WALK",
+        "windows": 24
+      },
+      {
+        "accuracy": 0.6666666666666666,
+        "correctWindows": 16,
+        "dominantPredictedClass": "STRAIGHT_WALK",
+        "failurePattern": "SHORT_RUNS",
+        "longestConsecutiveWrongRun": 3,
+        "longestStraightToTurningRun": 2,
+        "session": "STRAIGHT_DEV_2",
+        "trueClass": "STRAIGHT_WALK",
+        "windows": 24
+      },
+      {
+        "accuracy": 0.5833333333333334,
+        "correctWindows": 14,
+        "dominantPredictedClass": "STRAIGHT_WALK",
+        "failurePattern": "SHORT_RUNS",
+        "longestConsecutiveWrongRun": 3,
+        "longestStraightToTurningRun": 3,
+        "session": "STRAIGHT_DEV_3",
+        "trueClass": "STRAIGHT_WALK",
+        "windows": 24
+      },
+      {
+        "accuracy": 0.5833333333333334,
+        "correctWindows": 14,
+        "dominantPredictedClass": "STRAIGHT_WALK",
+        "failurePattern": "SHORT_RUNS",
+        "longestConsecutiveWrongRun": 3,
+        "longestStraightToTurningRun": 3,
+        "session": "STRAIGHT_DEV_4",
+        "trueClass": "STRAIGHT_WALK",
+        "windows": 24
+      },
+      {
+        "accuracy": 0.20833333333333334,
+        "correctWindows": 5,
+        "dominantPredictedClass": "TURNING",
+        "failurePattern": "PERSISTENT_SESSION_LEVEL",
+        "longestConsecutiveWrongRun": 10,
+        "longestStraightToTurningRun": 9,
+        "session": "STRAIGHT_DEV_5",
+        "trueClass": "STRAIGHT_WALK",
+        "windows": 24
+      },
+      {
+        "accuracy": 1.0,
+        "correctWindows": 24,
+        "dominantPredictedClass": "TURNING",
+        "failurePattern": "TRANSIENT",
+        "longestConsecutiveWrongRun": 0,
+        "longestStraightToTurningRun": 0,
+        "session": "TURNING_DEV_1",
+        "trueClass": "TURNING",
+        "windows": 24
+      },
+      {
+        "accuracy": 0.6666666666666666,
+        "correctWindows": 16,
+        "dominantPredictedClass": "TURNING",
+        "failurePattern": "SHORT_RUNS",
+        "longestConsecutiveWrongRun": 4,
+        "longestStraightToTurningRun": 0,
+        "session": "TURNING_DEV_2",
+        "trueClass": "TURNING",
+        "windows": 24
+      },
+      {
+        "accuracy": 0.7916666666666666,
+        "correctWindows": 19,
+        "dominantPredictedClass": "TURNING",
+        "failurePattern": "SHORT_RUNS",
+        "longestConsecutiveWrongRun": 2,
+        "longestStraightToTurningRun": 0,
+        "session": "TURNING_DEV_3",
+        "trueClass": "TURNING",
+        "windows": 24
+      },
+      {
+        "accuracy": 0.7916666666666666,
+        "correctWindows": 19,
+        "dominantPredictedClass": "TURNING",
+        "failurePattern": "SHORT_RUNS",
+        "longestConsecutiveWrongRun": 2,
+        "longestStraightToTurningRun": 0,
+        "session": "TURNING_DEV_4",
+        "trueClass": "TURNING",
+        "windows": 24
+      },
+      {
+        "accuracy": 0.7916666666666666,
+        "correctWindows": 19,
+        "dominantPredictedClass": "TURNING",
+        "failurePattern": "SHORT_RUNS",
+        "longestConsecutiveWrongRun": 3,
+        "longestStraightToTurningRun": 0,
+        "session": "TURNING_DEV_5",
+        "trueClass": "TURNING",
+        "windows": 24
+      },
+      {
+        "accuracy": 1.0,
+        "correctWindows": 24,
+        "dominantPredictedClass": "UNSTABLE_MOTION",
+        "failurePattern": "TRANSIENT",
+        "longestConsecutiveWrongRun": 0,
+        "longestStraightToTurningRun": 0,
+        "session": "UNSTABLE_DEV_1",
+        "trueClass": "UNSTABLE_MOTION",
+        "windows": 24
+      },
+      {
+        "accuracy": 1.0,
+        "correctWindows": 24,
+        "dominantPredictedClass": "UNSTABLE_MOTION",
+        "failurePattern": "TRANSIENT",
+        "longestConsecutiveWrongRun": 0,
+        "longestStraightToTurningRun": 0,
+        "session": "UNSTABLE_DEV_2",
+        "trueClass": "UNSTABLE_MOTION",
+        "windows": 24
+      },
+      {
+        "accuracy": 1.0,
+        "correctWindows": 24,
+        "dominantPredictedClass": "UNSTABLE_MOTION",
+        "failurePattern": "TRANSIENT",
+        "longestConsecutiveWrongRun": 0,
+        "longestStraightToTurningRun": 0,
+        "session": "UNSTABLE_DEV_3",
+        "trueClass": "UNSTABLE_MOTION",
+        "windows": 24
+      },
+      {
+        "accuracy": 0.75,
+        "correctWindows": 18,
+        "dominantPredictedClass": "UNSTABLE_MOTION",
+        "failurePattern": "SHORT_RUNS",
+        "longestConsecutiveWrongRun": 2,
+        "longestStraightToTurningRun": 0,
+        "session": "UNSTABLE_DEV_4",
+        "trueClass": "UNSTABLE_MOTION",
+        "windows": 24
+      },
+      {
+        "accuracy": 0.9166666666666666,
+        "correctWindows": 22,
+        "dominantPredictedClass": "UNSTABLE_MOTION",
+        "failurePattern": "TRANSIENT",
+        "longestConsecutiveWrongRun": 1,
+        "longestStraightToTurningRun": 0,
+        "session": "UNSTABLE_DEV_5",
+        "trueClass": "UNSTABLE_MOTION",
+        "windows": 24
+      }
+    ]
+  },
+  "status": "MOTION_FAILURE_DIAGNOSIS_COMPLETE"
+}

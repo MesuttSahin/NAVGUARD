@@ -25,6 +25,7 @@ class MainActivity : FlutterActivity() {
     private var fullNavguardFlowDiagnostic: FullNavguardFlowDiagnostic? = null
     private var navguardBenchmarkDiagnostic: NavguardBenchmarkDiagnostic? = null
     private var navguardAccuracyV2Diagnostic: NavguardAccuracyV2Diagnostic? = null
+    private var navguardAiDatasetCapture: NavguardAiDatasetCapture? = null
     private var liveNavguardDemoController: LiveNavguardDemoController? = null
     private var locationManager: LocationManager? = null
 
@@ -34,6 +35,7 @@ class MainActivity : FlutterActivity() {
     private var pendingGnssPermissionResult: MethodChannel.Result? = null
     private var pendingStepPermissionResult: MethodChannel.Result? = null
     private var pendingArCoreCameraPermissionResult: MethodChannel.Result? = null
+    private var pendingAiCapturePermissionResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -144,6 +146,17 @@ class MainActivity : FlutterActivity() {
                 null
             }
 
+        navguardAiDatasetCapture =
+            if (sensorManager != null && availableLocationManager != null) {
+                NavguardAiDatasetCapture(
+                    applicationContext = applicationContext,
+                    locationManager = availableLocationManager,
+                    sensorManager = sensorManager,
+                )
+            } else {
+                null
+            }
+
         liveNavguardDemoController =
             if (sensorManager != null && availableLocationManager != null) {
                 LiveNavguardDemoController(
@@ -168,6 +181,7 @@ class MainActivity : FlutterActivity() {
         configureFullNavguardFlowChannel(flutterEngine)
         configureNavguardBenchmarkChannel(flutterEngine)
         configureNavguardAccuracyV2Channel(flutterEngine)
+        configureNavguardAiChannel(flutterEngine)
         configureLiveNavguardDemoChannels(flutterEngine)
     }
 
@@ -1138,7 +1152,8 @@ class MainActivity : FlutterActivity() {
             navguardFusionDiagnostic?.isDiagnosticRunning() == true ||
             fullNavguardFlowDiagnostic?.isDiagnosticRunning() == true ||
             navguardBenchmarkDiagnostic?.isDiagnosticRunning() == true ||
-            navguardAccuracyV2Diagnostic?.isOperationRunning() == true
+            navguardAccuracyV2Diagnostic?.isOperationRunning() == true ||
+            navguardAiDatasetCapture?.isOperationRunning() == true
 
     private fun isStandaloneOperationRunning(): Boolean =
         synchronized(standaloneOperationLock) { standaloneOperationRunning }
@@ -1668,6 +1683,248 @@ class MainActivity : FlutterActivity() {
             "aiModelImplemented" to false,
         )
 
+    private fun configureNavguardAiChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            NAVGUARD_AI_CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            val capture = navguardAiDatasetCapture
+            when (call.method) {
+                METHOD_GET_AI_PREFLIGHT -> {
+                    val anchor = parseLiveAnchor(call.arguments)
+                    val operationAvailable = !isAnotherEvaluationExclusiveOperationRunning()
+                    val snapshot =
+                        capture?.createPreflightSnapshot(
+                            anchorAvailable = anchor != null,
+                            operationAvailable = operationAvailable,
+                        )?.toMutableMap()
+                            ?: createUnavailableAiPreflightSnapshot().toMutableMap()
+                    val model = NavguardAiModelRuntime.loadFromAssets(applicationContext)
+                    snapshot["modelStatus"] = model.status.name
+                    snapshot["modelAvailable"] = model.status == NavguardAiRuntimeStatus.MODEL_READY
+                    snapshot["configESelectable"] = model.status == NavguardAiRuntimeStatus.MODEL_READY
+                    result.success(snapshot)
+                }
+
+                METHOD_REQUEST_AI_CAPTURE_PERMISSIONS -> {
+                    requestAiCapturePermissions(result)
+                }
+
+                METHOD_GET_AI_DATASET_SUMMARY ->
+                    result.success(capture?.datasetSummary() ?: emptyMap<String, Any?>())
+
+                METHOD_GET_AI_CAPTURE_STATUS ->
+                    result.success(capture?.captureStatus() ?: linkedMapOf("phase" to "IDLE", "remainingSeconds" to 0, "featureWindowCount" to 0))
+
+                METHOD_GET_AI_MODEL_STATUS -> {
+                    val model = NavguardAiModelRuntime.loadFromAssets(applicationContext)
+                    result.success(
+                        linkedMapOf(
+                            "status" to model.status.name,
+                            "modelAvailable" to (model.status == NavguardAiRuntimeStatus.MODEL_READY),
+                            "configESelectable" to (model.status == NavguardAiRuntimeStatus.MODEL_READY),
+                            "fallbackConfigId" to NavguardAdaptiveFusionV2.CONFIG_ID,
+                            "configEId" to NavguardAiAssistedFusion.CONFIG_ID,
+                            "reason" to model.reason,
+                        ),
+                    )
+                }
+
+                METHOD_START_AI_DATASET_CAPTURE -> {
+                    if (capture == null) {
+                        result.error("ai_dataset_unavailable", "AI dataset services are unavailable.", null)
+                        return@setMethodCallHandler
+                    }
+                    if (isAnotherEvaluationExclusiveOperationRunning()) {
+                        result.error(NavguardAiDatasetCapture.ERROR_ALREADY_RUNNING, "Another mutually exclusive NAVGUARD operation is running.", null)
+                        return@setMethodCallHandler
+                    }
+                    val anchor = parseLiveAnchor(call.arguments)
+                    if (anchor == null) {
+                        result.error(NavguardAiDatasetCapture.ERROR_ANCHOR_REQUIRED, "A valid locked Stage 3A GNSS anchor is required.", null)
+                        return@setMethodCallHandler
+                    }
+                    val preflight =
+                        capture.createPreflightSnapshot(
+                            anchorAvailable = true,
+                            operationAvailable = true,
+                        )
+                    if (preflight["captureReady"] != true) {
+                        result.error(
+                            NavguardAiDatasetCapture.ERROR_PREFLIGHT_FAILED,
+                            "AI dataset capture preflight failed.",
+                            linkedMapOf("blockingReasons" to preflight["blockingReasons"]),
+                        )
+                        return@setMethodCallHandler
+                    }
+                    val arguments = call.arguments as? Map<*, *>
+                    val motionLabel = arguments?.get("motionLabel") as? String
+                    val durationSeconds = (arguments?.get("durationSeconds") as? Number)?.toInt()
+                    if (motionLabel == null || durationSeconds == null) {
+                        result.error(NavguardAiDatasetCapture.ERROR_INVALID_ARGUMENT, "Motion label and duration are required.", null)
+                        return@setMethodCallHandler
+                    }
+                    capture.start(
+                        motionLabel = motionLabel,
+                        durationSeconds = durationSeconds,
+                        anchorLatitudeDeg = anchor.latitudeDeg,
+                        anchorLongitudeDeg = anchor.longitudeDeg,
+                        anchorAltitudeM = anchor.altitudeEllipsoidM,
+                        callback = aiCaptureCallback(result),
+                    )
+                }
+
+                METHOD_CANCEL_AI_DATASET_CAPTURE -> {
+                    capture?.cancel()
+                    result.success(linkedMapOf("phase" to "CANCELLED"))
+                }
+
+                METHOD_CLEAR_AI_DATASET -> {
+                    if (isAnotherEvaluationExclusiveOperationRunning()) {
+                        result.error(NavguardAiDatasetCapture.ERROR_ALREADY_RUNNING, "Cannot clear local AI data while another operation is active.", null)
+                    } else {
+                        result.success(runCatching { capture?.clearLocalDataset() ?: emptyMap<String, Any?>() }.getOrElse {
+                            result.error("ai_dataset_clear_failed", "Unable to clear the local AI dataset.", null)
+                            return@setMethodCallHandler
+                        })
+                    }
+                }
+
+                METHOD_RUN_AI_DEVELOPMENT_BENCHMARK -> {
+                    val model = NavguardAiModelRuntime.loadFromAssets(applicationContext)
+                    result.success(
+                        linkedMapOf(
+                            "benchmarkInfrastructureImplemented" to true,
+                            "status" to model.status.name,
+                            "configIds" to listOf(
+                                "config_a_deterministic_pdr",
+                                "config_d_navguard_ekf_v1",
+                                NavguardAdaptiveFusionV2.CONFIG_ID,
+                                NavguardAiAssistedFusion.CONFIG_ID,
+                            ),
+                            "executable" to (model.status == NavguardAiRuntimeStatus.MODEL_READY),
+                            "protectedGtUsedByConfigE" to false,
+                            "protectedGtUsedByAiFeatures" to false,
+                            "protectedGtUsedByAiInference" to false,
+                            "developmentOnly" to true,
+                            "accuracyValidated" to false,
+                        ),
+                    )
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun requestAiCapturePermissions(result: MethodChannel.Result) {
+        if (navguardAiDatasetCapture == null) {
+            result.error("ai_dataset_unavailable", "AI dataset services are unavailable.", null)
+            return
+        }
+
+        val missingPermissions =
+            buildList {
+                if (!hasFineLocationPermission()) {
+                    add(Manifest.permission.ACCESS_FINE_LOCATION)
+                    add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                }
+                if (!hasCameraPermission()) add(Manifest.permission.CAMERA)
+                if (isActivityRecognitionPermissionRequired() && !hasActivityRecognitionPermission()) {
+                    add(Manifest.permission.ACTIVITY_RECOGNITION)
+                }
+            }.distinct()
+
+        if (missingPermissions.isEmpty()) {
+            result.success(createAiCapturePermissionResultSnapshot(AI_PERMISSION_OUTCOME_ALREADY_GRANTED))
+            return
+        }
+
+        val reserved =
+            synchronized(permissionResultLock) {
+                if (
+                    pendingGnssPermissionResult != null ||
+                    pendingStepPermissionResult != null ||
+                    pendingArCoreCameraPermissionResult != null ||
+                    pendingAiCapturePermissionResult != null
+                ) {
+                    false
+                } else {
+                    pendingAiCapturePermissionResult = result
+                    true
+                }
+            }
+        if (!reserved) {
+            result.error(
+                ERROR_AI_PERMISSION_REQUEST_ALREADY_RUNNING,
+                "Another runtime permission request is already running.",
+                null,
+            )
+            return
+        }
+
+        try {
+            requestPermissions(missingPermissions.toTypedArray(), AI_CAPTURE_PERMISSION_REQUEST_CODE)
+        } catch (_: Exception) {
+            clearPendingAiCapturePermissionResult(result)?.error(
+                ERROR_AI_PERMISSION_REQUEST_FAILED,
+                "Unable to start the AI capture permission request.",
+                null,
+            )
+        }
+    }
+
+    private fun createAiCapturePermissionResultSnapshot(requestOutcome: String): Map<String, Any?> =
+        linkedMapOf(
+            "requestOutcome" to requestOutcome,
+            "fineLocationPermissionGranted" to hasFineLocationPermission(),
+            "cameraPermissionGranted" to hasCameraPermission(),
+            "activityRecognitionPermissionGranted" to hasActivityRecognitionPermission(),
+        )
+
+    private fun aiCaptureCallback(result: MethodChannel.Result): NavguardAiDatasetCapture.Callback =
+        object : NavguardAiDatasetCapture.Callback {
+            override fun onSuccess(summary: Map<String, Any?>) = result.success(summary)
+
+            override fun onError(code: String, message: String, details: Map<String, Any?>?) {
+                result.error(code, message, details)
+            }
+        }
+
+    private fun createUnavailableAiPreflightSnapshot(): Map<String, Any?> =
+        linkedMapOf(
+            "schemaVersion" to NavguardAiDatasetCapture.DATASET_SCHEMA_VERSION,
+            "featureSchemaVersion" to NavguardAiFeatureExtractor.FEATURE_SCHEMA_VERSION,
+            "configEId" to NavguardAiAssistedFusion.CONFIG_ID,
+            "featureCount" to NavguardAiFeatureExtractor.FEATURE_ORDER.size,
+            "modelStatus" to NavguardAiRuntimeStatus.MODEL_NOT_AVAILABLE.name,
+            "modelAvailable" to false,
+            "configESelectable" to false,
+            "accelerometerAvailable" to false,
+            "gyroscopeAvailable" to false,
+            "rotationVectorAvailable" to false,
+            "stepDetectorAvailable" to false,
+            "arCoreSupported" to false,
+            "arCoreInstalled" to false,
+            "cameraPermissionGranted" to hasCameraPermission(),
+            "activityRecognitionPermissionGranted" to hasActivityRecognitionPermission(),
+            "fineLocationPermissionGranted" to hasFineLocationPermission(),
+            "gpsProviderAvailable" to false,
+            "gpsProviderEnabled" to false,
+            "anchorAvailable" to false,
+            "operationAvailable" to false,
+            "captureReady" to false,
+            "nativeReady" to false,
+            "operationBusy" to true,
+            "blockingReasons" to listOf("CAPTURE_SERVICE_UNAVAILABLE"),
+            "nativeSelfTests" to emptyMap<String, Boolean>(),
+            "nativeSelfTestCount" to 0,
+            "nativeSelfTestsPassed" to false,
+            "failedNativeSelfTests" to emptyList<String>(),
+            "nativeSelfTestFailures" to emptyList<Map<String, String>>(),
+            "selfTestsPassed" to false,
+        )
+
     private fun configureLiveNavguardDemoChannels(flutterEngine: FlutterEngine) {
         val controller = liveNavguardDemoController
         EventChannel(
@@ -1742,6 +1999,13 @@ class MainActivity : FlutterActivity() {
 
                 METHOD_REQUEST_LIVE_GNSS_RECOVERY -> {
                     controller.requestRecovery(liveCommandCallback(result))
+                }
+
+                METHOD_SET_LIVE_NAVGUARD_FUSION_MODE -> {
+                    controller.switchFusionMode(
+                        fusionModeId = parseLiveFusionMode(call.arguments),
+                        callback = liveCommandCallback(result),
+                    )
                 }
 
                 METHOD_STOP_LIVE_NAVGUARD_DEMO -> {
@@ -2107,6 +2371,19 @@ class MainActivity : FlutterActivity() {
                     ),
                 )
             }
+
+            AI_CAPTURE_PERMISSION_REQUEST_CODE -> {
+                val pendingResult = takePendingAiCapturePermissionResult() ?: return
+                val allGranted =
+                    hasFineLocationPermission() &&
+                        hasCameraPermission() &&
+                        hasActivityRecognitionPermission()
+                pendingResult.success(
+                    createAiCapturePermissionResultSnapshot(
+                        if (allGranted) AI_PERMISSION_OUTCOME_GRANTED else AI_PERMISSION_OUTCOME_PARTIAL_OR_DENIED,
+                    ),
+                )
+            }
         }
     }
 
@@ -2144,6 +2421,9 @@ class MainActivity : FlutterActivity() {
         )
         navguardBenchmarkDiagnostic?.cancelActiveSession(
             "NAVGUARD benchmark cancelled because the activity paused.",
+        )
+        navguardAiDatasetCapture?.cancel(
+            "AI dataset capture cancelled because the activity paused.",
         )
         liveNavguardDemoController?.stop(
             reason = "Live NAVGUARD demo stopped because the activity paused.",
@@ -2187,6 +2467,9 @@ class MainActivity : FlutterActivity() {
         navguardBenchmarkDiagnostic?.cancelActiveSession(
             "NAVGUARD benchmark cancelled because the activity was destroyed.",
         )
+        navguardAiDatasetCapture?.cancel(
+            "AI dataset capture cancelled because the activity was destroyed.",
+        )
         liveNavguardDemoController?.stop(
             reason = "Live NAVGUARD demo stopped because the activity was destroyed.",
         )
@@ -2203,6 +2486,8 @@ class MainActivity : FlutterActivity() {
         navguardFusionDiagnostic = null
         fullNavguardFlowDiagnostic = null
         navguardBenchmarkDiagnostic = null
+        navguardAccuracyV2Diagnostic = null
+        navguardAiDatasetCapture = null
         liveNavguardDemoController = null
         locationManager = null
 
@@ -2219,6 +2504,11 @@ class MainActivity : FlutterActivity() {
         takePendingArCoreCameraPermissionResult()?.error(
             ERROR_ARCORE_CAMERA_PERMISSION_REQUEST_CANCELLED,
             "ARCore camera permission request cancelled because the activity was destroyed.",
+            null,
+        )
+        takePendingAiCapturePermissionResult()?.error(
+            ERROR_AI_PERMISSION_REQUEST_CANCELLED,
+            "AI capture permission request cancelled because the activity was destroyed.",
             null,
         )
 
@@ -2480,6 +2770,25 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+    private fun takePendingAiCapturePermissionResult(): MethodChannel.Result? =
+        synchronized(permissionResultLock) {
+            val result = pendingAiCapturePermissionResult
+            pendingAiCapturePermissionResult = null
+            result
+        }
+
+    private fun clearPendingAiCapturePermissionResult(
+        expectedResult: MethodChannel.Result,
+    ): MethodChannel.Result? =
+        synchronized(permissionResultLock) {
+            if (pendingAiCapturePermissionResult === expectedResult) {
+                pendingAiCapturePermissionResult = null
+                expectedResult
+            } else {
+                null
+            }
+        }
+
     private data class GnssAnchorReadiness(
         val fineLocationPermissionGranted: Boolean,
         val locationServicesEnabled: Boolean?,
@@ -2533,6 +2842,8 @@ class MainActivity : FlutterActivity() {
             "io.github.mesuttsahin.navguard/navguard_benchmark"
         const val NAVGUARD_ACCURACY_V2_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/navguard_accuracy_v2"
+        const val NAVGUARD_AI_CHANNEL_NAME =
+            "io.github.mesuttsahin.navguard/navguard_ai"
         const val LIVE_NAVGUARD_DEMO_METHOD_CHANNEL_NAME =
             "io.github.mesuttsahin.navguard/live_navguard_demo"
         const val LIVE_NAVGUARD_DEMO_EVENT_CHANNEL_NAME =
@@ -2628,6 +2939,17 @@ class MainActivity : FlutterActivity() {
             "runAccuracyV2DevelopmentBenchmark"
         const val METHOD_RESET_ACCURACY_V2_CALIBRATION =
             "resetAccuracyV2Calibration"
+        const val METHOD_GET_AI_PREFLIGHT = "getAiPreflight"
+        const val METHOD_REQUEST_AI_CAPTURE_PERMISSIONS =
+            "requestAiCapturePermissions"
+        const val METHOD_START_AI_DATASET_CAPTURE = "startAiDatasetCapture"
+        const val METHOD_GET_AI_CAPTURE_STATUS = "getAiCaptureStatus"
+        const val METHOD_CANCEL_AI_DATASET_CAPTURE = "cancelAiDatasetCapture"
+        const val METHOD_GET_AI_DATASET_SUMMARY = "getAiDatasetSummary"
+        const val METHOD_CLEAR_AI_DATASET = "clearAiDataset"
+        const val METHOD_GET_AI_MODEL_STATUS = "getAiModelStatus"
+        const val METHOD_RUN_AI_DEVELOPMENT_BENCHMARK =
+            "runAiDevelopmentBenchmark"
         const val METHOD_GET_LIVE_NAVGUARD_DEMO_PREFLIGHT =
             "getLiveNavguardDemoPreflight"
         const val METHOD_START_LIVE_NAVGUARD_DEMO =
@@ -2636,6 +2958,8 @@ class MainActivity : FlutterActivity() {
             "beginLiveGnssDenial"
         const val METHOD_REQUEST_LIVE_GNSS_RECOVERY =
             "requestLiveGnssRecovery"
+        const val METHOD_SET_LIVE_NAVGUARD_FUSION_MODE =
+            "setLiveNavguardFusionMode"
         const val METHOD_STOP_LIVE_NAVGUARD_DEMO =
             "stopLiveNavguardDemo"
 
@@ -2697,11 +3021,15 @@ class MainActivity : FlutterActivity() {
         const val GNSS_PERMISSION_REQUEST_CODE = 42_021
         const val ARCORE_CAMERA_PERMISSION_REQUEST_CODE = 42_022
         const val STEP_ACTIVITY_PERMISSION_REQUEST_CODE = 42_023
+        const val AI_CAPTURE_PERMISSION_REQUEST_CODE = 42_024
 
         const val ARCORE_PERMISSION_OUTCOME_ALREADY_GRANTED =
             "already_granted"
         const val ARCORE_PERMISSION_OUTCOME_GRANTED = "granted"
         const val ARCORE_PERMISSION_OUTCOME_DENIED = "denied"
+        const val AI_PERMISSION_OUTCOME_ALREADY_GRANTED = "already_granted"
+        const val AI_PERMISSION_OUTCOME_GRANTED = "granted"
+        const val AI_PERMISSION_OUTCOME_PARTIAL_OR_DENIED = "partial_or_denied"
 
         const val ERROR_SENSOR_MANAGER_UNAVAILABLE =
             "sensor_manager_unavailable"
@@ -2752,6 +3080,12 @@ class MainActivity : FlutterActivity() {
             "arcore_camera_permission_request_failed"
         const val ERROR_ARCORE_CAMERA_PERMISSION_REQUEST_CANCELLED =
             "arcore_camera_permission_request_cancelled"
+        const val ERROR_AI_PERMISSION_REQUEST_ALREADY_RUNNING =
+            "ai_capture_permission_request_already_running"
+        const val ERROR_AI_PERMISSION_REQUEST_FAILED =
+            "ai_capture_permission_request_failed"
+        const val ERROR_AI_PERMISSION_REQUEST_CANCELLED =
+            "ai_capture_permission_request_cancelled"
         const val ERROR_ARCORE_ENU_UNAVAILABLE = "arcore_enu_unavailable"
         const val ERROR_ARCORE_ENU_ANCHOR_REQUIRED =
             "arcore_enu_anchor_required"

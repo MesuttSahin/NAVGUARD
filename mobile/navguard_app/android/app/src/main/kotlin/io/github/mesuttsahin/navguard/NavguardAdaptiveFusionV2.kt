@@ -215,6 +215,7 @@ class NavguardAdaptiveFusionV2(
         measuredHeadingRad: Double,
         quality: AdaptiveSourceQuality,
         reportedAccuracyRad: Double? = null,
+        externalUncertaintyMultiplier: Double = 1.0,
     ): Boolean {
         if (timestampNs <= 0L || !measuredHeadingRad.isFinite()) return false
         val measured = normalizeHeading(measuredHeadingRad)
@@ -224,8 +225,7 @@ class NavguardAdaptiveFusionV2(
         val absoluteInnovation = abs(innovation)
         runtime.headingInnovationSumRad += absoluteInnovation
         runtime.headingInnovationMaxRad = max(runtime.headingInnovationMaxRad, absoluteInnovation)
-        val sigmaRad = adaptiveHeadingSigma(quality, reportedAccuracyRad)
-        runtime.headingSigmaRad = sigmaRad
+        val deterministicSigmaRad = adaptiveHeadingSigma(quality, reportedAccuracyRad)
         val qualityAccepted =
             quality == AdaptiveSourceQuality.GOOD ||
                 quality == AdaptiveSourceQuality.USABLE ||
@@ -241,6 +241,10 @@ class NavguardAdaptiveFusionV2(
             runtime.headingRejectedCount += 1L
             return false
         }
+        val sigmaRad =
+            (deterministicSigmaRad * boundedExternalUncertainty(externalUncertaintyMultiplier))
+                .coerceIn(BASE_HEADING_SIGMA_RAD, MAX_HEADING_SIGMA_RAD)
+        runtime.headingSigmaRad = sigmaRad
         updateHeadingEkf(measured, sigmaRad)
         runtime.headingAcceptedCount += 1L
         runtime.latestDeviceHeadingRad = measured
@@ -255,6 +259,7 @@ class NavguardAdaptiveFusionV2(
     fun predictStep(
         timestampNs: Long,
         quality: AdaptiveSourceQuality = AdaptiveSourceQuality.USABLE,
+        externalUncertaintyMultiplier: Double = 1.0,
     ): Boolean {
         if (timestampNs <= 0L || quality == AdaptiveSourceQuality.UNRELIABLE || quality == AdaptiveSourceQuality.UNAVAILABLE) {
             return false
@@ -276,8 +281,9 @@ class NavguardAdaptiveFusionV2(
                 AdaptiveSourceQuality.DEGRADED -> 6.0
                 else -> 8.0
             }
-        val sigmaLength2 = BASE_STEP_LENGTH_SIGMA_M * BASE_STEP_LENGTH_SIGMA_M * qualityMultiplier
-        val sigmaHeading2 = BASE_STEP_HEADING_PROCESS_SIGMA_RAD * BASE_STEP_HEADING_PROCESS_SIGMA_RAD * qualityMultiplier
+        val boundedExternal = boundedExternalUncertainty(externalUncertaintyMultiplier)
+        val sigmaLength2 = BASE_STEP_LENGTH_SIGMA_M * BASE_STEP_LENGTH_SIGMA_M * qualityMultiplier * boundedExternal
+        val sigmaHeading2 = BASE_STEP_HEADING_PROCESS_SIGMA_RAD * BASE_STEP_HEADING_PROCESS_SIGMA_RAD * qualityMultiplier * boundedExternal
         val q =
             doubleArrayOf(
                 sigmaLength2 * sinHeading * sinHeading,
@@ -311,6 +317,7 @@ class NavguardAdaptiveFusionV2(
         quality: AdaptiveSourceQuality,
         frameGapMs: Double? = null,
         allowCalibrationLearning: Boolean = true,
+        externalUncertaintyMultiplier: Double = 1.0,
     ): AdaptiveMeasurementResult {
         runtime.arcoreUpdateCount += 1L
         if (timestampNs <= 0L || !measuredEastM.isFinite() || !measuredNorthM.isFinite()) {
@@ -368,7 +375,11 @@ class NavguardAdaptiveFusionV2(
                 MAX_ARCORE_SIGMA_M,
             )
         }
-        updateArcoreEkf(measuredEastM, measuredNorthM, sigma)
+        val fusionSigma =
+            (sigma * boundedExternalUncertainty(externalUncertaintyMultiplier))
+                .coerceIn(BASE_ARCORE_SIGMA_M, MAX_ARCORE_SIGMA_M)
+        if (fusionSigma > sigma) robustlyInflated = true
+        updateArcoreEkf(measuredEastM, measuredNorthM, fusionSigma)
         runtime.arcoreAcceptedCount += 1L
         if (robustlyInflated) {
             runtime.arcoreAcceptedInflatedCount += 1L
@@ -376,8 +387,8 @@ class NavguardAdaptiveFusionV2(
         } else {
             runtime.arcoreAcceptedNominalCount += 1L
         }
-        recordArcoreSigma(sigma)
-        recordAcceptedRobustSigma(sigma)
+        recordArcoreSigma(fusionSigma)
+        recordAcceptedRobustSigma(fusionSigma)
         if (allowCalibrationLearning) {
             observeCalibration(timestampNs, measuredEastM, measuredNorthM, quality, preRobustNis)
         }
@@ -386,8 +397,15 @@ class NavguardAdaptiveFusionV2(
             runtime.firstArNorthM = measuredNorthM
         }
         validateState()
-        return AdaptiveMeasurementResult(true, sigma, innovationEast, innovationNorth, innovationNorm, postRobustNis, null)
+        return AdaptiveMeasurementResult(true, fusionSigma, innovationEast, innovationNorth, innovationNorm, postRobustNis, null)
     }
+
+    private fun boundedExternalUncertainty(value: Double): Double =
+        if (value.isFinite()) {
+            value.coerceIn(1.0, MAX_EXTERNAL_UNCERTAINTY_MULTIPLIER)
+        } else {
+            1.0
+        }
 
     fun tick(timestampNs: Long) {
         if (timestampNs <= 0L) return
@@ -813,6 +831,7 @@ class NavguardAdaptiveFusionV2(
         const val DEFAULT_STRIDE_M = 0.75
         const val BASE_ARCORE_SIGMA_M = 0.35
         const val MAX_ARCORE_SIGMA_M = 5.0
+        const val MAX_EXTERNAL_UNCERTAINTY_MULTIPLIER = 2.5
         const val ARCORE_NIS_SOFT_GATE = 5.99
         const val ARCORE_NIS_HARD_GATE = 25.0
         private const val ARCORE_TURN_SIGMA_MULTIPLIER = 1.35
@@ -1009,7 +1028,10 @@ class NavguardAdaptiveFusionV2(
                 turnAwareCore.turnState == AdaptiveTurnState.TURNING &&
                     turnArcore.accepted &&
                     turnArcore.sigmaM > BASE_ARCORE_SIGMA_M &&
-                    (turnDiagnostics["arcorePreRobustNisMax"] as? Double ?: 0.0) > ARCORE_NIS_HARD_GATE &&
+                    (turnDiagnostics["arcorePreRobustNisMax"] as? Double ?: 0.0) > ARCORE_NIS_SOFT_GATE &&
+                    (turnDiagnostics["arcorePostRobustNisMax"] as? Double ?: ARCORE_NIS_UNSAFE_SENTINEL) <=
+                    ARCORE_NIS_HARD_GATE &&
+                    turnDiagnostics["arcoreAcceptedAfterRobustInflationCount"] == 1L &&
                     turnAwareCore.bodyHeadingOffsetRad == turnOffsetBefore
             val knownNis =
                 calculateNis(

@@ -1,0 +1,406 @@
+{
+  "aiMotionFinalResult": "INDEPENDENT_HOLDOUT_GATE_NOT_MET",
+  "configEActive": false,
+  "decodedHoldout": {
+    "metrics": {
+      "accuracy": 0.8020833333333334,
+      "confusionMatrix": [
+        [
+          23,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          22,
+          2,
+          0
+        ],
+        [
+          0,
+          15,
+          9,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          23
+        ]
+      ],
+      "macroF1": 0.7925363053022627,
+      "macroPrecision": 0.8455710955710956,
+      "macroRecall": 0.8020833333333334,
+      "perClass": {
+        "STATIONARY": {
+          "f1": 0.9787234042553191,
+          "precision": 1.0,
+          "recall": 0.9583333333333334,
+          "support": 24
+        },
+        "STRAIGHT_WALK": {
+          "f1": 0.6984126984126984,
+          "precision": 0.5641025641025641,
+          "recall": 0.9166666666666666,
+          "support": 24
+        },
+        "TURNING": {
+          "f1": 0.5142857142857142,
+          "precision": 0.8181818181818182,
+          "recall": 0.375,
+          "support": 24
+        },
+        "UNSTABLE_MOTION": {
+          "f1": 0.9787234042553191,
+          "precision": 1.0,
+          "recall": 0.9583333333333334,
+          "support": 24
+        }
+      }
+    },
+    "minimumClassRecall": 0.375
+  },
+  "determinism": {
+    "decodedPredictionsMatch": true,
+    "metricsMatch": true,
+    "modelParametersMatch": true,
+    "passed": true,
+    "probabilitiesMatch": true,
+    "rawPredictionsMatch": true,
+    "twoFrozenDevelopmentFitsCompletedBeforeHoldoutLoad": true
+  },
+  "development": {
+    "datasetSchemaVersion": "navguard_ai_dataset_v3",
+    "duplicateSessionWindowCount": 0,
+    "featureCount": 40,
+    "featureSchemaVersion": "navguard_ai_features_v3",
+    "finiteFeatures": true,
+    "mixedDatasetSchema": false,
+    "mixedFeatureSchema": false,
+    "motionWindowCounts": {
+      "STATIONARY": 120,
+      "STRAIGHT_WALK": 120,
+      "TURNING": 120,
+      "UNSTABLE_MOTION": 120
+    },
+    "sessionCount": 20,
+    "sessionsPerMotionClass": {
+      "STATIONARY": 5,
+      "STRAIGHT_WALK": 5,
+      "TURNING": 5,
+      "UNSTABLE_MOTION": 5
+    },
+    "unknownMotionClassCount": 0,
+    "windowCount": 480,
+    "windowsPerSession": 24
+  },
+  "developmentHoldoutSessionOverlapCount": 0,
+  "finalGates": {
+    "decodedMacroF1AtLeast075": true,
+    "empiricalMaxDelayAtMostTwo": true,
+    "everyDecodedClassRecallAtLeast055": false,
+    "noPersistentSessionFailure": false,
+    "theoreticalMaxDelayAtMostTwo": true
+  },
+  "finalV3HoldoutGate": "FAIL",
+  "frozenDecoder": {
+    "consecutiveWindows": 1,
+    "firWeights": [
+      0.6,
+      0.3,
+      0.1
+    ],
+    "futureWindowUsed": false,
+    "highConfidence": 0.7,
+    "highMargin": 0.1,
+    "history": "t,t-1,t-2",
+    "historyLength": 3,
+    "lowConfidence": 0.5,
+    "lowMargin": 0.0,
+    "name": "fir3_0.60_0.30_0.10_bounded_hc0.70_hm0.10_lc0.50_lm0.00_c1",
+    "probabilityFilter": "FIR3",
+    "recursiveEmaUsed": false,
+    "sessionStateReset": true,
+    "theoreticalMaxDelayWindows": 2
+  },
+  "frozenDevelopmentContractVerified": true,
+  "frozenModel": {
+    "activation": "relu",
+    "alpha": 0.01,
+    "architecture": [
+      40,
+      32,
+      4
+    ],
+    "classOrder": [
+      "STATIONARY",
+      "STRAIGHT_WALK",
+      "TURNING",
+      "UNSTABLE_MOTION"
+    ],
+    "developmentRowsUsedForFit": 480,
+    "earlyStopping": false,
+    "epochs": 86,
+    "family": "MLP_SINGLE_HIDDEN",
+    "featureCount": 40,
+    "featureOrder": [
+      "accel_mag_mean",
+      "accel_mag_std",
+      "accel_mag_rms",
+      "gyro_mag_mean",
+      "gyro_mag_std",
+      "gyro_mag_rms",
+      "heading_circular_std_rad",
+      "heading_rate_abs_mean_rad_s",
+      "heading_rate_abs_max_rad_s",
+      "step_count",
+      "step_cadence_hz",
+      "step_interval_std_s",
+      "arcore_displacement_m",
+      "arcore_speed_mean_mps",
+      "arcore_speed_std_mps",
+      "arcore_tracking_fraction",
+      "arcore_frame_gap_mean_ms",
+      "arcore_pre_robust_nis_mean",
+      "arcore_post_robust_nis_mean",
+      "source_disagreement_mean_m",
+      "source_disagreement_max_m",
+      "stride_estimate_m",
+      "stationary_candidate_fraction",
+      "turning_heuristic_fraction",
+      "arcore_robust_sigma_mean_m",
+      "heading_unreliable_fraction",
+      "heading_net_change_abs_rad",
+      "heading_turn_consistency",
+      "sustained_turn_fraction",
+      "arcore_path_length_m",
+      "arcore_straightness_ratio",
+      "arcore_net_turn_abs_rad",
+      "arcore_turn_consistency",
+      "arcore_curvature_abs_rad_per_m",
+      "heading_signed_net_turn_rad",
+      "arcore_signed_net_turn_rad",
+      "heading_path_turn_direction_agreement",
+      "heading_path_turn_magnitude_difference_ratio",
+      "heading_path_turn_coherence",
+      "arcore_cross_track_rms_m"
+    ],
+    "featureSchemaVersion": "navguard_ai_features_v3",
+    "holdoutRowsUsedForFit": 0,
+    "internalValidationSplit": false,
+    "learningRateInit": 0.0005,
+    "optimizer": "adam",
+    "randomState": 42
+  },
+  "furtherAiTuningPlanned": false,
+  "furtherDevelopmentDataCollectionPlanned": false,
+  "holdout": {
+    "datasetSchemaVersion": "navguard_ai_dataset_v3",
+    "duplicateSessionWindowCount": 0,
+    "featureCount": 40,
+    "featureSchemaVersion": "navguard_ai_features_v3",
+    "finiteFeatures": true,
+    "mixedDatasetSchema": false,
+    "mixedFeatureSchema": false,
+    "motionWindowCounts": {
+      "STATIONARY": 24,
+      "STRAIGHT_WALK": 24,
+      "TURNING": 24,
+      "UNSTABLE_MOTION": 24
+    },
+    "sessionCount": 4,
+    "sessionsPerMotionClass": {
+      "STATIONARY": 1,
+      "STRAIGHT_WALK": 1,
+      "TURNING": 1,
+      "UNSTABLE_MOTION": 1
+    },
+    "windowCount": 96,
+    "windowsPerSession": 24
+  },
+  "interpretation": "The frozen motion classifier did not pass the predefined independent V3 holdout gate on four fresh physical sessions.",
+  "interpretationLimits": {
+    "broadPopulationGeneralizationClaimed": false,
+    "fourFreshIndependentPhysicalSessions": true,
+    "navigationAccuracyValidated": false,
+    "oneSessionPerMotionClass": true,
+    "productionSafetyValidationClaimed": false,
+    "universalModelValidationClaimed": false
+  },
+  "isolation": {
+    "holdoutLoadedAfterBothFrozenModelsFitted": true,
+    "holdoutUsedForDecoderChoice": false,
+    "holdoutUsedForEpochSelection": false,
+    "holdoutUsedForFeatureSelection": false,
+    "holdoutUsedForHyperparameterChoice": false,
+    "holdoutUsedForModelSelection": false,
+    "holdoutUsedForNormalization": false,
+    "holdoutUsedForThresholdChoice": false,
+    "privatePathsReturned": false,
+    "rawRowsReturned": false,
+    "sessionIdentifiersReturned": false,
+    "tuningAfterHoldout": false
+  },
+  "latency": {
+    "definition": "ESTABLISHED_RAW_TO_FROZEN_DECODER_SWITCH_DELAY_PROXY",
+    "hopSeconds": 1.0,
+    "maxWindows": 1,
+    "meanWindows": 0.4,
+    "p90Windows": 1.0,
+    "theoreticalMaxWindows": 2
+  },
+  "modelStatus": "NOT_APPROVED_FOR_CONFIG_E",
+  "navigationAccuracyValidated": false,
+  "nextAction": "CLOSE_AI_RESEARCH_WITH_SAFE_DV2_FALLBACK",
+  "normalization": {
+    "fitSource": "development_v3_only",
+    "holdoutStatisticsUsed": false,
+    "standardizedClamp": [
+      -5.0,
+      5.0
+    ]
+  },
+  "productionIntegrationAuthorized": false,
+  "productionModelAbsent": true,
+  "productionModelExported": false,
+  "rawHoldout": {
+    "meanMaxProbability": 0.7824973480184682,
+    "medianMaxProbability": 0.8008175928788697,
+    "metrics": {
+      "accuracy": 0.8020833333333334,
+      "confusionMatrix": [
+        [
+          23,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          23,
+          1,
+          0
+        ],
+        [
+          2,
+          14,
+          8,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          23
+        ]
+      ],
+      "macroF1": 0.783126532366654,
+      "macroPrecision": 0.8496581196581197,
+      "macroRecall": 0.8020833333333334,
+      "perClass": {
+        "STATIONARY": {
+          "f1": 0.9387755102040817,
+          "precision": 0.92,
+          "recall": 0.9583333333333334,
+          "support": 24
+        },
+        "STRAIGHT_WALK": {
+          "f1": 0.7301587301587301,
+          "precision": 0.5897435897435898,
+          "recall": 0.9583333333333334,
+          "support": 24
+        },
+        "TURNING": {
+          "f1": 0.48484848484848486,
+          "precision": 0.8888888888888888,
+          "recall": 0.3333333333333333,
+          "support": 24
+        },
+        "UNSTABLE_MOTION": {
+          "f1": 0.9787234042553191,
+          "precision": 1.0,
+          "recall": 0.9583333333333334,
+          "support": 24
+        }
+      }
+    }
+  },
+  "reliabilityHeads": {
+    "arcore": "PREVIOUS_PASS",
+    "heading": "INSUFFICIENT",
+    "pdr": "FAIL",
+    "retuned": false
+  },
+  "replacementHoldoutPlanned": false,
+  "sanitizedSessionResults": {
+    "FINAL_STATIONARY": {
+      "accuracy": 0.9583333333333334,
+      "correctWindows": 23,
+      "dominantPrediction": "STATIONARY",
+      "longestWrongRun": 1,
+      "motionClass": "STATIONARY",
+      "persistentFailure": false,
+      "sanitizedSession": "FINAL_STATIONARY",
+      "windowCount": 24,
+      "wrongClassDominatesMostWindows": false
+    },
+    "FINAL_STRAIGHT_WALK": {
+      "accuracy": 0.9166666666666666,
+      "correctWindows": 22,
+      "dominantPrediction": "STRAIGHT_WALK",
+      "longestStraightToTurningRun": 2,
+      "longestWrongRun": 2,
+      "motionClass": "STRAIGHT_WALK",
+      "persistentFailure": false,
+      "sanitizedSession": "FINAL_STRAIGHT_WALK",
+      "windowCount": 24,
+      "wrongClassDominatesMostWindows": false
+    },
+    "FINAL_TURNING": {
+      "accuracy": 0.375,
+      "correctWindows": 9,
+      "dominantPrediction": "STRAIGHT_WALK",
+      "longestTurningToStraightRun": 6,
+      "longestWrongRun": 6,
+      "motionClass": "TURNING",
+      "persistentFailure": true,
+      "sanitizedSession": "FINAL_TURNING",
+      "windowCount": 24,
+      "wrongClassDominatesMostWindows": true
+    },
+    "FINAL_UNSTABLE_MOTION": {
+      "accuracy": 0.9583333333333334,
+      "correctWindows": 23,
+      "dominantPrediction": "UNSTABLE_MOTION",
+      "longestWrongRun": 1,
+      "motionClass": "UNSTABLE_MOTION",
+      "persistentFailure": false,
+      "sanitizedSession": "FINAL_UNSTABLE_MOTION",
+      "windowCount": 24,
+      "wrongClassDominatesMostWindows": false
+    }
+  },
+  "schemaVersion": "navguard_ai_v3_final_holdout_report_v1",
+  "selfTests": {
+    "configENotActivated": true,
+    "decoderStateResetPerSession": true,
+    "developmentExact20Sessions": true,
+    "developmentHoldoutNoOverlap": true,
+    "exact86Epochs": true,
+    "exactClassOrder": true,
+    "exactFrozenBoundedSwitch": true,
+    "exactFrozenFir3": true,
+    "exactV3FeatureSchema": true,
+    "holdoutExact4Sessions": true,
+    "holdoutLoadedOnlyAfterFinalFit": true,
+    "noEarlyStopping": true,
+    "noFutureWindow": true,
+    "noHistoryOlderThanTMinus2": true,
+    "noProductionModelExport": true,
+    "noTuningAfterHoldout": true,
+    "repeatedFrozenEvaluationDeterministic": true,
+    "scalerDevelopmentOnly": true
+  }
+}

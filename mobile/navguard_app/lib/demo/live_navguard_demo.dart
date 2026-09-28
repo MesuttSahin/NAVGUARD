@@ -51,7 +51,8 @@ enum LiveNavigationSource {
 
 enum LiveFusionMode {
   navguardV1('config_d_navguard_ekf_v1', 'NAVGUARD v1'),
-  adaptiveV2('config_d_v2_adaptive_navguard', 'NAVGUARD v2 (Adaptive)');
+  adaptiveV2('config_d_v2_adaptive_navguard', 'NAVGUARD v2 (Adaptive)'),
+  experimentalAiV3('config_e_ai_assisted_navguard_v1', 'V3 · AI');
 
   const LiveFusionMode(this.wireName, this.displayName);
 
@@ -132,6 +133,9 @@ class LiveNavguardPreflight {
     required this.anchorAvailable,
     required this.nativeReady,
     required this.demoRunning,
+    this.aiModelStatus = 'MODEL_NOT_AVAILABLE',
+    this.aiModelAvailable = false,
+    this.aiConfigESelectable = false,
   });
 
   factory LiveNavguardPreflight.fromMap(Object? raw) {
@@ -152,6 +156,9 @@ class LiveNavguardPreflight {
       anchorAvailable: map['anchorAvailable'] == true,
       nativeReady: map['nativeReady'] == true,
       demoRunning: map['demoRunning'] == true,
+      aiModelStatus: map['aiModelStatus']?.toString() ?? 'MODEL_NOT_AVAILABLE',
+      aiModelAvailable: map['aiModelAvailable'] == true,
+      aiConfigESelectable: map['aiConfigESelectable'] == true,
     );
   }
 
@@ -167,6 +174,9 @@ class LiveNavguardPreflight {
   final bool anchorAvailable;
   final bool nativeReady;
   final bool demoRunning;
+  final String aiModelStatus;
+  final bool aiModelAvailable;
+  final bool aiConfigESelectable;
 }
 
 class LiveNavguardPosition {
@@ -220,6 +230,13 @@ class LiveNavguardPosition {
     required this.arcoreAcceptedAfterRobustInflationCount,
     required this.arcoreRejectedAfterMaxInflationCount,
     this.sourceDisagreementM,
+    this.aiExperimentalMode = false,
+    this.aiRuntimeStatus = 'DISABLED',
+    this.aiMotionState,
+    this.aiMotionConfidence,
+    this.aiFallbackConfigId = 'config_d_v2_adaptive_navguard',
+    this.aiCoordinatesDirectlyPredicted = false,
+    this.aiStrideDirectlyMutated = false,
   });
 
   factory LiveNavguardPosition.fromMap(Map<Object?, Object?> map) {
@@ -315,6 +332,16 @@ class LiveNavguardPosition {
         0,
       ),
       sourceDisagreementM: _optionalNumber(map, 'sourceDisagreementM'),
+      aiExperimentalMode: map['aiExperimentalMode'] == true,
+      aiRuntimeStatus: map['aiRuntimeStatus']?.toString() ?? 'DISABLED',
+      aiMotionState: map['aiMotionState']?.toString(),
+      aiMotionConfidence: _optionalNumber(map, 'aiMotionConfidence'),
+      aiFallbackConfigId:
+          map['aiFallbackConfigId']?.toString() ??
+          'config_d_v2_adaptive_navguard',
+      aiCoordinatesDirectlyPredicted:
+          map['aiCoordinatesDirectlyPredicted'] == true,
+      aiStrideDirectlyMutated: map['aiStrideDirectlyMutated'] == true,
     );
     if (_integer(map, 'pdrPredictionsApplied') != value.pdrPredictionCount ||
         map['stepCounterInvariantHolds'] != true ||
@@ -337,6 +364,13 @@ class LiveNavguardPosition {
         (value.receivedStepEventCount == 0) !=
             latencies.every((double? latency) => latency == null)) {
       throw const FormatException('Invalid live step callback latency');
+    }
+    if (value.fusionMode == LiveFusionMode.experimentalAiV3 &&
+        (!value.aiExperimentalMode ||
+            value.aiCoordinatesDirectlyPredicted ||
+            value.aiStrideDirectlyMutated ||
+            value.aiFallbackConfigId != LiveFusionMode.adaptiveV2.wireName)) {
+      throw const FormatException('Invalid experimental AI safety contract');
     }
     return value;
   }
@@ -391,6 +425,13 @@ class LiveNavguardPosition {
   final int arcoreAcceptedAfterRobustInflationCount;
   final int arcoreRejectedAfterMaxInflationCount;
   final double? sourceDisagreementM;
+  final bool aiExperimentalMode;
+  final String aiRuntimeStatus;
+  final String? aiMotionState;
+  final double? aiMotionConfidence;
+  final String aiFallbackConfigId;
+  final bool aiCoordinatesDirectlyPredicted;
+  final bool aiStrideDirectlyMutated;
 
   bool get stepCounterInvariantHolds =>
       pdrPredictionCount +
@@ -495,6 +536,7 @@ abstract interface class LiveNavguardPlatform {
   ]);
   Future<void> beginDenial();
   Future<void> requestRecovery();
+  Future<void> setFusionMode(LiveFusionMode fusionMode);
   Future<void> stop();
 }
 
@@ -534,6 +576,12 @@ class MethodChannelLiveNavguardPlatform implements LiveNavguardPlatform {
 
   @override
   Future<void> requestRecovery() => _invoke('requestLiveGnssRecovery');
+
+  @override
+  Future<void> setFusionMode(LiveFusionMode fusionMode) => _invoke(
+    'setLiveNavguardFusionMode',
+    <String, Object?>{'fusionMode': fusionMode.wireName},
+  );
 
   @override
   Future<void> stop() => _invoke('stopLiveNavguardDemo');
