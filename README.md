@@ -4,19 +4,35 @@ AI-Assisted GNSS-Denied Mobile Navigation & Sensor Fusion System.
 
 NAVGUARD is an Android-based research and development project focused on pedestrian navigation continuity using smartphone sensors and on-device processing.
 
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 35 (1)" src="https://github.com/user-attachments/assets/11ce0d99-b7ec-440f-966b-7f594f8791df" />
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 37" src="https://github.com/user-attachments/assets/a787941a-1d7a-4ac5-bfae-6c3954ea8559" />
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 37 (1)" src="https://github.com/user-attachments/assets/bf1e2568-af59-4698-abc0-947c2d73bc2a" />
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 36" src="https://github.com/user-attachments/assets/65093f85-46aa-4a5e-b06e-ae93370505ce" />
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 36 (7)" src="https://github.com/user-attachments/assets/df0a899c-237b-4908-be2b-9708b2b2aebc" />
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 36 (6)" src="https://github.com/user-attachments/assets/c51b7ce3-f50e-4cc4-a3f2-786cbe814518" />
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 36 (5)" src="https://github.com/user-attachments/assets/8db84e0d-85fc-4e78-ab78-4a774697c50a" />
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 36 (4)" src="https://github.com/user-attachments/assets/699c4958-9f00-453b-b64d-117b7dfb4158" />
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 36 (3)" src="https://github.com/user-attachments/assets/9dda3a36-42b6-41b5-b48c-d41d238f4615" />
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 36 (2)" src="https://github.com/user-attachments/assets/9ba97314-b9dc-4197-a4a7-8eed26e6e205" />
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 36 (1)" src="https://github.com/user-attachments/assets/bd3109b3-a14d-4127-9772-0909fe724fc1" />
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 35" src="https://github.com/user-attachments/assets/26516158-066d-4d20-83de-c8c262216afd" />
-<img width="921" height="2048" alt="WhatsApp Image 2026-09-28 at 11 07 35 (2)" src="https://github.com/user-attachments/assets/d78c89ed-fc36-4b04-ae7e-1fef70aa3735" />
+## Screenshots
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/11ce0d99-b7ec-440f-966b-7f594f8791df" width="25%" />
+  <img src="https://github.com/user-attachments/assets/a787941a-1d7a-4ac5-bfae-6c3954ea8559" width="25%" />
+  <img src="https://github.com/user-attachments/assets/bf1e2568-af59-4698-abc0-947c2d73bc2a" width="25%" />
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/65093f85-46aa-4a5e-b06e-ae93370505ce" width="25%" />
+  <img src="https://github.com/user-attachments/assets/df0a899c-237b-4908-be2b-9708b2b2aebc" width="25%" />
+  <img src="https://github.com/user-attachments/assets/c51b7ce3-f50e-4cc4-a3f2-786cbe814518" width="25%" />
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/8db84e0d-85fc-4e78-ab78-4a774697c50a" width="25%" />
+  <img src="https://github.com/user-attachments/assets/699c4958-9f00-453b-b64d-117b7dfb4158" width="25%" />
+  <img src="https://github.com/user-attachments/assets/9dda3a36-42b6-41b5-b48c-d41d238f4615" width="25%" />
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/9ba97314-b9dc-4197-a4a7-8eed26e6e205" width="25%" />
+  <img src="https://github.com/user-attachments/assets/bd3109b3-a14d-4127-9772-0909fe724fc1" width="25%" />
+  <img src="https://github.com/user-attachments/assets/26516158-066d-4d20-83de-c8c262216afd" width="25%" />
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/d78c89ed-fc36-4b04-ae7e-1fef70aa3735" width="25%" />
+</p>
 
 
 
